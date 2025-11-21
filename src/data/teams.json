@@ -1,0 +1,1479 @@
+[
+  {
+    "id": "ger",
+    "name": "Germany",
+    "flag": "https://flagsapi.com/DE/flat/64.png",
+    "region": "Europe",
+    "skill": 85
+  },
+  {
+    "id": "fra",
+    "name": "France",
+    "flag": "https://flagsapi.com/FR/flat/64.png",
+    "region": "Europe",
+    "skill": 88
+  },
+  {
+    "id": "esp",
+    "name": "Spain",
+    "flag": "https://flagsapi.com/ES/flat/64.png",
+    "region": "Europe",
+    "skill": 87
+  },
+  {
+    "id": "ita",
+    "name": "Italy",
+    "flag": "https://flagsapi.com/IT/flat/64.png",
+    "region": "Europe",
+    "skill": 84
+  },
+  {
+    "id": "eng",
+    "name": "England",
+    "flag": "https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/320px-Flag_of_England.svg.png",
+    "region": "Europe",
+    "skill": 86
+  },
+  {
+    "id": "ned",
+    "name": "Netherlands",
+    "flag": "https://flagsapi.com/NL/flat/64.png",
+    "region": "Europe",
+    "skill": 85
+  },
+  {
+    "id": "por",
+    "name": "Portugal",
+    "flag": "https://flagsapi.com/PT/flat/64.png",
+    "region": "Europe",
+    "skill": 85
+  },
+  {
+    "id": "bel",
+    "name": "Belgium",
+    "flag": "https://flagsapi.com/BE/flat/64.png",
+    "region": "Europe",
+    "skill": 84
+  },
+  {
+    "id": "cro",
+    "name": "Croatia",
+    "flag": "https://flagsapi.com/HR/flat/64.png",
+    "region": "Europe",
+    "skill": 82
+  },
+  {
+    "id": "den",
+    "name": "Denmark",
+    "flag": "https://flagsapi.com/DK/flat/64.png",
+    "region": "Europe",
+    "skill": 80
+  },
+  {
+    "id": "sui",
+    "name": "Switzerland",
+    "flag": "https://flagsapi.com/CH/flat/64.png",
+    "region": "Europe",
+    "skill": 79
+  },
+  {
+    "id": "aut",
+    "name": "Austria",
+    "flag": "https://flagsapi.com/AT/flat/64.png",
+    "region": "Europe",
+    "skill": 78
+  },
+  {
+    "id": "swe",
+    "name": "Sweden",
+    "flag": "https://flagsapi.com/SE/flat/64.png",
+    "region": "Europe",
+    "skill": 77
+  },
+  {
+    "id": "pol",
+    "name": "Poland",
+    "flag": "https://flagsapi.com/PL/flat/64.png",
+    "region": "Europe",
+    "skill": 76
+  },
+  {
+    "id": "ukr",
+    "name": "Ukraine",
+    "flag": "https://flagsapi.com/UA/flat/64.png",
+    "region": "Europe",
+    "skill": 75
+  },
+  {
+    "id": "ser",
+    "name": "Serbia",
+    "flag": "https://flagsapi.com/RS/flat/64.png",
+    "region": "Europe",
+    "skill": 75
+  },
+  {
+    "id": "tur",
+    "name": "Turkey",
+    "flag": "https://flagsapi.com/TR/flat/64.png",
+    "region": "Europe",
+    "skill": 74
+  },
+  {
+    "id": "cze",
+    "name": "Czech Republic",
+    "flag": "https://flagsapi.com/CZ/flat/64.png",
+    "region": "Europe",
+    "skill": 73
+  },
+  {
+    "id": "wal",
+    "name": "Wales",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Flag_of_Wales.svg/320px-Flag_of_Wales.svg.png",
+    "region": "Europe",
+    "skill": 72
+  },
+  {
+    "id": "sco",
+    "name": "Scotland",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Flag_of_Scotland.svg/320px-Flag_of_Scotland.svg.png",
+    "region": "Europe",
+    "skill": 71
+  },
+  {
+    "id": "nor",
+    "name": "Norway",
+    "flag": "https://flagsapi.com/NO/flat/64.png",
+    "region": "Europe",
+    "skill": 73
+  },
+  {
+    "id": "rus",
+    "name": "Russia",
+    "flag": "https://flagsapi.com/RU/flat/64.png",
+    "region": "Europe",
+    "skill": 74
+  },
+  {
+    "id": "rou",
+    "name": "Romania",
+    "flag": "https://flagsapi.com/RO/flat/64.png",
+    "region": "Europe",
+    "skill": 70
+  },
+  {
+    "id": "hun",
+    "name": "Hungary",
+    "flag": "https://flagsapi.com/HU/flat/64.png",
+    "region": "Europe",
+    "skill": 69
+  },
+  {
+    "id": "gre",
+    "name": "Greece",
+    "flag": "https://flagsapi.com/GR/flat/64.png",
+    "region": "Europe",
+    "skill": 68
+  },
+  {
+    "id": "svk",
+    "name": "Slovakia",
+    "flag": "https://flagsapi.com/SK/flat/64.png",
+    "region": "Europe",
+    "skill": 67
+  },
+  {
+    "id": "fin",
+    "name": "Finland",
+    "flag": "https://flagsapi.com/FI/flat/64.png",
+    "region": "Europe",
+    "skill": 66
+  },
+  {
+    "id": "bih",
+    "name": "Bosnia and Herzegovina",
+    "flag": "https://flagsapi.com/BA/flat/64.png",
+    "region": "Europe",
+    "skill": 65
+  },
+  {
+    "id": "isl",
+    "name": "Iceland",
+    "flag": "https://flagsapi.com/IS/flat/64.png",
+    "region": "Europe",
+    "skill": 66
+  },
+  {
+    "id": "ire",
+    "name": "Republic of Ireland",
+    "flag": "https://flagsapi.com/IE/flat/64.png",
+    "region": "Europe",
+    "skill": 67
+  },
+  {
+    "id": "nir",
+    "name": "Northern Ireland",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Flag_of_Northern_Ireland_%281953%E2%80%931972%29.svg/320px-Flag_of_Northern_Ireland_%281953%E2%80%931972%29.svg.png",
+    "region": "Europe",
+    "skill": 64
+  },
+  {
+    "id": "alb",
+    "name": "Albania",
+    "flag": "https://flagsapi.com/AL/flat/64.png",
+    "region": "Europe",
+    "skill": 63
+  },
+  {
+    "id": "svn",
+    "name": "Slovenia",
+    "flag": "https://flagsapi.com/SI/flat/64.png",
+    "region": "Europe",
+    "skill": 64
+  },
+  {
+    "id": "mkd",
+    "name": "North Macedonia",
+    "flag": "https://flagsapi.com/MK/flat/64.png",
+    "region": "Europe",
+    "skill": 62
+  },
+  {
+    "id": "bul",
+    "name": "Bulgaria",
+    "flag": "https://flagsapi.com/BG/flat/64.png",
+    "region": "Europe",
+    "skill": 61
+  },
+  {
+    "id": "mne",
+    "name": "Montenegro",
+    "flag": "https://flagsapi.com/ME/flat/64.png",
+    "region": "Europe",
+    "skill": 60
+  },
+  {
+    "id": "isr",
+    "name": "Israel",
+    "flag": "https://flagsapi.com/IL/flat/64.png",
+    "region": "Europe",
+    "skill": 63
+  },
+  {
+    "id": "geo",
+    "name": "Georgia",
+    "flag": "https://flagsapi.com/GE/flat/64.png",
+    "region": "Europe",
+    "skill": 64
+  },
+  {
+    "id": "arm",
+    "name": "Armenia",
+    "flag": "https://flagsapi.com/AM/flat/64.png",
+    "region": "Europe",
+    "skill": 58
+  },
+  {
+    "id": "aze",
+    "name": "Azerbaijan",
+    "flag": "https://flagsapi.com/AZ/flat/64.png",
+    "region": "Europe",
+    "skill": 57
+  },
+  {
+    "id": "kaz",
+    "name": "Kazakhstan",
+    "flag": "https://flagsapi.com/KZ/flat/64.png",
+    "region": "Europe",
+    "skill": 59
+  },
+  {
+    "id": "blr",
+    "name": "Belarus",
+    "flag": "https://flagsapi.com/BY/flat/64.png",
+    "region": "Europe",
+    "skill": 60
+  },
+  {
+    "id": "lux",
+    "name": "Luxembourg",
+    "flag": "https://flagsapi.com/LU/flat/64.png",
+    "region": "Europe",
+    "skill": 55
+  },
+  {
+    "id": "cyp",
+    "name": "Cyprus",
+    "flag": "https://flagsapi.com/CY/flat/64.png",
+    "region": "Europe",
+    "skill": 54
+  },
+  {
+    "id": "est",
+    "name": "Estonia",
+    "flag": "https://flagsapi.com/EE/flat/64.png",
+    "region": "Europe",
+    "skill": 53
+  },
+  {
+    "id": "lva",
+    "name": "Latvia",
+    "flag": "https://flagsapi.com/LV/flat/64.png",
+    "region": "Europe",
+    "skill": 52
+  },
+  {
+    "id": "ltu",
+    "name": "Lithuania",
+    "flag": "https://flagsapi.com/LT/flat/64.png",
+    "region": "Europe",
+    "skill": 53
+  },
+  {
+    "id": "fro",
+    "name": "Faroe Islands",
+    "flag": "https://flagsapi.com/FO/flat/64.png",
+    "region": "Europe",
+    "skill": 51
+  },
+  {
+    "id": "mlt",
+    "name": "Malta",
+    "flag": "https://flagsapi.com/MT/flat/64.png",
+    "region": "Europe",
+    "skill": 50
+  },
+  {
+    "id": "mda",
+    "name": "Moldova",
+    "flag": "https://flagsapi.com/MD/flat/64.png",
+    "region": "Europe",
+    "skill": 52
+  },
+  {
+    "id": "kos",
+    "name": "Kosovo",
+    "flag": "https://flagsapi.com/XK/flat/64.png",
+    "region": "Europe",
+    "skill": 56
+  },
+  {
+    "id": "lie",
+    "name": "Liechtenstein",
+    "flag": "https://flagsapi.com/LI/flat/64.png",
+    "region": "Europe",
+    "skill": 48
+  },
+  {
+    "id": "and",
+    "name": "Andorra",
+    "flag": "https://flagsapi.com/AD/flat/64.png",
+    "region": "Europe",
+    "skill": 47
+  },
+  {
+    "id": "smr",
+    "name": "San Marino",
+    "flag": "https://flagsapi.com/SM/flat/64.png",
+    "region": "Europe",
+    "skill": 45
+  },
+  {
+    "id": "gib",
+    "name": "Gibraltar",
+    "flag": "https://flagsapi.com/GI/flat/64.png",
+    "region": "Europe",
+    "skill": 46
+  },
+  {
+    "id": "bra",
+    "name": "Brazil",
+    "flag": "https://flagsapi.com/BR/flat/64.png",
+    "region": "America",
+    "skill": 90
+  },
+  {
+    "id": "arg",
+    "name": "Argentina",
+    "flag": "https://flagsapi.com/AR/flat/64.png",
+    "region": "America",
+    "skill": 89
+  },
+  {
+    "id": "uru",
+    "name": "Uruguay",
+    "flag": "https://flagsapi.com/UY/flat/64.png",
+    "region": "America",
+    "skill": 83
+  },
+  {
+    "id": "col",
+    "name": "Colombia",
+    "flag": "https://flagsapi.com/CO/flat/64.png",
+    "region": "America",
+    "skill": 82
+  },
+  {
+    "id": "chi",
+    "name": "Chile",
+    "flag": "https://flagsapi.com/CL/flat/64.png",
+    "region": "America",
+    "skill": 78
+  },
+  {
+    "id": "par",
+    "name": "Paraguay",
+    "flag": "https://flagsapi.com/PY/flat/64.png",
+    "region": "America",
+    "skill": 72
+  },
+  {
+    "id": "ecu",
+    "name": "Ecuador",
+    "flag": "https://flagsapi.com/EC/flat/64.png",
+    "region": "America",
+    "skill": 74
+  },
+  {
+    "id": "per",
+    "name": "Peru",
+    "flag": "https://flagsapi.com/PE/flat/64.png",
+    "region": "America",
+    "skill": 73
+  },
+  {
+    "id": "ven",
+    "name": "Venezuela",
+    "flag": "https://flagsapi.com/VE/flat/64.png",
+    "region": "America",
+    "skill": 68
+  },
+  {
+    "id": "bol",
+    "name": "Bolivia",
+    "flag": "https://flagsapi.com/BO/flat/64.png",
+    "region": "America",
+    "skill": 65
+  },
+  {
+    "id": "mex",
+    "name": "Mexico",
+    "flag": "https://flagsapi.com/MX/flat/64.png",
+    "region": "America",
+    "skill": 79
+  },
+  {
+    "id": "usa",
+    "name": "United States",
+    "flag": "https://flagsapi.com/US/flat/64.png",
+    "region": "America",
+    "skill": 78
+  },
+  {
+    "id": "can",
+    "name": "Canada",
+    "flag": "https://flagsapi.com/CA/flat/64.png",
+    "region": "America",
+    "skill": 75
+  },
+  {
+    "id": "crc",
+    "name": "Costa Rica",
+    "flag": "https://flagsapi.com/CR/flat/64.png",
+    "region": "America",
+    "skill": 72
+  },
+  {
+    "id": "jam",
+    "name": "Jamaica",
+    "flag": "https://flagsapi.com/JM/flat/64.png",
+    "region": "America",
+    "skill": 68
+  },
+  {
+    "id": "pan",
+    "name": "Panama",
+    "flag": "https://flagsapi.com/PA/flat/64.png",
+    "region": "America",
+    "skill": 67
+  },
+  {
+    "id": "hon",
+    "name": "Honduras",
+    "flag": "https://flagsapi.com/HN/flat/64.png",
+    "region": "America",
+    "skill": 66
+  },
+  {
+    "id": "slv",
+    "name": "El Salvador",
+    "flag": "https://flagsapi.com/SV/flat/64.png",
+    "region": "America",
+    "skill": 64
+  },
+  {
+    "id": "tri",
+    "name": "Trinidad and Tobago",
+    "flag": "https://flagsapi.com/TT/flat/64.png",
+    "region": "America",
+    "skill": 63
+  },
+  {
+    "id": "hti",
+    "name": "Haiti",
+    "flag": "https://flagsapi.com/HT/flat/64.png",
+    "region": "America",
+    "skill": 60
+  },
+  {
+    "id": "cub",
+    "name": "Cuba",
+    "flag": "https://flagsapi.com/CU/flat/64.png",
+    "region": "America",
+    "skill": 58
+  },
+  {
+    "id": "gua",
+    "name": "Guatemala",
+    "flag": "https://flagsapi.com/GT/flat/64.png",
+    "region": "America",
+    "skill": 62
+  },
+  {
+    "id": "nic",
+    "name": "Nicaragua",
+    "flag": "https://flagsapi.com/NI/flat/64.png",
+    "region": "America",
+    "skill": 57
+  },
+  {
+    "id": "sur",
+    "name": "Suriname",
+    "flag": "https://flagsapi.com/SR/flat/64.png",
+    "region": "America",
+    "skill": 56
+  },
+  {
+    "id": "brb",
+    "name": "Barbados",
+    "flag": "https://flagsapi.com/BB/flat/64.png",
+    "region": "America",
+    "skill": 54
+  },
+  {
+    "id": "dom",
+    "name": "Dominican Republic",
+    "flag": "https://flagsapi.com/DO/flat/64.png",
+    "region": "America",
+    "skill": 55
+  },
+  {
+    "id": "ber",
+    "name": "Bermuda",
+    "flag": "https://flagsapi.com/BM/flat/64.png",
+    "region": "America",
+    "skill": 52
+  },
+  {
+    "id": "blz",
+    "name": "Belize",
+    "flag": "https://flagsapi.com/BZ/flat/64.png",
+    "region": "America",
+    "skill": 51
+  },
+  {
+    "id": "guy",
+    "name": "Guyana",
+    "flag": "https://flagsapi.com/GY/flat/64.png",
+    "region": "America",
+    "skill": 53
+  },
+  {
+    "id": "pue",
+    "name": "Puerto Rico",
+    "flag": "https://flagsapi.com/PR/flat/64.png",
+    "region": "America",
+    "skill": 50
+  },
+  {
+    "id": "cuw",
+    "name": "Curaçao",
+    "flag": "https://flagsapi.com/CW/flat/64.png",
+    "region": "America",
+    "skill": 48
+  },
+  {
+    "id": "atg",
+    "name": "Antigua and Barbuda",
+    "flag": "https://flagsapi.com/AG/flat/64.png",
+    "region": "America",
+    "skill": 42
+  },
+  {
+    "id": "skn",
+    "name": "Saint Kitts and Nevis",
+    "flag": "https://flagsapi.com/KN/flat/64.png",
+    "region": "America",
+    "skill": 41
+  },
+  {
+    "id": "lca",
+    "name": "Saint Lucia",
+    "flag": "https://flagsapi.com/LC/flat/64.png",
+    "region": "America",
+    "skill": 40
+  },
+  {
+    "id": "vin",
+    "name": "Saint Vincent and the Grenadines",
+    "flag": "https://flagsapi.com/VC/flat/64.png",
+    "region": "America",
+    "skill": 39
+  },
+  {
+    "id": "grn",
+    "name": "Grenada",
+    "flag": "https://flagsapi.com/GD/flat/64.png",
+    "region": "America",
+    "skill": 39
+  },
+  {
+    "id": "msr",
+    "name": "Montserrat",
+    "flag": "https://flagsapi.com/MS/flat/64.png",
+    "region": "America",
+    "skill": 35
+  },
+  {
+    "id": "dma",
+    "name": "Dominica",
+    "flag": "https://flagsapi.com/DM/flat/64.png",
+    "region": "America",
+    "skill": 37
+  },
+  {
+    "id": "aru",
+    "name": "Aruba",
+    "flag": "https://flagsapi.com/AW/flat/64.png",
+    "region": "America",
+    "skill": 36
+  },
+  {
+    "id": "cay",
+    "name": "Cayman Islands",
+    "flag": "https://flagsapi.com/KY/flat/64.png",
+    "region": "America",
+    "skill": 35
+  },
+  {
+    "id": "bah",
+    "name": "Bahamas",
+    "flag": "https://flagsapi.com/BS/flat/64.png",
+    "region": "America",
+    "skill": 34
+  },
+  {
+    "id": "tca",
+    "name": "Turks and Caicos Islands",
+    "flag": "https://flagsapi.com/TC/flat/64.png",
+    "region": "America",
+    "skill": 32
+  },
+  {
+    "id": "vgb",
+    "name": "British Virgin Islands",
+    "flag": "https://flagsapi.com/VG/flat/64.png",
+    "region": "America",
+    "skill": 31
+  },
+  {
+    "id": "vir",
+    "name": "US Virgin Islands",
+    "flag": "https://flagsapi.com/VI/flat/64.png",
+    "region": "America",
+    "skill": 31
+  },
+  {
+    "id": "aia",
+    "name": "Anguilla",
+    "flag": "https://flagsapi.com/AI/flat/64.png",
+    "region": "America",
+    "skill": 30
+  },
+  {
+    "id": "sen",
+    "name": "Senegal",
+    "flag": "https://flagsapi.com/SN/flat/64.png",
+    "region": "Africa",
+    "skill": 77
+  },
+  {
+    "id": "mar",
+    "name": "Morocco",
+    "flag": "https://flagsapi.com/MA/flat/64.png",
+    "region": "Africa",
+    "skill": 79
+  },
+  {
+    "id": "tun",
+    "name": "Tunisia",
+    "flag": "https://flagsapi.com/TN/flat/64.png",
+    "region": "Africa",
+    "skill": 73
+  },
+  {
+    "id": "alg",
+    "name": "Algeria",
+    "flag": "https://flagsapi.com/DZ/flat/64.png",
+    "region": "Africa",
+    "skill": 74
+  },
+  {
+    "id": "egy",
+    "name": "Egypt",
+    "flag": "https://flagsapi.com/EG/flat/64.png",
+    "region": "Africa",
+    "skill": 75
+  },
+  {
+    "id": "nga",
+    "name": "Nigeria",
+    "flag": "https://flagsapi.com/NG/flat/64.png",
+    "region": "Africa",
+    "skill": 76
+  },
+  {
+    "id": "cmr",
+    "name": "Cameroon",
+    "flag": "https://flagsapi.com/CM/flat/64.png",
+    "region": "Africa",
+    "skill": 74
+  },
+  {
+    "id": "gha",
+    "name": "Ghana",
+    "flag": "https://flagsapi.com/GH/flat/64.png",
+    "region": "Africa",
+    "skill": 73
+  },
+  {
+    "id": "civ",
+    "name": "Ivory Coast",
+    "flag": "https://flagsapi.com/CI/flat/64.png",
+    "region": "Africa",
+    "skill": 75
+  },
+  {
+    "id": "mli",
+    "name": "Mali",
+    "flag": "https://flagsapi.com/ML/flat/64.png",
+    "region": "Africa",
+    "skill": 71
+  },
+  {
+    "id": "bfa",
+    "name": "Burkina Faso",
+    "flag": "https://flagsapi.com/BF/flat/64.png",
+    "region": "Africa",
+    "skill": 69
+  },
+  {
+    "id": "cgo",
+    "name": "Congo DR",
+    "flag": "https://flagsapi.com/CD/flat/64.png",
+    "region": "Africa",
+    "skill": 68
+  },
+  {
+    "id": "zaf",
+    "name": "South Africa",
+    "flag": "https://flagsapi.com/ZA/flat/64.png",
+    "region": "Africa",
+    "skill": 70
+  },
+  {
+    "id": "gab",
+    "name": "Gabon",
+    "flag": "https://flagsapi.com/GA/flat/64.png",
+    "region": "Africa",
+    "skill": 66
+  },
+  {
+    "id": "gui",
+    "name": "Guinea",
+    "flag": "https://flagsapi.com/GN/flat/64.png",
+    "region": "Africa",
+    "skill": 67
+  },
+  {
+    "id": "cap",
+    "name": "Cape Verde",
+    "flag": "https://flagsapi.com/CV/flat/64.png",
+    "region": "Africa",
+    "skill": 65
+  },
+  {
+    "id": "uga",
+    "name": "Uganda",
+    "flag": "https://flagsapi.com/UG/flat/64.png",
+    "region": "Africa",
+    "skill": 64
+  },
+  {
+    "id": "zam",
+    "name": "Zambia",
+    "flag": "https://flagsapi.com/ZM/flat/64.png",
+    "region": "Africa",
+    "skill": 63
+  },
+  {
+    "id": "ken",
+    "name": "Kenya",
+    "flag": "https://flagsapi.com/KE/flat/64.png",
+    "region": "Africa",
+    "skill": 62
+  },
+  {
+    "id": "mad",
+    "name": "Madagascar",
+    "flag": "https://flagsapi.com/MG/flat/64.png",
+    "region": "Africa",
+    "skill": 61
+  },
+  {
+    "id": "mau",
+    "name": "Mauritania",
+    "flag": "https://flagsapi.com/MR/flat/64.png",
+    "region": "Africa",
+    "skill": 60
+  },
+  {
+    "id": "ben",
+    "name": "Benin",
+    "flag": "https://flagsapi.com/BJ/flat/64.png",
+    "region": "Africa",
+    "skill": 62
+  },
+  {
+    "id": "nig",
+    "name": "Niger",
+    "flag": "https://flagsapi.com/NE/flat/64.png",
+    "region": "Africa",
+    "skill": 58
+  },
+  {
+    "id": "tog",
+    "name": "Togo",
+    "flag": "https://flagsapi.com/TG/flat/64.png",
+    "region": "Africa",
+    "skill": 59
+  },
+  {
+    "id": "gui-bis",
+    "name": "Guinea-Bissau",
+    "flag": "https://flagsapi.com/GW/flat/64.png",
+    "region": "Africa",
+    "skill": 57
+  },
+  {
+    "id": "rwa",
+    "name": "Rwanda",
+    "flag": "https://flagsapi.com/RW/flat/64.png",
+    "region": "Africa",
+    "skill": 60
+  },
+  {
+    "id": "bdi",
+    "name": "Burundi",
+    "flag": "https://flagsapi.com/BI/flat/64.png",
+    "region": "Africa",
+    "skill": 56
+  },
+  {
+    "id": "eth",
+    "name": "Ethiopia",
+    "flag": "https://flagsapi.com/ET/flat/64.png",
+    "region": "Africa",
+    "skill": 58
+  },
+  {
+    "id": "tan",
+    "name": "Tanzania",
+    "flag": "https://flagsapi.com/TZ/flat/64.png",
+    "region": "Africa",
+    "skill": 57
+  },
+  {
+    "id": "zim",
+    "name": "Zimbabwe",
+    "flag": "https://flagsapi.com/ZW/flat/64.png",
+    "region": "Africa",
+    "skill": 59
+  },
+  {
+    "id": "nam",
+    "name": "Namibia",
+    "flag": "https://flagsapi.com/NA/flat/64.png",
+    "region": "Africa",
+    "skill": 58
+  },
+  {
+    "id": "moz",
+    "name": "Mozambique",
+    "flag": "https://flagsapi.com/MZ/flat/64.png",
+    "region": "Africa",
+    "skill": 56
+  },
+  {
+    "id": "ang",
+    "name": "Angola",
+    "flag": "https://flagsapi.com/AO/flat/64.png",
+    "region": "Africa",
+    "skill": 61
+  },
+  {
+    "id": "lbr",
+    "name": "Liberia",
+    "flag": "https://flagsapi.com/LR/flat/64.png",
+    "region": "Africa",
+    "skill": 55
+  },
+  {
+    "id": "sle",
+    "name": "Sierra Leone",
+    "flag": "https://flagsapi.com/SL/flat/64.png",
+    "region": "Africa",
+    "skill": 54
+  },
+  {
+    "id": "mal",
+    "name": "Malawi",
+    "flag": "https://flagsapi.com/MW/flat/64.png",
+    "region": "Africa",
+    "skill": 55
+  },
+  {
+    "id": "cgob",
+    "name": "Congo",
+    "flag": "https://flagsapi.com/CG/flat/64.png",
+    "region": "Africa",
+    "skill": 57
+  },
+  {
+    "id": "eqg",
+    "name": "Equatorial Guinea",
+    "flag": "https://flagsapi.com/GQ/flat/64.png",
+    "region": "Africa",
+    "skill": 56
+  },
+  {
+    "id": "cta",
+    "name": "Central African Republic",
+    "flag": "https://flagsapi.com/CF/flat/64.png",
+    "region": "Africa",
+    "skill": 52
+  },
+  {
+    "id": "cha",
+    "name": "Chad",
+    "flag": "https://flagsapi.com/TD/flat/64.png",
+    "region": "Africa",
+    "skill": 53
+  },
+  {
+    "id": "stp",
+    "name": "São Tomé and Príncipe",
+    "flag": "https://flagsapi.com/ST/flat/64.png",
+    "region": "Africa",
+    "skill": 50
+  },
+  {
+    "id": "gam",
+    "name": "Gambia",
+    "flag": "https://flagsapi.com/GM/flat/64.png",
+    "region": "Africa",
+    "skill": 56
+  },
+  {
+    "id": "mri",
+    "name": "Mauritius",
+    "flag": "https://flagsapi.com/MU/flat/64.png",
+    "region": "Africa",
+    "skill": 51
+  },
+  {
+    "id": "com",
+    "name": "Comoros",
+    "flag": "https://flagsapi.com/KM/flat/64.png",
+    "region": "Africa",
+    "skill": 54
+  },
+  {
+    "id": "sey",
+    "name": "Seychelles",
+    "flag": "https://flagsapi.com/SC/flat/64.png",
+    "region": "Africa",
+    "skill": 49
+  },
+  {
+    "id": "dji",
+    "name": "Djibouti",
+    "flag": "https://flagsapi.com/DJ/flat/64.png",
+    "region": "Africa",
+    "skill": 48
+  },
+  {
+    "id": "som",
+    "name": "Somalia",
+    "flag": "https://flagsapi.com/SO/flat/64.png",
+    "region": "Africa",
+    "skill": 47
+  },
+  {
+    "id": "ssd",
+    "name": "South Sudan",
+    "flag": "https://flagsapi.com/SS/flat/64.png",
+    "region": "Africa",
+    "skill": 46
+  },
+  {
+    "id": "eri",
+    "name": "Eritrea",
+    "flag": "https://flagsapi.com/ER/flat/64.png",
+    "region": "Africa",
+    "skill": 47
+  },
+  {
+    "id": "les",
+    "name": "Lesotho",
+    "flag": "https://flagsapi.com/LS/flat/64.png",
+    "region": "Africa",
+    "skill": 50
+  },
+  {
+    "id": "bot",
+    "name": "Botswana",
+    "flag": "https://flagsapi.com/BW/flat/64.png",
+    "region": "Africa",
+    "skill": 52
+  },
+  {
+    "id": "swa",
+    "name": "Eswatini",
+    "flag": "https://flagsapi.com/SZ/flat/64.png",
+    "region": "Africa",
+    "skill": 51
+  },
+  {
+    "id": "lby",
+    "name": "Libya",
+    "flag": "https://flagsapi.com/LY/flat/64.png",
+    "region": "Africa",
+    "skill": 59
+  },
+  {
+    "id": "sud",
+    "name": "Sudan",
+    "flag": "https://flagsapi.com/SD/flat/64.png",
+    "region": "Africa",
+    "skill": 55
+  },
+  {
+    "id": "jpn",
+    "name": "Japan",
+    "flag": "https://flagsapi.com/JP/flat/64.png",
+    "region": "Asia",
+    "skill": 81
+  },
+  {
+    "id": "kor",
+    "name": "South Korea",
+    "flag": "https://flagsapi.com/KR/flat/64.png",
+    "region": "Asia",
+    "skill": 80
+  },
+  {
+    "id": "irn",
+    "name": "Iran",
+    "flag": "https://flagsapi.com/IR/flat/64.png",
+    "region": "Asia",
+    "skill": 76
+  },
+  {
+    "id": "aus",
+    "name": "Australia",
+    "flag": "https://flagsapi.com/AU/flat/64.png",
+    "region": "Asia",
+    "skill": 77
+  },
+  {
+    "id": "sau",
+    "name": "Saudi Arabia",
+    "flag": "https://flagsapi.com/SA/flat/64.png",
+    "region": "Asia",
+    "skill": 73
+  },
+  {
+    "id": "qat",
+    "name": "Qatar",
+    "flag": "https://flagsapi.com/QA/flat/64.png",
+    "region": "Asia",
+    "skill": 71
+  },
+  {
+    "id": "uae",
+    "name": "UAE",
+    "flag": "https://flagsapi.com/AE/flat/64.png",
+    "region": "Asia",
+    "skill": 70
+  },
+  {
+    "id": "irq",
+    "name": "Iraq",
+    "flag": "https://flagsapi.com/IQ/flat/64.png",
+    "region": "Asia",
+    "skill": 69
+  },
+  {
+    "id": "chn",
+    "name": "China",
+    "flag": "https://flagsapi.com/CN/flat/64.png",
+    "region": "Asia",
+    "skill": 68
+  },
+  {
+    "id": "uzb",
+    "name": "Uzbekistan",
+    "flag": "https://flagsapi.com/UZ/flat/64.png",
+    "region": "Asia",
+    "skill": 67
+  },
+  {
+    "id": "tha",
+    "name": "Thailand",
+    "flag": "https://flagsapi.com/TH/flat/64.png",
+    "region": "Asia",
+    "skill": 66
+  },
+  {
+    "id": "vie",
+    "name": "Vietnam",
+    "flag": "https://flagsapi.com/VN/flat/64.png",
+    "region": "Asia",
+    "skill": 65
+  },
+  {
+    "id": "omn",
+    "name": "Oman",
+    "flag": "https://flagsapi.com/OM/flat/64.png",
+    "region": "Asia",
+    "skill": 68
+  },
+  {
+    "id": "jor",
+    "name": "Jordan",
+    "flag": "https://flagsapi.com/JO/flat/64.png",
+    "region": "Asia",
+    "skill": 67
+  },
+  {
+    "id": "bhr",
+    "name": "Bahrain",
+    "flag": "https://flagsapi.com/BH/flat/64.png",
+    "region": "Asia",
+    "skill": 66
+  },
+  {
+    "id": "syr",
+    "name": "Syria",
+    "flag": "https://flagsapi.com/SY/flat/64.png",
+    "region": "Asia",
+    "skill": 65
+  },
+  {
+    "id": "lbn",
+    "name": "Lebanon",
+    "flag": "https://flagsapi.com/LB/flat/64.png",
+    "region": "Asia",
+    "skill": 64
+  },
+  {
+    "id": "pal",
+    "name": "Palestine",
+    "flag": "https://flagsapi.com/PS/flat/64.png",
+    "region": "Asia",
+    "skill": 63
+  },
+  {
+    "id": "kuw",
+    "name": "Kuwait",
+    "flag": "https://flagsapi.com/KW/flat/64.png",
+    "region": "Asia",
+    "skill": 65
+  },
+  {
+    "id": "tkm",
+    "name": "Turkmenistan",
+    "flag": "https://flagsapi.com/TM/flat/64.png",
+    "region": "Asia",
+    "skill": 61
+  },
+  {
+    "id": "kgz",
+    "name": "Kyrgyzstan",
+    "flag": "https://flagsapi.com/KG/flat/64.png",
+    "region": "Asia",
+    "skill": 60
+  },
+  {
+    "id": "tjk",
+    "name": "Tajikistan",
+    "flag": "https://flagsapi.com/TJ/flat/64.png",
+    "region": "Asia",
+    "skill": 59
+  },
+  {
+    "id": "afg",
+    "name": "Afghanistan",
+    "flag": "https://flagsapi.com/AF/flat/64.png",
+    "region": "Asia",
+    "skill": 58
+  },
+  {
+    "id": "ind",
+    "name": "India",
+    "flag": "https://flagsapi.com/IN/flat/64.png",
+    "region": "Asia",
+    "skill": 62
+  },
+  {
+    "id": "mya",
+    "name": "Myanmar",
+    "flag": "https://flagsapi.com/MM/flat/64.png",
+    "region": "Asia",
+    "skill": 57
+  },
+  {
+    "id": "phi",
+    "name": "Philippines",
+    "flag": "https://flagsapi.com/PH/flat/64.png",
+    "region": "Asia",
+    "skill": 61
+  },
+  {
+    "id": "idn",
+    "name": "Indonesia",
+    "flag": "https://flagsapi.com/ID/flat/64.png",
+    "region": "Asia",
+    "skill": 63
+  },
+  {
+    "id": "mas",
+    "name": "Malaysia",
+    "flag": "https://flagsapi.com/MY/flat/64.png",
+    "region": "Asia",
+    "skill": 64
+  },
+  {
+    "id": "sin",
+    "name": "Singapore",
+    "flag": "https://flagsapi.com/SG/flat/64.png",
+    "region": "Asia",
+    "skill": 60
+  },
+  {
+    "id": "ban",
+    "name": "Bangladesh",
+    "flag": "https://flagsapi.com/BD/flat/64.png",
+    "region": "Asia",
+    "skill": 56
+  },
+  {
+    "id": "prk",
+    "name": "North Korea",
+    "flag": "https://flagsapi.com/KP/flat/64.png",
+    "region": "Asia",
+    "skill": 62
+  },
+  {
+    "id": "hkg",
+    "name": "Hong Kong",
+    "flag": "https://flagsapi.com/HK/flat/64.png",
+    "region": "Asia",
+    "skill": 59
+  },
+  {
+    "id": "yem",
+    "name": "Yemen",
+    "flag": "https://flagsapi.com/YE/flat/64.png",
+    "region": "Asia",
+    "skill": 55
+  },
+  {
+    "id": "pak",
+    "name": "Pakistan",
+    "flag": "https://flagsapi.com/PK/flat/64.png",
+    "region": "Asia",
+    "skill": 57
+  },
+  {
+    "id": "sri",
+    "name": "Sri Lanka",
+    "flag": "https://flagsapi.com/LK/flat/64.png",
+    "region": "Asia",
+    "skill": 58
+  },
+  {
+    "id": "mdv",
+    "name": "Maldives",
+    "flag": "https://flagsapi.com/MV/flat/64.png",
+    "region": "Asia",
+    "skill": 54
+  },
+  {
+    "id": "nep",
+    "name": "Nepal",
+    "flag": "https://flagsapi.com/NP/flat/64.png",
+    "region": "Asia",
+    "skill": 55
+  },
+  {
+    "id": "bhu",
+    "name": "Bhutan",
+    "flag": "https://flagsapi.com/BT/flat/64.png",
+    "region": "Asia",
+    "skill": 52
+  },
+  {
+    "id": "cam",
+    "name": "Cambodia",
+    "flag": "https://flagsapi.com/KH/flat/64.png",
+    "region": "Asia",
+    "skill": 56
+  },
+  {
+    "id": "lao",
+    "name": "Laos",
+    "flag": "https://flagsapi.com/LA/flat/64.png",
+    "region": "Asia",
+    "skill": 54
+  },
+  {
+    "id": "tls",
+    "name": "Timor-Leste",
+    "flag": "https://flagsapi.com/TL/flat/64.png",
+    "region": "Asia",
+    "skill": 53
+  },
+  {
+    "id": "bru",
+    "name": "Brunei",
+    "flag": "https://flagsapi.com/BN/flat/64.png",
+    "region": "Asia",
+    "skill": 55
+  },
+  {
+    "id": "mac",
+    "name": "Macau",
+    "flag": "https://flagsapi.com/MO/flat/64.png",
+    "region": "Asia",
+    "skill": 52
+  },
+  {
+    "id": "mon",
+    "name": "Mongolia",
+    "flag": "https://flagsapi.com/MN/flat/64.png",
+    "region": "Asia",
+    "skill": 56
+  },
+  {
+    "id": "tpe",
+    "name": "Chinese Taipei",
+    "flag": "https://flagsapi.com/TW/flat/64.png",
+    "region": "Asia",
+    "skill": 60
+  },
+  {
+    "id": "gum",
+    "name": "Guam",
+    "flag": "https://flagsapi.com/GU/flat/64.png",
+    "region": "Asia",
+    "skill": 51
+  },
+  {
+    "id": "nzl",
+    "name": "New Zealand",
+    "flag": "https://flagsapi.com/NZ/flat/64.png",
+    "region": "Oceania",
+    "skill": 72
+  },
+  {
+    "id": "png",
+    "name": "Papua New Guinea",
+    "flag": "https://flagsapi.com/PG/flat/64.png",
+    "region": "Oceania",
+    "skill": 58
+  },
+  {
+    "id": "fij",
+    "name": "Fiji",
+    "flag": "https://flagsapi.com/FJ/flat/64.png",
+    "region": "Oceania",
+    "skill": 57
+  },
+  {
+    "id": "ncl",
+    "name": "New Caledonia",
+    "flag": "https://flagsapi.com/NC/flat/64.png",
+    "region": "Oceania",
+    "skill": 56
+  },
+  {
+    "id": "tah",
+    "name": "Tahiti",
+    "flag": "https://flagsapi.com/PF/flat/64.png",
+    "region": "Oceania",
+    "skill": 55
+  },
+  {
+    "id": "slb",
+    "name": "Solomon Islands",
+    "flag": "https://flagsapi.com/SB/flat/64.png",
+    "region": "Oceania",
+    "skill": 54
+  },
+  {
+    "id": "van",
+    "name": "Vanuatu",
+    "flag": "https://flagsapi.com/VU/flat/64.png",
+    "region": "Oceania",
+    "skill": 53
+  },
+  {
+    "id": "cok",
+    "name": "Cook Islands",
+    "flag": "https://flagsapi.com/CK/flat/64.png",
+    "region": "Oceania",
+    "skill": 52
+  },
+  {
+    "id": "sam",
+    "name": "Samoa",
+    "flag": "https://flagsapi.com/WS/flat/64.png",
+    "region": "Oceania",
+    "skill": 54
+  },
+  {
+    "id": "asa",
+    "name": "American Samoa",
+    "flag": "https://flagsapi.com/AS/flat/64.png",
+    "region": "Oceania",
+    "skill": 51
+  },
+  {
+    "id": "ton",
+    "name": "Tonga",
+    "flag": "https://flagsapi.com/TO/flat/64.png",
+    "region": "Oceania",
+    "skill": 52
+  }
+]
