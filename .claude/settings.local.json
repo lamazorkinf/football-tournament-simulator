@@ -11,7 +11,8 @@
       "mcp__supabase__list_migrations",
       "Bash(git checkout:*)",
       "Bash(npx tsx:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

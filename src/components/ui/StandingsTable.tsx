@@ -80,18 +80,18 @@ export function StandingsTable({
                         return (
                           <>
                             <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
-                            <span>{team.name}</span>
+                            <span className="truncate max-w-[100px] sm:max-w-none">{team.name}</span>
                             {(() => {
                               const tier = team.tier || calculateTier(team.skill);
                               return (
                                 <span
                                   className={cn(
-                                    'px-2 py-0.5 text-xs rounded-full border',
+                                    'px-2 py-0.5 text-xs rounded-full border flex-shrink-0',
                                     getTierColor(tier)
                                   )}
-                                  title={`Skill: ${team.skill}`}
+                                  title={`${tier} - Skill: ${team.skill}`}
                                 >
-                                  {getTierIcon(tier)} {tier}
+                                  {getTierIcon(tier)} <span className="hidden sm:inline ml-1">{tier}</span>
                                 </span>
                               );
                             })()}

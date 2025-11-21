@@ -190,35 +190,35 @@ function MatchCard({ match, getTeam, onSimulate, onViewDetails }: MatchCardProps
       }`}
       onClick={match.isPlayed ? onViewDetails : undefined}
     >
-      <div className="flex-1 flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-1">
+      <div className="flex-1 flex items-center justify-between min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           {homeTeam && <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={32} />}
-          <span className="font-medium text-sm sm:text-base">
+          <span className="font-medium text-sm sm:text-base truncate">
             {homeTeam?.name || match.homeTeamId}
           </span>
         </div>
 
-        <div className="flex items-center gap-4 mx-4">
+        <div className="flex items-center gap-2 sm:gap-4 mx-2 sm:mx-4 flex-shrink-0">
           {match.isPlayed ? (
-            <div className="flex items-center gap-3 font-bold text-lg">
+            <div className="flex items-center gap-1.5 sm:gap-3 font-bold text-base sm:text-lg">
               <span className="text-gray-900">{match.homeScore}</span>
               <span className="text-gray-400">-</span>
               <span className="text-gray-900">{match.awayScore}</span>
             </div>
           ) : (
-            <span className="text-gray-400 font-medium">vs</span>
+            <span className="text-gray-400 font-medium text-sm">vs</span>
           )}
         </div>
 
-        <div className="flex items-center gap-3 flex-1 justify-end">
-          <span className="font-medium text-sm sm:text-base text-right">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end min-w-0">
+          <span className="font-medium text-sm sm:text-base text-right truncate">
             {awayTeam?.name || match.awayTeamId}
           </span>
           {awayTeam && <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={32} />}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 ml-4">
+      <div className="flex items-center gap-2 ml-2 sm:ml-4 flex-shrink-0">
         {match.isPlayed ? (
           <Button
             variant="ghost"
@@ -227,7 +227,7 @@ function MatchCard({ match, getTeam, onSimulate, onViewDetails }: MatchCardProps
               e.stopPropagation();
               onViewDetails();
             }}
-            className="gap-2"
+            className="gap-1 sm:gap-2"
           >
             <Info className="w-3 h-3" />
             <span className="hidden sm:inline">Details</span>
@@ -240,7 +240,7 @@ function MatchCard({ match, getTeam, onSimulate, onViewDetails }: MatchCardProps
               e.stopPropagation();
               onSimulate();
             }}
-            className="gap-2"
+            className="gap-1 sm:gap-2"
           >
             <Play className="w-3 h-3" />
             <span className="hidden sm:inline">Play</span>
