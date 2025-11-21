@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { RegionView } from './RegionView';
 import { GroupView } from './GroupView';
+import { RunnersUpModal } from './RunnersUpModal';
 import type { Region, Group } from '../../types';
-import { Globe2, Filter } from 'lucide-react';
+import { Globe2, Filter, Trophy } from 'lucide-react';
+import { Button } from '../ui/Button';
 
 interface QualifiersViewProps {
   initialRegion?: string;
@@ -11,7 +13,7 @@ interface QualifiersViewProps {
 }
 
 export function QualifiersView({ initialRegion, initialGroupId }: QualifiersViewProps = {}) {
-  const { teams, currentTournament } = useTournamentStore();
+  const { teams, currentTournament, simulateMatch } = useTournamentStore();
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>(
     (initialRegion as Region) || 'all'
   );
@@ -19,6 +21,7 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
     group: Group;
     region: Region;
   } | null>(null);
+  const [showRunnersUpModal, setShowRunnersUpModal] = useState(false);
 
   // Auto-select group if initialGroupId is provided
   useEffect(() => {
@@ -39,15 +42,7 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
     );
   }
 
-  const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia', 'Oceania'];
-
-  const handleGroupClick = (groupId: string, region: Region) => {
-    const groups = currentTournament.qualifiers[region] || [];
-    const group = groups.find((g) => g.id === groupId);
-    if (group) {
-      setSelectedGroup({ group, region });
-    }
-  };
+  const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
 
   const handleBack = () => {
     setSelectedGroup(null);
@@ -95,7 +90,7 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
       {/* Header with Filter */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 text-white">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <Globe2 className="w-8 h-8" />
               <div>
@@ -105,6 +100,15 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
                 </p>
               </div>
             </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowRunnersUpModal(true)}
+              className="bg-white text-blue-600 hover:bg-blue-50 border-white gap-2"
+            >
+              <Trophy className="w-4 h-4" />
+              <span className="hidden sm:inline">Clasificación Segundos Lugares</span>
+              <span className="sm:hidden">Segundos</span>
+            </Button>
           </div>
         </div>
 
@@ -191,11 +195,23 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
               key={region}
               region={region}
               groups={groups}
-              onGroupClick={(groupId) => handleGroupClick(groupId, region)}
+              teams={teams}
+              onSimulateMatch={(matchId, groupId) => {
+                simulateMatch(matchId, groupId, 'qualifier');
+              }}
             />
           );
         })}
       </div>
+
+      {/* Runners-Up Modal */}
+      {showRunnersUpModal && (
+        <RunnersUpModal
+          qualifiers={currentTournament.qualifiers}
+          teams={teams}
+          onClose={() => setShowRunnersUpModal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ CREATE TABLE teams (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   flag TEXT NOT NULL,
-  region TEXT NOT NULL CHECK (region IN ('Europe', 'America', 'Africa', 'Asia', 'Oceania')),
+  region TEXT NOT NULL CHECK (region IN ('Europe', 'America', 'Africa', 'Asia')),
   skill INTEGER NOT NULL CHECK (skill >= 30 AND skill <= 100),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())

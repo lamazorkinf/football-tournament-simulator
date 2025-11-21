@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ChampionCelebration } from './ChampionCelebration';
 import { MatchDetailModal } from './MatchDetailModal';
 import { BracketLine } from './BracketLine';
+import { TeamFlag } from '../ui/TeamFlag';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -75,7 +76,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails }: MatchCardProps) 
           }`}
         >
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-2xl">{homeTeam.flag}</span>
+            <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={24} />
             <span className="text-sm truncate">{homeTeam.name}</span>
           </div>
           <div className="text-lg font-bold min-w-[30px] text-center">
@@ -90,7 +91,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails }: MatchCardProps) 
           }`}
         >
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-2xl">{awayTeam.flag}</span>
+            <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={24} />
             <span className="text-sm truncate">{awayTeam.name}</span>
           </div>
           <div className="text-lg font-bold min-w-[30px] text-center">
@@ -166,8 +167,9 @@ export const KnockoutView = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleSimulate = (matchId: string) => {
+  const handleSimulate = async (matchId: string) => {
     const allMatches = [
+      ...knockout.roundOf32,
       ...knockout.roundOf16,
       ...knockout.quarterFinals,
       ...knockout.semiFinals,
@@ -178,7 +180,7 @@ export const KnockoutView = ({
     const match = allMatches.find((m) => m.id === matchId);
     if (!match) return;
 
-    simulateKnockoutMatch(matchId);
+    await simulateKnockoutMatch(matchId);
 
     toast.success(
       `🏆 Knockout match played!`,
@@ -252,6 +254,7 @@ export const KnockoutView = ({
                 <p className="text-sm text-gray-600">
                   {(() => {
                     const allMatches = [
+                      ...knockout.roundOf32,
                       ...knockout.roundOf16,
                       ...knockout.quarterFinals,
                       ...knockout.semiFinals,
@@ -371,17 +374,46 @@ export const KnockoutView = ({
           </svg>
 
           <motion.div
-            className="grid grid-cols-4 gap-6 relative"
+            className="grid grid-cols-5 gap-6 relative"
             style={{ zIndex: 1 }}
             variants={matchContainerVariants}
             initial="hidden"
             animate="visible"
           >
+        {/* Round of 32 */}
+        <div className="space-y-3">
+          <motion.h3
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-sm font-semibold text-gray-700 text-center sticky top-0 bg-gray-50 py-2 rounded"
+          >
+            Round of 32
+          </motion.h3>
+          <div className="space-y-3">
+            {knockout.roundOf32.length > 0 ? (
+              knockout.roundOf32.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  teams={teams}
+                  onSimulate={handleSimulate}
+                  onViewDetails={setSelectedMatch}
+                />
+              ))
+            ) : (
+              <div className="text-center text-gray-400 text-sm py-8">
+                Complete group stage first
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Round of 16 */}
         <div className="space-y-3">
           <motion.h3
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
             className="text-sm font-semibold text-gray-700 text-center sticky top-0 bg-gray-50 py-2 rounded"
           >
             Round of 16
@@ -399,7 +431,7 @@ export const KnockoutView = ({
               ))
             ) : (
               <div className="text-center text-gray-400 text-sm py-8">
-                Complete group stage first
+                Complete Round of 32
               </div>
             )}
           </div>
@@ -517,6 +549,32 @@ export const KnockoutView = ({
 
       {/* Mobile View - Vertical List */}
       <div className="lg:hidden space-y-6">
+        {/* Round of 32 */}
+        <Card>
+          <CardHeader className="bg-primary-600 text-white">
+            <CardTitle className="text-white text-sm">Round of 32</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="space-y-3">
+              {knockout.roundOf32.length > 0 ? (
+                knockout.roundOf32.map((match) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    teams={teams}
+                    onSimulate={handleSimulate}
+                    onViewDetails={setSelectedMatch}
+                  />
+                ))
+              ) : (
+                <div className="text-center text-gray-400 text-sm py-8">
+                  Complete group stage first
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Round of 16 */}
         <Card>
           <CardHeader className="bg-primary-600 text-white">
@@ -536,7 +594,7 @@ export const KnockoutView = ({
                 ))
               ) : (
                 <div className="text-center text-gray-400 text-sm py-8">
-                  Complete group stage first
+                  Complete Round of 32
                 </div>
               )}
             </div>

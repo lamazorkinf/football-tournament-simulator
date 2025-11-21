@@ -53,7 +53,7 @@ export const COUNTRY_CODES: Record<string, string> = {
   'tls': 'TL', 'bru': 'BN', 'mac': 'MO', 'mon': 'MN', 'tpe': 'TW',
   'gum': 'GU',
 
-  // Oceania
+  // Oceania (now part of Asia confederation)
   'nzl': 'NZ', 'png': 'PG', 'fij': 'FJ', 'ncl': 'NC', 'tah': 'PF',
   'slb': 'SB', 'van': 'VU', 'cok': 'CK', 'sam': 'WS', 'asa': 'AS',
   'ton': 'TO',

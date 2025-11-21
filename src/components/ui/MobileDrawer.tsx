@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Globe2, Award, BarChart3, History, Settings, CalendarDays, LayoutDashboard, GitCompare, Workflow, Archive, Trophy } from 'lucide-react';
+import { X, Globe2, Award, BarChart3, History, Settings, CalendarDays, GitCompare, Workflow, Archive, Trophy, Medal } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
 
-type View = 'overview' | 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -18,13 +18,13 @@ export function MobileDrawer({
   onViewChange,
 }: MobileDrawerProps) {
   const menuItems = [
-    { id: 'overview' as View, icon: LayoutDashboard, label: 'Overview' },
     { id: 'wizard' as View, icon: Workflow, label: 'Progreso' },
     { id: 'matches' as View, icon: CalendarDays, label: 'Match Center' },
     { id: 'qualifiers' as View, icon: Globe2, label: 'Qualifiers' },
     { id: 'worldcup' as View, icon: Award, label: 'Mundial' },
     { id: 'stats' as View, icon: BarChart3, label: 'Statistics' },
     { id: 'comparison' as View, icon: GitCompare, label: 'Comparar' },
+    { id: 'champions' as View, icon: Medal, label: 'Campeones' },
     { id: 'history' as View, icon: History, label: 'History' },
     { id: 'tournaments' as View, icon: Archive, label: 'Torneos' },
     { id: 'settings' as View, icon: Settings, label: 'Configuración' },

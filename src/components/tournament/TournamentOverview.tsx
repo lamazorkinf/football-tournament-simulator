@@ -419,13 +419,12 @@ function getNextStep(tournament: Tournament, qualifierStats: any, worldCupStats:
 }
 
 function calculateRegionalProgress(tournament: Tournament) {
-  const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia', 'Oceania'];
+  const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
   const regionIcons: Record<Region, string> = {
     Europe: '🇪🇺',
     America: '🌎',
     Africa: '🌍',
     Asia: '🌏',
-    Oceania: '🌏',
   };
 
   return regions.map((region) => {

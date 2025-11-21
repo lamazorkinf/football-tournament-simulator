@@ -46,7 +46,7 @@ CREATE INDEX idx_tournaments_new_status ON tournaments_new(status);
 CREATE TABLE qualifier_groups (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   tournament_id TEXT NOT NULL REFERENCES tournaments_new(id) ON DELETE CASCADE,
-  region TEXT NOT NULL CHECK (region IN ('Europe', 'America', 'Africa', 'Asia', 'Oceania')),
+  region TEXT NOT NULL CHECK (region IN ('Europe', 'America', 'Africa', 'Asia')),
   name TEXT NOT NULL,
   num_qualify INTEGER NOT NULL DEFAULT 2,
   created_at TIMESTAMPTZ DEFAULT NOW(),

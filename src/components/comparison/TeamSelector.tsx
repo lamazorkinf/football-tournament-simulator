@@ -32,7 +32,7 @@ export function TeamSelector({
   // Sort by skill descending
   const sortedTeams = [...filteredTeams].sort((a, b) => b.skill - a.skill);
 
-  const regions: Array<Region | 'all'> = ['all', 'Europe', 'America', 'Africa', 'Asia', 'Oceania'];
+  const regions: Array<Region | 'all'> = ['all', 'Europe', 'America', 'Africa', 'Asia'];
 
   if (selectedTeam) {
     return (

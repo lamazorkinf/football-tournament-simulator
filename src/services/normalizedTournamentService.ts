@@ -224,7 +224,6 @@ const loadTournamentFromNormalizedSchema = async (
       America: [],
       Africa: [],
       Asia: [],
-      Oceania: [],
     };
 
     for (const dbGroup of qualifierGroups || []) {

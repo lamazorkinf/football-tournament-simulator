@@ -1,8 +1,8 @@
-import { Trophy, Globe2, Award, BarChart3, Settings, History, CalendarDays, LayoutDashboard, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trophy, Globe2, Award, BarChart3, Settings, History, CalendarDays, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight, Medal } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
 import { useSidebarCollapse } from '../../hooks/useSidebarCollapse';
 
-type View = 'overview' | 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
 
 interface SidebarProps {
   currentView: View;
@@ -13,13 +13,13 @@ interface SidebarProps {
 export function Sidebar({ currentView, onViewChange, tournamentYear }: SidebarProps) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
   const menuItems = [
-    { id: 'overview' as View, icon: LayoutDashboard, label: 'Overview' },
     { id: 'wizard' as View, icon: Workflow, label: 'Progreso' },
     { id: 'matches' as View, icon: CalendarDays, label: 'Match Center' },
     { id: 'qualifiers' as View, icon: Globe2, label: 'Qualifiers' },
     { id: 'worldcup' as View, icon: Award, label: 'Mundial' },
     { id: 'stats' as View, icon: BarChart3, label: 'Statistics' },
     { id: 'comparison' as View, icon: GitCompare, label: 'Comparar' },
+    { id: 'champions' as View, icon: Medal, label: 'Campeones' },
     { id: 'history' as View, icon: History, label: 'History' },
     { id: 'tournaments' as View, icon: Archive, label: 'Torneos' },
     { id: 'settings' as View, icon: Settings, label: 'Configuración' },

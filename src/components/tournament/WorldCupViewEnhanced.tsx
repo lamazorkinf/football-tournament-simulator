@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { Trophy, Award, Users, Zap } from 'lucide-react';
+import { Trophy, Award, Users, Zap, RefreshCw } from 'lucide-react';
 import { WorldCupGridView } from './WorldCupGridView';
 import { KnockoutView } from './KnockoutView';
 import { areGroupsComplete } from '../../core/knockout';
@@ -10,7 +10,7 @@ import { Button } from '../ui/Button';
 type WorldCupTab = 'groups' | 'playoffs';
 
 export function WorldCupViewEnhanced() {
-  const { currentTournament, teams, advanceToKnockout } = useTournamentStore();
+  const { currentTournament, teams, advanceToKnockout, regenerateKnockoutStage, simulateMatch } = useTournamentStore();
   const [activeTab, setActiveTab] = useState<WorldCupTab>('groups');
 
   if (!currentTournament) {
@@ -101,7 +101,7 @@ export function WorldCupViewEnhanced() {
       ? Math.round((playedKnockoutMatches / totalKnockoutMatches) * 100)
       : 0;
 
-  const handleAdvanceToKnockout = () => {
+  const handleAdvanceToKnockout = async () => {
     if (
       !confirm(
         '¿Generar Dieciseisavos de Final?\n\nLos 32 equipos clasificados (2 por grupo) avanzarán a la fase de eliminación directa.'
@@ -109,9 +109,21 @@ export function WorldCupViewEnhanced() {
     ) {
       return;
     }
-    advanceToKnockout();
+    await advanceToKnockout();
     toast.success('⚡ ¡Dieciseisavos de Final generados!');
     setActiveTab('playoffs');
+  };
+
+  const handleRegenerateKnockout = async () => {
+    if (
+      !confirm(
+        '¿Regenerar Playoffs?\n\nSe eliminarán todos los partidos de playoffs (no jugados) y se volverán a generar los cruces basándose en las posiciones actuales de la fase de grupos.'
+      )
+    ) {
+      return;
+    }
+    await regenerateKnockoutStage();
+    toast.success('✅ ¡Playoffs regenerados correctamente!');
   };
 
   return (
@@ -235,7 +247,7 @@ export function WorldCupViewEnhanced() {
 
         {activeTab === 'playoffs' && knockoutStarted && (
           <div className="p-6 bg-gray-50">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
               <div>
                 <div className="text-sm text-gray-600">Partidos totales</div>
                 <div className="text-2xl font-bold text-gray-900">
@@ -255,6 +267,19 @@ export function WorldCupViewEnhanced() {
                 </div>
               </div>
             </div>
+
+            {/* Regenerate Knockout Button - Only show if no matches played */}
+            {knockoutStarted && playedKnockoutMatches === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateKnockout}
+                className="gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Regenerar Playoffs
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -265,9 +290,8 @@ export function WorldCupViewEnhanced() {
           <WorldCupGridView
             groups={worldCup.groups}
             teams={teams}
-            onGroupClick={(groupId) => {
-              // Handle group click - could navigate to detail
-              console.log('Group clicked:', groupId);
+            onSimulateMatch={(matchId, groupId) => {
+              simulateMatch(matchId, groupId, 'world-cup');
             }}
           />
         )}

@@ -138,44 +138,46 @@ export function MatchDetailModal({
           <div className="p-6 space-y-4">
             <h3 className="font-semibold text-gray-900 mb-3">Match Statistics</h3>
 
-            {/* Skill Changes */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-600">Skill Change</span>
-                  {homeSkillChange !== 0 && (
-                    homeSkillChange > 0 ? (
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-5 h-5 text-red-600" />
-                    )
-                  )}
+            {/* Skill Changes - Only show if available */}
+            {(homeSkillChange !== 0 || awaySkillChange !== 0) && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-600">Skill Change</span>
+                    {homeSkillChange !== 0 && (
+                      homeSkillChange > 0 ? (
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <TrendingDown className="w-5 h-5 text-red-600" />
+                      )
+                    )}
+                  </div>
+                  <p className={`text-2xl font-bold ${
+                    homeSkillChange > 0 ? 'text-green-600' : homeSkillChange < 0 ? 'text-red-600' : 'text-gray-400'
+                  }`}>
+                    {homeSkillChange > 0 ? '+' : ''}{homeSkillChange.toFixed(2)}
+                  </p>
                 </div>
-                <p className={`text-2xl font-bold ${
-                  homeSkillChange > 0 ? 'text-green-600' : homeSkillChange < 0 ? 'text-red-600' : 'text-gray-400'
-                }`}>
-                  {homeSkillChange > 0 ? '+' : ''}{homeSkillChange.toFixed(2)}
-                </p>
-              </div>
 
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-600">Skill Change</span>
-                  {awaySkillChange !== 0 && (
-                    awaySkillChange > 0 ? (
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-5 h-5 text-red-600" />
-                    )
-                  )}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-600">Skill Change</span>
+                    {awaySkillChange !== 0 && (
+                      awaySkillChange > 0 ? (
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <TrendingDown className="w-5 h-5 text-red-600" />
+                      )
+                    )}
+                  </div>
+                  <p className={`text-2xl font-bold ${
+                    awaySkillChange > 0 ? 'text-green-600' : awaySkillChange < 0 ? 'text-red-600' : 'text-gray-400'
+                  }`}>
+                    {awaySkillChange > 0 ? '+' : ''}{awaySkillChange.toFixed(2)}
+                  </p>
                 </div>
-                <p className={`text-2xl font-bold ${
-                  awaySkillChange > 0 ? 'text-green-600' : awaySkillChange < 0 ? 'text-red-600' : 'text-gray-400'
-                }`}>
-                  {awaySkillChange > 0 ? '+' : ''}{awaySkillChange.toFixed(2)}
-                </p>
               </div>
-            </div>
+            )}
 
             {/* Goal Timeline (simulated) */}
             <div className="bg-gray-50 rounded-lg p-4">
@@ -195,7 +197,7 @@ export function MatchDetailModal({
                       className="flex items-center gap-3 text-sm"
                     >
                       <span className="font-mono text-gray-500 w-8">{minute}'</span>
-                      <span className="text-2xl">{team.flag}</span>
+                      <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
                       <span className="font-medium text-gray-900">{team.name}</span>
                       <span className="text-gray-500">⚽</span>
                     </motion.div>

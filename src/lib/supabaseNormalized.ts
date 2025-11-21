@@ -15,6 +15,10 @@ import { supabase } from './supabase';
  * and the types are defined in database.ts.
  */
 export const db = {
+  // Base tables
+  teams: () => (supabase.from('teams') as any),
+  match_history: () => (supabase.from('match_history') as any),
+
   // Normalized tables
   tournaments_new: () => (supabase.from('tournaments_new') as any),
   qualifier_groups: () => (supabase.from('qualifier_groups') as any),

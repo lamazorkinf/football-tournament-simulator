@@ -12,7 +12,12 @@
       "Bash(git checkout:*)",
       "Bash(npx tsx:*)",
       "Bash(npx supabase:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:inside.fifa.com)",
+      "WebFetch(domain:www.soccerallover.com)",
+      "WebFetch(domain:football-ranking.com)",
+      "mcp__supabase__execute_sql"
     ],
     "deny": [],
     "ask": []

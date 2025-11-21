@@ -193,7 +193,7 @@ export function generateQuarterFinals(roundOf16: KnockoutMatch[]): KnockoutMatch
         awayScore: null,
         isPlayed: false,
         stage: 'world-cup-knockout',
-        round: 'quarter-final',
+        round: 'quarter',
         position: pairing.position,
       });
     }
@@ -226,7 +226,7 @@ export function generateSemiFinals(quarterFinals: KnockoutMatch[]): KnockoutMatc
         awayScore: null,
         isPlayed: false,
         stage: 'world-cup-knockout',
-        round: 'semi-final',
+        round: 'semi',
         position: pairing.position,
       });
     }

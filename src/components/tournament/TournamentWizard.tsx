@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import {
   getQualifierProgress,
@@ -7,6 +7,7 @@ import {
   canAdvanceToWorldCup,
   canAdvanceToKnockout,
 } from '../../utils/tournamentProgress';
+import { sortStandings, getBestRunnersUp } from '../../core/scheduler';
 import { Button } from '../ui/Button';
 import {
   CheckCircle2,
@@ -16,18 +17,26 @@ import {
   Award,
   Globe2,
   Zap,
+  Sparkles,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { DrawSimulator } from './DrawSimulator';
+import type { WorldCupGroup, Group, Region, Team } from '../../types';
 
 export function TournamentWizard() {
   const {
     currentTournament,
+    teams,
     advanceToWorldCup,
+    advanceToWorldCupWithManualDraw,
     advanceToKnockout,
     generateDrawAndFixtures,
     regenerateWorldCupDrawAndFixtures,
   } = useTournamentStore();
+
+  const [showDrawSimulator, setShowDrawSimulator] = useState(false);
+  const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
 
   if (!currentTournament) {
     return null;
@@ -88,12 +97,64 @@ export function TournamentWizard() {
   const handleAdvanceToWorldCup = () => {
     if (
       confirm(
-        '¿Avanzar a la fase de Copa del Mundo?\n\nLos 64 equipos clasificados (42 primeros + 22 mejores segundos) se distribuirán en 16 grupos del Mundial.'
+        '¿Avanzar a la fase de Copa del Mundo con sorteo AUTOMÁTICO?\n\nLos 64 equipos clasificados (42 primeros + 22 mejores segundos) se distribuirán en 16 grupos del Mundial automáticamente.'
       )
     ) {
       advanceToWorldCup();
       toast.success('🏆 ¡Avanzado a Copa del Mundo con 64 equipos clasificados!');
     }
+  };
+
+  const handleManualDraw = () => {
+    // Calculate qualified teams (same logic as advanceToWorldCup)
+    const qualifiedTeamIds: string[] = [];
+
+    // Collect all groups from all regions
+    const allGroups: Group[] = [];
+    for (const region in currentTournament.qualifiers) {
+      const groups = currentTournament.qualifiers[region as Region];
+      allGroups.push(...groups);
+    }
+
+    // Get all first-place teams (42 teams from 42 groups)
+    for (const region in currentTournament.qualifiers) {
+      const groups = currentTournament.qualifiers[region as Region];
+      groups.forEach((group) => {
+        const sorted = sortStandings(group.standings, teams);
+        if (sorted.length > 0) {
+          const firstPlace = sorted[0].teamId;
+          qualifiedTeamIds.push(firstPlace);
+        }
+      });
+    }
+
+    // Get the 22 best second-place teams across all regions (42 + 22 = 64 total)
+    const bestRunnersUp = getBestRunnersUp(allGroups, 22, teams);
+    qualifiedTeamIds.push(...bestRunnersUp);
+
+    console.log(`✅ Qualified teams for manual draw: ${qualifiedTeamIds.length} (42 winners + 22 best runners-up)`);
+
+    if (qualifiedTeamIds.length !== 64) {
+      toast.error(`Error: Solo ${qualifiedTeamIds.length} equipos clasificados en lugar de 64.`);
+      return;
+    }
+
+    // Get qualified Team objects with all their data
+    const qualifiedTeams = teams.filter((team) => qualifiedTeamIds.includes(team.id));
+    setQualifiedTeamsForDraw(qualifiedTeams);
+    setShowDrawSimulator(true);
+  };
+
+  const handleDrawSimulatorComplete = (groups: WorldCupGroup[]) => {
+    console.log('Draw completed with groups:', groups);
+    advanceToWorldCupWithManualDraw(groups);
+    setShowDrawSimulator(false);
+    toast.success('🏆 ¡Sorteo manual completado y guardado exitosamente!');
+  };
+
+  const handleDrawSimulatorCancel = () => {
+    setShowDrawSimulator(false);
+    toast.info('Sorteo manual cancelado');
   };
 
   const handleRegenerateWorldCupDraw = () => {
@@ -107,13 +168,13 @@ export function TournamentWizard() {
     }
   };
 
-  const handleAdvanceToKnockout = () => {
+  const handleAdvanceToKnockout = async () => {
     if (
       confirm(
         '¿Generar Dieciseisavos de Final?\n\nLos 32 equipos clasificados (2 por grupo) avanzarán a la fase de eliminación directa.'
       )
     ) {
-      advanceToKnockout();
+      await advanceToKnockout();
       toast.success('⚡ ¡Dieciseisavos de Final generados!');
     }
   };
@@ -209,15 +270,26 @@ export function TournamentWizard() {
             }
             actions={
               canStartWorldCup ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleAdvanceToWorldCup}
-                  className="gap-2"
-                >
-                  <Trophy className="w-4 h-4" />
-                  Iniciar Copa del Mundo
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleAdvanceToWorldCup}
+                    className="gap-2"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Sorteo Automático
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleManualDraw}
+                    className="gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Sorteo Manual (Simulador)
+                  </Button>
+                </div>
               ) : canRegenerateWorldCup ? (
                 <Button
                   variant="outline"
@@ -295,6 +367,34 @@ export function TournamentWizard() {
           )}
         </div>
       </div>
+
+      {/* Draw Simulator Modal */}
+      <AnimatePresence>
+        {showDrawSimulator && canStartWorldCup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-lg shadow-2xl max-w-[95vw] w-full max-h-[95vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <DrawSimulator
+                  qualifiedTeams={qualifiedTeamsForDraw}
+                  onComplete={handleDrawSimulatorComplete}
+                  onCancel={handleDrawSimulatorCancel}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -423,8 +523,8 @@ function getRoundLabel(
   round:
     | 'round-of-32'
     | 'round-of-16'
-    | 'quarter-final'
-    | 'semi-final'
+    | 'quarter'
+    | 'semi'
     | 'final'
     | 'complete'
 ): string {
@@ -433,9 +533,9 @@ function getRoundLabel(
       return 'Dieciseisavos';
     case 'round-of-16':
       return 'Octavos';
-    case 'quarter-final':
+    case 'quarter':
       return 'Cuartos';
-    case 'semi-final':
+    case 'semi':
       return 'Semifinales';
     case 'final':
       return 'Final';

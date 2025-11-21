@@ -14,7 +14,7 @@ export interface Database {
           id: string
           name: string
           flag: string
-          region: 'Europe' | 'America' | 'Africa' | 'Asia' | 'Oceania'
+          region: 'Europe' | 'America' | 'Africa' | 'Asia'
           skill: number
           created_at: string
           updated_at: string
@@ -23,7 +23,7 @@ export interface Database {
           id: string
           name: string
           flag: string
-          region: 'Europe' | 'America' | 'Africa' | 'Asia' | 'Oceania'
+          region: 'Europe' | 'America' | 'Africa' | 'Asia'
           skill: number
           created_at?: string
           updated_at?: string
@@ -171,7 +171,7 @@ export interface Database {
         Row: {
           id: string
           tournament_id: string
-          region: 'Europe' | 'America' | 'Africa' | 'Asia' | 'Oceania'
+          region: 'Europe' | 'America' | 'Africa' | 'Asia'
           name: string
           num_qualify: number
           created_at: string
@@ -179,7 +179,7 @@ export interface Database {
         Insert: {
           id?: string
           tournament_id: string
-          region: 'Europe' | 'America' | 'Africa' | 'Asia' | 'Oceania'
+          region: 'Europe' | 'America' | 'Africa' | 'Asia'
           name: string
           num_qualify?: number
           created_at?: string

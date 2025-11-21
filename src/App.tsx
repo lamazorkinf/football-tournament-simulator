@@ -1,22 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
 import { useSidebarCollapse } from './hooks/useSidebarCollapse';
+import { TeamProfileProvider } from './hooks/useTeamProfile';
 import { StatsDashboard } from './components/tournament/StatsDashboard';
 import { MatchHistory } from './components/tournament/MatchHistory';
 import { MatchCenter } from './components/tournament/MatchCenter';
-import { TournamentOverview } from './components/tournament/TournamentOverview';
 import { TournamentWizard } from './components/tournament/TournamentWizard';
 import { SettingsHub } from './components/settings/SettingsHub';
 import { TeamComparison } from './components/comparison/TeamComparison';
 import { QualifiersView } from './components/tournament/QualifiersView';
 import { WorldCupViewEnhanced } from './components/tournament/WorldCupViewEnhanced';
 import { TournamentHistory } from './components/tournament/TournamentHistory';
+import { ChampionsHistory } from './components/tournament/ChampionsHistory';
 import { MobileDrawer } from './components/ui/MobileDrawer';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
+import { ProgressModal } from './components/ui/ProgressModal';
 import { Menu } from 'lucide-react';
 
-type View = 'overview' | 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
 
 function App() {
   const {
@@ -27,7 +29,7 @@ function App() {
   } = useTournamentStore();
 
   const { isCollapsed } = useSidebarCollapse();
-  const [currentView, setCurrentView] = useState<View>('overview');
+  const [currentView, setCurrentView] = useState<View>('wizard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
 
@@ -65,9 +67,13 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile Drawer */}
-      <MobileDrawer
+    <TeamProfileProvider>
+      <div className="min-h-screen bg-gray-50">
+        {/* Progress Modal */}
+        <ProgressModal />
+
+        {/* Mobile Drawer */}
+        <MobileDrawer
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         currentView={currentView}
@@ -111,13 +117,7 @@ function App() {
         </header>
 
         <main className="px-4 sm:px-6 lg:px-8 py-6">
-        {currentView === 'overview' ? (
-          <TournamentOverview
-            tournament={currentTournament}
-            teams={teams}
-            onNavigate={(view) => setCurrentView(view as View)}
-          />
-        ) : currentView === 'wizard' ? (
+        {currentView === 'wizard' ? (
           <TournamentWizard />
         ) : currentView === 'matches' ? (
           <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />
@@ -138,6 +138,8 @@ function App() {
           />
         ) : currentView === 'tournaments' ? (
           <TournamentHistory />
+        ) : currentView === 'champions' ? (
+          <ChampionsHistory />
         ) : null}
         </main>
 
@@ -147,7 +149,8 @@ function App() {
           </div>
         </footer>
       </div>
-    </div>
+      </div>
+    </TeamProfileProvider>
   );
 }
 

@@ -38,7 +38,7 @@ export function WorldCupView({
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [showKnockout, setShowKnockout] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const { advanceToKnockout } = useTournamentStore();
+  const { advanceToKnockout, simulateMatch } = useTournamentStore();
 
   const selectedGroup = selectedGroupId
     ? groups.find((g) => g.id === selectedGroupId)
@@ -126,7 +126,9 @@ export function WorldCupView({
         <WorldCupGridView
           groups={groups}
           teams={teams}
-          onGroupClick={(groupId) => setSelectedGroupId(groupId)}
+          onSimulateMatch={(matchId, groupId) => {
+            simulateMatch(matchId, groupId, 'world-cup');
+          }}
         />
       ) : (
         <>

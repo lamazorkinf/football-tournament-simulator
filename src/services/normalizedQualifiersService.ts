@@ -22,20 +22,28 @@ export const normalizedQualifiersService = {
 
     try {
       for (const group of groups) {
-        // Create qualifier group
+        // Create or update qualifier group (upsert to avoid conflicts)
         const { error: groupError } = await db
           .qualifier_groups()
-          .insert({
+          .upsert({
             id: group.id,
             tournament_id: tournamentId,
             region,
             name: group.name,
             num_qualify: 2, // Default: top 2 qualify
+          }, {
+            onConflict: 'id'
           })
           .select()
           .single();
 
         if (groupError) throw groupError;
+
+        // Delete existing team standings for this group to start fresh
+        await db
+          .qualifier_group_teams()
+          .delete()
+          .eq('group_id', group.id);
 
         // Create group teams with initial standings
         for (const teamId of group.teamIds) {
@@ -85,7 +93,7 @@ export const normalizedQualifiersService = {
     try {
       const { error } = await db
         .matches_new()
-        .insert({
+        .upsert({
           id: match.id,
           tournament_id: tournamentId,
           match_type: 'qualifier',
@@ -96,6 +104,8 @@ export const normalizedQualifiersService = {
           away_score: match.awayScore,
           is_played: match.isPlayed,
           matchday: match.matchday, // Save matchday for ordering
+        }, {
+          onConflict: 'id'
         });
 
       if (error) throw error;

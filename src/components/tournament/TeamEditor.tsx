@@ -14,7 +14,6 @@ const REGIONS: Region[] = [
   'America',
   'Africa',
   'Asia',
-  'Oceania',
 ];
 
 export function TeamEditor() {

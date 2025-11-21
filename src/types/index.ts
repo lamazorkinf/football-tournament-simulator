@@ -1,4 +1,4 @@
-export type Region = 'Europe' | 'America' | 'Africa' | 'Asia' | 'Oceania';
+export type Region = 'Europe' | 'America' | 'Africa' | 'Asia';
 
 export type SkillTier = 'Elite' | 'Strong' | 'Average' | 'Weak';
 
@@ -57,7 +57,7 @@ export interface WorldCupGroup {
 }
 
 export interface KnockoutMatch extends Match {
-  round: 'round-of-32' | 'round-of-16' | 'quarter-final' | 'semi-final' | 'third-place' | 'final';
+  round: 'round-of-32' | 'round-of-16' | 'quarter' | 'semi' | 'third-place' | 'final';
   winnerId?: string;
   loserId?: string;
   penalties?: {
@@ -127,8 +127,10 @@ export interface TournamentState {
   simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => void;
   simulateAllGroupMatches: (groupId: string, stage: 'qualifier' | 'world-cup') => void;
   advanceToWorldCup: () => void;
-  advanceToKnockout: () => void;
-  simulateKnockoutMatch: (matchId: string) => void;
+  advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => void;
+  advanceToKnockout: () => Promise<void>;
+  regenerateKnockoutStage: () => Promise<void>;
+  simulateKnockoutMatch: (matchId: string) => Promise<void>;
   generateDrawAndFixtures: () => void;
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
 }

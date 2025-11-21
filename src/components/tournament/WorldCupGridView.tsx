@@ -1,17 +1,20 @@
-import type { WorldCupGroup, Team } from '../../types';
+import { useState } from 'react';
+import type { WorldCupGroup, Team, Group } from '../../types';
 import { Card, CardContent } from '../ui/Card';
 import { Trophy, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { sortStandings } from '../../core/scheduler';
 import { TeamFlag } from '../ui/TeamFlag';
+import { GroupDetailModal } from './GroupDetailModal';
 
 interface WorldCupGridViewProps {
   groups: WorldCupGroup[];
   teams: Team[];
-  onGroupClick: (groupId: string) => void;
+  onSimulateMatch?: (matchId: string, groupId: string) => void;
 }
 
-export function WorldCupGridView({ groups, teams, onGroupClick }: WorldCupGridViewProps) {
+export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGridViewProps) {
+  const [selectedGroup, setSelectedGroup] = useState<WorldCupGroup | null>(null);
   const getTeam = (teamId: string) => teams.find((t) => t.id === teamId);
 
   return (
@@ -46,7 +49,7 @@ export function WorldCupGridView({ groups, teams, onGroupClick }: WorldCupGridVi
             >
               <div
                 className="cursor-pointer"
-                onClick={() => onGroupClick(group.id)}
+                onClick={() => setSelectedGroup(group)}
               >
                 <Card
                   className={`transition-all hover:shadow-xl hover:scale-105 ${
@@ -215,6 +218,19 @@ export function WorldCupGridView({ groups, teams, onGroupClick }: WorldCupGridVi
           </CardContent>
         </Card>
       </div>
+
+      {/* Group Detail Modal */}
+      {selectedGroup && (
+        <GroupDetailModal
+          group={selectedGroup as Group}
+          teams={teams}
+          region="Copa del Mundo"
+          onClose={() => setSelectedGroup(null)}
+          onSimulate={onSimulateMatch ? (matchId) => {
+            onSimulateMatch(matchId, selectedGroup.id);
+          } : undefined}
+        />
+      )}
     </div>
   );
 }

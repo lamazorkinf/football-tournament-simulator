@@ -19,7 +19,7 @@ export interface WorldCupGroupProgress {
 }
 
 export interface KnockoutProgress {
-  currentRound: 'round-of-32' | 'round-of-16' | 'quarter-final' | 'semi-final' | 'final' | 'complete';
+  currentRound: 'round-of-32' | 'round-of-16' | 'quarter' | 'semi' | 'final' | 'complete';
   roundOf32Complete: boolean;
   roundOf16Complete: boolean;
   quarterFinalsComplete: boolean;
@@ -142,9 +142,9 @@ export function getKnockoutProgress(knockout: KnockoutBracket): KnockoutProgress
   } else if (semiFinalsComplete) {
     currentRound = 'final';
   } else if (quarterFinalsComplete) {
-    currentRound = 'semi-final';
+    currentRound = 'semi';
   } else if (roundOf16Complete) {
-    currentRound = 'quarter-final';
+    currentRound = 'quarter';
   } else if (roundOf32Complete) {
     currentRound = 'round-of-16';
   }

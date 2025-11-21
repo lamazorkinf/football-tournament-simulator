@@ -382,4 +382,38 @@ export const normalizedWorldCupService = {
       throw error;
     }
   },
+
+  /**
+   * Delete only knockout stage data (matches_new and match_history)
+   * Keeps World Cup group stage data intact
+   */
+  async deleteKnockoutData(tournamentId: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+
+    try {
+      // Delete knockout matches from matches_new
+      const { error: matchesError } = await db
+        .matches_new()
+        .delete()
+        .eq('tournament_id', tournamentId)
+        .eq('match_type', 'world-cup-knockout');
+
+      if (matchesError) throw matchesError;
+
+      // Delete knockout matches from match_history
+      const { supabase } = await import('../lib/supabase');
+      const { error: historyError } = await supabase
+        .from('match_history')
+        .delete()
+        .eq('tournament_id', tournamentId)
+        .eq('stage', 'world-cup-knockout');
+
+      if (historyError) throw historyError;
+
+      console.log(`Deleted knockout data for tournament ${tournamentId}`);
+    } catch (error) {
+      console.error('Error deleting knockout data:', error);
+      throw error;
+    }
+  },
 };

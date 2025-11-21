@@ -1403,77 +1403,77 @@
     "id": "nzl",
     "name": "New Zealand",
     "flag": "https://flagsapi.com/NZ/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 72
   },
   {
     "id": "png",
     "name": "Papua New Guinea",
     "flag": "https://flagsapi.com/PG/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 58
   },
   {
     "id": "fij",
     "name": "Fiji",
     "flag": "https://flagsapi.com/FJ/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 57
   },
   {
     "id": "ncl",
     "name": "New Caledonia",
     "flag": "https://flagsapi.com/NC/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 56
   },
   {
     "id": "tah",
     "name": "Tahiti",
     "flag": "https://flagsapi.com/PF/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 55
   },
   {
     "id": "slb",
     "name": "Solomon Islands",
     "flag": "https://flagsapi.com/SB/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 54
   },
   {
     "id": "van",
     "name": "Vanuatu",
     "flag": "https://flagsapi.com/VU/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 53
   },
   {
     "id": "cok",
     "name": "Cook Islands",
     "flag": "https://flagsapi.com/CK/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 52
   },
   {
     "id": "sam",
     "name": "Samoa",
     "flag": "https://flagsapi.com/WS/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 54
   },
   {
     "id": "asa",
     "name": "American Samoa",
     "flag": "https://flagsapi.com/AS/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 51
   },
   {
     "id": "ton",
     "name": "Tonga",
     "flag": "https://flagsapi.com/TO/flat/64.png",
-    "region": "Oceania",
+    "region": "Asia",
     "skill": 52
   }
 ]
