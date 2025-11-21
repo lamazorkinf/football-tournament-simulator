@@ -2,6 +2,8 @@ import type { WorldCupGroup, Team } from '../../types';
 import { Card, CardContent } from '../ui/Card';
 import { Trophy, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { sortStandings } from '../../core/scheduler';
+import { TeamFlag } from '../ui/TeamFlag';
 
 interface WorldCupGridViewProps {
   groups: WorldCupGroup[];
@@ -64,7 +66,7 @@ export function WorldCupGridView({ groups, teams, onGroupClick }: WorldCupGridVi
 
                   {/* Standings Mini Table */}
                   <div className="space-y-2 mb-4">
-                    {group.standings.slice(0, 4).map((standing, idx) => {
+                    {sortStandings(group.standings, teams).slice(0, 4).map((standing, idx) => {
                       const team = getTeam(standing.teamId);
                       const isQualified = idx < 2;
 
@@ -85,7 +87,14 @@ export function WorldCupGridView({ groups, teams, onGroupClick }: WorldCupGridVi
                             >
                               {idx + 1}
                             </span>
-                            <span className="text-xl flex-shrink-0">{team?.flag}</span>
+                            {team && (
+                              <TeamFlag
+                                teamId={team.id}
+                                teamName={team.name}
+                                flagUrl={team.flag}
+                                size={24}
+                              />
+                            )}
                             <span
                               className={`text-sm font-medium truncate ${
                                 isQualified ? 'text-green-900' : 'text-gray-700'

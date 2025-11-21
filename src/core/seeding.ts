@@ -1,10 +1,39 @@
 import type { Team, WorldCupGroup } from '../types';
 import { nanoid } from 'nanoid';
-import { generateWorldCupGroupMatches, initializeStandings } from './scheduler';
+import { initializeStandings } from './scheduler';
+import { WORLD_CUP_FIXTURE_TEMPLATE, type WorldCupFixtureLetter } from '../constants/fixtureTemplate';
+import type { Match } from '../types';
 
 interface Pot {
   teams: Team[];
   tier: string;
+}
+
+/**
+ * Generate World Cup group matches using the standard FIFA fixture template
+ * Assigns positions A, B, C, D based on pot (bombo) position
+ */
+function generateWorldCupGroupMatchesWithTemplate(
+  _teamIds: string[],
+  letterAssignments: Record<string, WorldCupFixtureLetter>
+): Match[] {
+  // Invert the mapping: letter -> teamId
+  const letterToTeam: Record<WorldCupFixtureLetter, string> = {} as any;
+  Object.entries(letterAssignments).forEach(([teamId, letter]) => {
+    letterToTeam[letter] = teamId;
+  });
+
+  // Generate matches from template
+  return WORLD_CUP_FIXTURE_TEMPLATE.map((fixture) => ({
+    id: nanoid(),
+    homeTeamId: letterToTeam[fixture.home],
+    awayTeamId: letterToTeam[fixture.away],
+    homeScore: null,
+    awayScore: null,
+    isPlayed: false,
+    stage: 'world-cup' as const,
+    matchday: fixture.matchday,
+  }));
 }
 
 /**
@@ -13,6 +42,7 @@ interface Pot {
  * - Ensures regional diversity in groups
  * - Avoids placing teams from same region in same group when possible
  * - Handles 64 teams in 16 groups
+ * - Assigns positions A, B, C, D based on pot for fixture generation
  */
 export function createSmartWorldCupDraw(qualifiedTeams: Team[]): WorldCupGroup[] {
   // Sort teams by skill rating
@@ -24,7 +54,7 @@ export function createSmartWorldCupDraw(qualifiedTeams: Team[]): WorldCupGroup[]
   const pot3 = sortedTeams.slice(32, 48); // Teams 33-48
   const pot4 = sortedTeams.slice(48, 64); // Teams 49-64
 
-  // Initialize 16 groups (A through P)
+  // Initialize 16 groups (A through P) with letter assignments
   const groups: WorldCupGroup[] = [];
   for (let i = 0; i < 16; i++) {
     groups.push({
@@ -33,19 +63,20 @@ export function createSmartWorldCupDraw(qualifiedTeams: Team[]): WorldCupGroup[]
       teamIds: [],
       matches: [],
       standings: [],
+      letterAssignments: {}, // Will be populated as teams are assigned
     });
   }
 
-  // Assign teams from each pot to groups
+  // Assign teams from each pot to groups and track their positions (A, B, C, D)
   // Use snake draft to balance group strength
-  assignPotToGroups(groups, pot1, 0);
-  assignPotToGroups(groups, pot2, 1);
-  assignPotToGroups(groups, pot3, 2);
-  assignPotToGroups(groups, pot4, 3);
+  assignPotToGroupsWithLetters(groups, pot1, 0, 'A'); // Pot 1 → Position A
+  assignPotToGroupsWithLetters(groups, pot2, 1, 'B'); // Pot 2 → Position B
+  assignPotToGroupsWithLetters(groups, pot3, 2, 'C'); // Pot 3 → Position C
+  assignPotToGroupsWithLetters(groups, pot4, 3, 'D'); // Pot 4 → Position D
 
-  // Generate matches and standings for each group
+  // Generate matches using template and standings for each group
   groups.forEach((group) => {
-    group.matches = generateWorldCupGroupMatches(group.teamIds);
+    group.matches = generateWorldCupGroupMatchesWithTemplate(group.teamIds, group.letterAssignments || {});
     group.standings = initializeStandings(group.teamIds);
   });
 
@@ -53,12 +84,13 @@ export function createSmartWorldCupDraw(qualifiedTeams: Team[]): WorldCupGroup[]
 }
 
 /**
- * Assign teams from a pot to groups with regional diversity
+ * Assign teams from a pot to groups with regional diversity and letter positions
  */
-function assignPotToGroups(
+function assignPotToGroupsWithLetters(
   groups: WorldCupGroup[],
   pot: Team[],
-  potIndex: number
+  potIndex: number,
+  letter: WorldCupFixtureLetter
 ): void {
   const shuffledPot = [...pot];
 
@@ -86,31 +118,41 @@ function assignPotToGroups(
 
     if (regionConflict && potIndex > 0) {
       // Try to find alternative group without region conflict
-      const alternativeGroup = findAlternativeGroup(
+      const alternativeGroup = findAlternativeGroupWithLetters(
         groups,
         team,
         groupOrder,
-        index
+        index,
+        letter
       );
       if (alternativeGroup) {
         alternativeGroup.teamIds.push(team.id);
+        if (!alternativeGroup.letterAssignments) {
+          alternativeGroup.letterAssignments = {};
+        }
+        alternativeGroup.letterAssignments[team.id] = letter;
         return;
       }
     }
 
     // Add to original target group
     targetGroup.teamIds.push(team.id);
+    if (!targetGroup.letterAssignments) {
+      targetGroup.letterAssignments = {};
+    }
+    targetGroup.letterAssignments[team.id] = letter;
   });
 }
 
 /**
- * Find alternative group without regional conflict
+ * Find alternative group without regional conflict (with letter assignments)
  */
-function findAlternativeGroup(
+function findAlternativeGroupWithLetters(
   groups: WorldCupGroup[],
   _team: Team,
   groupOrder: number[],
-  currentIndex: number
+  currentIndex: number,
+  _letter: WorldCupFixtureLetter
 ): WorldCupGroup | null {
   // Check adjacent groups
   const candidates = [

@@ -356,4 +356,30 @@ export const normalizedWorldCupService = {
       throw error;
     }
   },
+
+  /**
+   * Delete World Cup matches from match_history
+   * Note: Uses raw supabase client as match_history is not in the normalized db object
+   */
+  async deleteWorldCupMatchHistory(tournamentId: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+
+    // Import supabase dynamically to avoid circular dependencies
+    const { supabase } = await import('../lib/supabase');
+
+    try {
+      const { error } = await supabase
+        .from('match_history')
+        .delete()
+        .eq('tournament_id', tournamentId)
+        .in('stage', ['world-cup-group', 'world-cup-knockout']);
+
+      if (error) throw error;
+
+      console.log(`Deleted World Cup match history for tournament ${tournamentId}`);
+    } catch (error) {
+      console.error('Error deleting World Cup match history:', error);
+      throw error;
+    }
+  },
 };

@@ -26,6 +26,7 @@ export function TournamentWizard() {
     advanceToWorldCup,
     advanceToKnockout,
     generateDrawAndFixtures,
+    regenerateWorldCupDrawAndFixtures,
   } = useTournamentStore();
 
   if (!currentTournament) {
@@ -51,6 +52,17 @@ export function TournamentWizard() {
   // Check if actions are available
   const canGenerateDraw = !currentTournament.hasAnyMatchPlayed;
   const canStartWorldCup = canAdvanceToWorldCup(currentTournament);
+  const canRegenerateWorldCup =
+    currentTournament.worldCup &&
+    !currentTournament.worldCup.groups.some(group =>
+      group.matches.some(m => m.isPlayed)
+    ) &&
+    !currentTournament.worldCup.knockout.roundOf32.some(m => m.isPlayed) &&
+    !currentTournament.worldCup.knockout.roundOf16.some(m => m.isPlayed) &&
+    !currentTournament.worldCup.knockout.quarterFinals.some(m => m.isPlayed) &&
+    !currentTournament.worldCup.knockout.semiFinals.some(m => m.isPlayed) &&
+    !currentTournament.worldCup.knockout.thirdPlace?.isPlayed &&
+    !currentTournament.worldCup.knockout.final?.isPlayed;
   const canStartKnockout =
     currentTournament.worldCup &&
     canAdvanceToKnockout(currentTournament.worldCup.groups);
@@ -76,11 +88,22 @@ export function TournamentWizard() {
   const handleAdvanceToWorldCup = () => {
     if (
       confirm(
-        '¿Avanzar a la fase de Copa del Mundo?\n\nLos 64 equipos clasificados (2 por grupo) se distribuirán en 16 grupos del Mundial.'
+        '¿Avanzar a la fase de Copa del Mundo?\n\nLos 64 equipos clasificados (42 primeros + 22 mejores segundos) se distribuirán en 16 grupos del Mundial.'
       )
     ) {
       advanceToWorldCup();
-      toast.success('🏆 ¡Avanzado a Copa del Mundo!');
+      toast.success('🏆 ¡Avanzado a Copa del Mundo con 64 equipos clasificados!');
+    }
+  };
+
+  const handleRegenerateWorldCupDraw = () => {
+    if (
+      confirm(
+        '¿Regenerar sorteo y fixtures de la Copa del Mundo?\n\nEsto eliminará todos los partidos actuales del Mundial (grupos y playoffs) y creará nuevos grupos con los mismos 64 equipos clasificados.\n\n⚠️ Esta acción NO se puede deshacer.'
+      )
+    ) {
+      regenerateWorldCupDrawAndFixtures();
+      toast.success('✅ Sorteo del Mundial regenerado correctamente');
     }
   };
 
@@ -194,6 +217,16 @@ export function TournamentWizard() {
                 >
                   <Trophy className="w-4 h-4" />
                   Iniciar Copa del Mundo
+                </Button>
+              ) : canRegenerateWorldCup ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerateWorldCupDraw}
+                  className="gap-2"
+                >
+                  <Zap className="w-4 h-4" />
+                  Regenerar Sorteo & Fixtures
                 </Button>
               ) : null
             }

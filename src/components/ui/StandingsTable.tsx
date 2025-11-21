@@ -2,6 +2,7 @@ import type { TeamStanding, Team } from '../../types';
 import { cn } from '../../lib/utils';
 import { calculateTier, getTierColor, getTierIcon } from '../../core/tiers';
 import { TeamFlag } from './TeamFlag';
+import { sortStandings } from '../../core/scheduler';
 
 interface StandingsTableProps {
   standings: TeamStanding[];
@@ -16,6 +17,9 @@ export function StandingsTable({
   highlightQualified = 0,
   className,
 }: StandingsTableProps) {
+  // Always sort standings to ensure correct order
+  const sortedStandings = sortStandings(standings, teams);
+
   const getTeam = (teamId: string) => {
     return teams.find((t) => t.id === teamId);
   };
@@ -59,7 +63,7 @@ export function StandingsTable({
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {standings.map((standing, index) => {
+          {sortedStandings.map((standing, index) => {
             const isQualified = highlightQualified > 0 && index < highlightQualified;
             return (
               <tr

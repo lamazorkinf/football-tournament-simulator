@@ -190,3 +190,42 @@ export function getQualifiedTeams(groups: Group[], numQualifiers: number, teams?
 
   return qualified;
 }
+
+/**
+ * Gets the best N second-place teams across all groups
+ * Used for World Cup qualification (22 best runners-up)
+ */
+export function getBestRunnersUp(groups: Group[], numBestRunnersUp: number, teams?: Team[]): string[] {
+  // Get all second-place teams with their stats
+  const runnersUp = groups.map(group => {
+    const sorted = sortStandings(group.standings, teams);
+    return sorted[1]; // Second place team
+  }).filter(standing => standing !== undefined);
+
+  // Sort runners-up by the same criteria as group standings
+  const sortedRunnersUp = runnersUp.sort((a, b) => {
+    // First by points
+    if (b.points !== a.points) return b.points - a.points;
+
+    // Then by goal difference
+    if (b.goalDifference !== a.goalDifference) {
+      return b.goalDifference - a.goalDifference;
+    }
+
+    // Then by goals scored
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+
+    // Finally by alphabetical order (tie-breaker)
+    if (teams) {
+      const teamA = teams.find(t => t.id === a.teamId);
+      const teamB = teams.find(t => t.id === b.teamId);
+      if (teamA && teamB) {
+        return teamA.name.localeCompare(teamB.name);
+      }
+    }
+    return 0;
+  });
+
+  // Return top N runners-up
+  return sortedRunnersUp.slice(0, numBestRunnersUp).map(s => s.teamId);
+}

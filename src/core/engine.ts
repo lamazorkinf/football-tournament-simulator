@@ -5,13 +5,14 @@ import { getEngineConfig } from '../store/useConfigStore';
  * Simulates a football match based on team skills
  * @param homeSkill - Home team skill rating (0-100)
  * @param awaySkill - Away team skill rating (0-100)
+ * @param disableHomeAdvantage - If true, no home advantage is applied (for World Cup/Knockouts)
  * @returns Match result with scores and skill changes
  */
-export function simulateMatch(homeSkill: number, awaySkill: number): MatchResult {
+export function simulateMatch(homeSkill: number, awaySkill: number, disableHomeAdvantage = false): MatchResult {
   const config = getEngineConfig();
 
-  // Home advantage: configurable skill points
-  const adjustedHomeSkill = homeSkill + config.homeAdvantage;
+  // Home advantage: configurable skill points (disabled for World Cup and knockouts)
+  const adjustedHomeSkill = disableHomeAdvantage ? homeSkill : homeSkill + config.homeAdvantage;
 
   // Calculate skill difference (affects expected goals)
   const skillDiff = adjustedHomeSkill - awaySkill;
@@ -107,9 +108,10 @@ export function updateTeamSkill(currentSkill: number, change: number): number {
  */
 export function simulateMatchWithPenalties(
   homeSkill: number,
-  awaySkill: number
+  awaySkill: number,
+  disableHomeAdvantage = true // Knockouts are always neutral
 ): MatchResult & { penalties?: { homeScore: number; awayScore: number } } {
-  const result = simulateMatch(homeSkill, awaySkill);
+  const result = simulateMatch(homeSkill, awaySkill, disableHomeAdvantage);
 
   // If it's a draw, simulate penalties
   if (result.homeScore === result.awayScore) {

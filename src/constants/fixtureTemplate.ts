@@ -1,5 +1,5 @@
 /**
- * FIFA-style fixture template for 5-team groups
+ * FIFA-style fixture template for 5-team groups (Qualifiers)
  * Each team plays every other team twice (home and away)
  * Total: 20 matches (10 first leg + 10 second leg)
  *
@@ -12,6 +12,7 @@
  */
 
 export type FixtureLetter = 'A' | 'B' | 'C' | 'D' | 'E';
+export type WorldCupFixtureLetter = 'A' | 'B' | 'C' | 'D';
 
 export interface FixtureTemplate {
   matchday: number;
@@ -44,4 +45,33 @@ export const FIXTURE_TEMPLATE: FixtureTemplate[] = [
   { matchday: 18, home: 'B', away: 'D', isSecondLeg: true },
   { matchday: 19, home: 'C', away: 'B', isSecondLeg: true },
   { matchday: 20, home: 'A', away: 'E', isSecondLeg: true },
+];
+
+/**
+ * World Cup fixture template for 4-team groups
+ * Each team plays every other team once
+ * Total: 6 matches per group
+ *
+ * Standard FIFA World Cup fixture order:
+ * Match 1: A vs B (Pot 1 vs Pot 2)
+ * Match 2: C vs D (Pot 3 vs Pot 4)
+ * Match 3: A vs C (Pot 1 vs Pot 3)
+ * Match 4: B vs D (Pot 2 vs Pot 4)
+ * Match 5: D vs A (Pot 4 vs Pot 1)
+ * Match 6: B vs C (Pot 2 vs Pot 3)
+ */
+
+export interface WorldCupFixtureTemplate {
+  matchday: number;
+  home: WorldCupFixtureLetter;
+  away: WorldCupFixtureLetter;
+}
+
+export const WORLD_CUP_FIXTURE_TEMPLATE: WorldCupFixtureTemplate[] = [
+  { matchday: 1, home: 'A', away: 'B' }, // Pot 1 vs Pot 2
+  { matchday: 1, home: 'C', away: 'D' }, // Pot 3 vs Pot 4
+  { matchday: 2, home: 'A', away: 'C' }, // Pot 1 vs Pot 3
+  { matchday: 2, home: 'B', away: 'D' }, // Pot 2 vs Pot 4
+  { matchday: 3, home: 'D', away: 'A' }, // Pot 4 vs Pot 1
+  { matchday: 3, home: 'B', away: 'C' }, // Pot 2 vs Pot 3
 ];

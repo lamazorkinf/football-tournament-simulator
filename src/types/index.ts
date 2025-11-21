@@ -53,6 +53,7 @@ export interface WorldCupGroup {
   teamIds: string[]; // 4 teams for World Cup groups
   matches: Match[];
   standings: TeamStanding[];
+  letterAssignments?: Record<string, 'A' | 'B' | 'C' | 'D'>; // Maps teamId to pot letter (A=Pot1, B=Pot2, C=Pot3, D=Pot4)
 }
 
 export interface KnockoutMatch extends Match {
@@ -129,6 +130,7 @@ export interface TournamentState {
   advanceToKnockout: () => void;
   simulateKnockoutMatch: (matchId: string) => void;
   generateDrawAndFixtures: () => void;
+  regenerateWorldCupDrawAndFixtures: () => Promise<void>;
 }
 
 export interface EngineConfig {
