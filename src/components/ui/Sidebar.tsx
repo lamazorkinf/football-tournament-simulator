@@ -14,13 +14,13 @@ export function Sidebar({ currentView, onViewChange, tournamentYear }: SidebarPr
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
   const menuItems = [
     { id: 'wizard' as View, icon: Workflow, label: 'Progreso' },
-    { id: 'matches' as View, icon: CalendarDays, label: 'Match Center' },
-    { id: 'qualifiers' as View, icon: Globe2, label: 'Qualifiers' },
+    { id: 'matches' as View, icon: CalendarDays, label: 'Centro de Partidos' },
+    { id: 'qualifiers' as View, icon: Globe2, label: 'Clasificatorias' },
     { id: 'worldcup' as View, icon: Award, label: 'Mundial' },
-    { id: 'stats' as View, icon: BarChart3, label: 'Statistics' },
+    { id: 'stats' as View, icon: BarChart3, label: 'Estadísticas' },
     { id: 'comparison' as View, icon: GitCompare, label: 'Comparar' },
     { id: 'champions' as View, icon: Medal, label: 'Campeones' },
-    { id: 'history' as View, icon: History, label: 'History' },
+    { id: 'history' as View, icon: History, label: 'Historial' },
     { id: 'tournaments' as View, icon: Archive, label: 'Torneos' },
     { id: 'settings' as View, icon: Settings, label: 'Configuración' },
   ];

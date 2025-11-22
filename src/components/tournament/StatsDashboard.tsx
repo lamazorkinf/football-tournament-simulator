@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Tournament, Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
-import { TrendingUp, Target, Users, Globe, History } from 'lucide-react';
+import { TrendingUp, History } from 'lucide-react';
 import { HistoricalStats } from './HistoricalStats';
 
 interface StatsDashboardProps {
@@ -29,9 +29,22 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
       totalMatches += group.matches.length;
       playedMatches += group.matches.filter((m) => m.isPlayed).length;
     });
-  }
 
-  const progress = totalMatches > 0 ? (playedMatches / totalMatches) * 100 : 0;
+    // Include knockout matches
+    if (tournament.worldCup.knockout) {
+      const knockout = tournament.worldCup.knockout;
+      const allKnockoutMatches = [
+        ...knockout.roundOf32,
+        ...knockout.roundOf16,
+        ...knockout.quarterFinals,
+        ...knockout.semiFinals,
+        ...(knockout.thirdPlace ? [knockout.thirdPlace] : []),
+        ...(knockout.final ? [knockout.final] : [])
+      ];
+      totalMatches += allKnockoutMatches.length;
+      playedMatches += allKnockoutMatches.filter((m: any) => m.isPlayed).length;
+    }
+  }
 
   // Get top scorers (simulate based on matches)
   const teamStats = teams.map((team) => {
@@ -112,7 +125,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
         >
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
-            Current Tournament
+            Torneo Actual
           </div>
         </button>
         <button
@@ -125,7 +138,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
         >
           <div className="flex items-center gap-2">
             <History className="w-4 h-4" />
-            Historical Stats
+            Estadísticas Históricas
           </div>
         </button>
       </div>
@@ -134,82 +147,15 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
         <HistoricalStats teams={teams} />
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Matches</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {playedMatches}
-                  <span className="text-lg text-gray-500">/{totalMatches}</span>
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                <Target className="w-6 h-6 text-primary-600" />
-              </div>
-            </div>
-            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-primary-600 h-2 rounded-full transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Teams Participating</p>
-                <p className="text-3xl font-bold text-gray-900">{teams.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Regions</p>
-                <p className="text-3xl font-bold text-gray-900">6</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Globe className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Completion</p>
-                <p className="text-3xl font-bold text-gray-900">{Math.round(progress)}%</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Top Scoring Teams</CardTitle>
+            <CardTitle>Equipos Más Goleadores</CardTitle>
           </CardHeader>
           <CardContent>
             {topScorers.length === 0 ? (
               <p className="text-center text-gray-500 py-8">
-                No matches played yet
+                No hay partidos jugados aún
               </p>
             ) : (
               <div className="space-y-3">
@@ -226,7 +172,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                       <div>
                         <p className="font-medium text-gray-900">{stat.team.name}</p>
                         <p className="text-xs text-gray-500">
-                          {stat.matchesPlayed} matches
+                          {stat.matchesPlayed} partidos
                         </p>
                       </div>
                     </div>
@@ -234,7 +180,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                       <p className="text-2xl font-bold text-primary-600">
                         {stat.goalsScored}
                       </p>
-                      <p className="text-xs text-gray-500">goals</p>
+                      <p className="text-xs text-gray-500">goles</p>
                     </div>
                   </div>
                 ))}
@@ -245,12 +191,12 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Best Goal Average</CardTitle>
+            <CardTitle>Mejor Promedio de Goles</CardTitle>
           </CardHeader>
           <CardContent>
             {topAverage.length === 0 ? (
               <p className="text-center text-gray-500 py-8">
-                Not enough matches played (min. 3)
+                No hay suficientes partidos jugados (mín. 3)
               </p>
             ) : (
               <div className="space-y-3">
@@ -267,7 +213,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                       <div>
                         <p className="font-medium text-gray-900">{stat.team.name}</p>
                         <p className="text-xs text-gray-500">
-                          {stat.goalsScored} in {stat.matchesPlayed} matches
+                          {stat.goalsScored} en {stat.matchesPlayed} partidos
                         </p>
                       </div>
                     </div>
@@ -275,7 +221,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                       <p className="text-2xl font-bold text-blue-600">
                         {stat.avgGoals.toFixed(2)}
                       </p>
-                      <p className="text-xs text-gray-500">avg</p>
+                      <p className="text-xs text-gray-500">prom</p>
                     </div>
                   </div>
                 ))}
@@ -287,7 +233,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Regional Statistics</CardTitle>
+          <CardTitle>Estadísticas Regionales</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -299,13 +245,13 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                 <h4 className="font-semibold text-gray-900 mb-2">{stat.region}</h4>
                 <div className="space-y-1 text-sm">
                   <p className="text-gray-600">
-                    Matches: <span className="font-medium">{stat.matchesPlayed}</span>
+                    Partidos: <span className="font-medium">{stat.matchesPlayed}</span>
                   </p>
                   <p className="text-gray-600">
-                    Total Goals: <span className="font-medium">{stat.totalGoals}</span>
+                    Goles Totales: <span className="font-medium">{stat.totalGoals}</span>
                   </p>
                   <p className="text-gray-600">
-                    Avg Goals:{' '}
+                    Prom. Goles:{' '}
                     <span className="font-medium text-primary-600">
                       {stat.avgGoals.toFixed(2)}
                     </span>

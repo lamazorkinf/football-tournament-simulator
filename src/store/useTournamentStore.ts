@@ -28,6 +28,7 @@ import { teamsService } from '../services/teamsService';
 import { adaptiveTournamentService } from '../services/adaptiveTournamentService';
 import { normalizedQualifiersService } from '../services/normalizedQualifiersService';
 import { normalizedWorldCupService } from '../services/normalizedWorldCupService';
+import { teamTournamentPerformanceService } from '../services/teamTournamentPerformanceService';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { performDraw, generateGroupMatches, initializeStandings } from '../utils/drawSystem';
 import { useProgressStore } from './useProgressStore';
@@ -63,6 +64,7 @@ export const useTournamentStore = create<TournamentState>()(
         tournaments: [],
         currentTournamentId: null,
         currentTournament: null,
+        isSavingMatch: false,
 
       loadTeamsFromDatabase: async () => {
         if (!isSupabaseConfigured()) {
@@ -397,9 +399,15 @@ export const useTournamentStore = create<TournamentState>()(
         });
       },
 
-      simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => {
+      simulateMatch: async (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => {
         const state = get();
         if (!state.currentTournament) return;
+
+        // Prevent simultaneous match simulations
+        if (state.isSavingMatch) {
+          console.warn('⚠️ Another match is being saved. Please wait...');
+          return;
+        }
 
         // Find the group and match
         let targetGroup: Group | undefined;
@@ -428,6 +436,9 @@ export const useTournamentStore = create<TournamentState>()(
         const match = targetGroup.matches[matchIndex];
         if (match.isPlayed) return;
 
+        // Set saving state
+        set({ isSavingMatch: true });
+
         // Get team skills
         const homeTeam = state.teams.find((t) => t.id === match.homeTeamId);
         const awayTeam = state.teams.find((t) => t.id === match.awayTeamId);
@@ -450,46 +461,45 @@ export const useTournamentStore = create<TournamentState>()(
         const newHomeSkill = updateTeamSkill(homeTeam.skill, result.homeSkillChange);
         const newAwaySkill = updateTeamSkill(awayTeam.skill, result.awaySkillChange);
 
-        // Save to database (async, don't wait)
-        if (isSupabaseConfigured()) {
-          // Update match result in normalized schema
-          if (stage === 'qualifier') {
-            normalizedQualifiersService
-              .updateMatchResult(matchId, result.homeScore, result.awayScore)
-              .catch((error) => console.error('Error updating match result:', error));
-          } else {
-            normalizedWorldCupService
-              .updateGroupMatchResult(matchId, result.homeScore, result.awayScore)
-              .catch((error: unknown) => console.error('Error updating World Cup match result:', error));
+        // Save to database and WAIT for completion
+        try {
+          if (isSupabaseConfigured()) {
+            // Update match result in normalized schema
+            if (stage === 'qualifier') {
+              await normalizedQualifiersService.updateMatchResult(matchId, result.homeScore, result.awayScore);
+            } else {
+              await normalizedWorldCupService.updateGroupMatchResult(matchId, result.homeScore, result.awayScore);
+            }
+
+            // Save in parallel: match history and team skills
+            await Promise.all([
+              matchHistoryService.createMatch({
+                homeTeamId: homeTeam.id,
+                awayTeamId: awayTeam.id,
+                homeScore: result.homeScore,
+                awayScore: result.awayScore,
+                stage: stage === 'qualifier' ? 'qualifier' : 'world-cup-group',
+                groupName: targetGroup.name,
+                region: targetGroup.region,
+                tournamentId: state.currentTournament.id,
+                homeSkillBefore: homeTeam.skill,
+                awaySkillBefore: awayTeam.skill,
+                homeSkillAfter: newHomeSkill,
+                awaySkillAfter: newAwaySkill,
+                homeSkillChange: result.homeSkillChange,
+                awaySkillChange: result.awaySkillChange,
+              }),
+              teamsService.batchUpdateTeams([
+                { id: homeTeam.id, skill: newHomeSkill },
+                { id: awayTeam.id, skill: newAwaySkill },
+              ])
+            ]);
+
+            console.log('✅ Match data saved successfully');
           }
-
-          // Log match to history
-          matchHistoryService
-            .createMatch({
-              homeTeamId: homeTeam.id,
-              awayTeamId: awayTeam.id,
-              homeScore: result.homeScore,
-              awayScore: result.awayScore,
-              stage: stage === 'qualifier' ? 'qualifier' : 'world-cup-group',
-              groupName: targetGroup.name,
-              region: targetGroup.region,
-              tournamentId: state.currentTournament.id,
-              homeSkillBefore: homeTeam.skill,
-              awaySkillBefore: awayTeam.skill,
-              homeSkillAfter: newHomeSkill,
-              awaySkillAfter: newAwaySkill,
-              homeSkillChange: result.homeSkillChange,
-              awaySkillChange: result.awaySkillChange,
-            })
-            .catch((error) => console.error('Error logging match:', error));
-
-          // Update team skills in database
-          teamsService
-            .batchUpdateTeams([
-              { id: homeTeam.id, skill: newHomeSkill },
-              { id: awayTeam.id, skill: newAwaySkill },
-            ])
-            .catch((error) => console.error('Error updating team skills:', error));
+        } catch (error) {
+          console.error('❌ Error saving match data:', error);
+          // Even if save fails, continue with state update
         }
 
         // Update team skills in local state
@@ -556,9 +566,12 @@ export const useTournamentStore = create<TournamentState>()(
             updateTournamentInState(set, get, updatedTournament);
           }
         }
+
+        // Reset saving state after everything is done
+        set({ isSavingMatch: false });
       },
 
-      simulateAllGroupMatches: (groupId: string, stage: 'qualifier' | 'world-cup') => {
+      simulateAllGroupMatches: async (groupId: string, stage: 'qualifier' | 'world-cup') => {
         const state = get();
         if (!state.currentTournament) return;
 
@@ -579,12 +592,12 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (!targetGroup) return;
 
-        // Simulate all unplayed matches
-        targetGroup.matches.forEach((match) => {
+        // Simulate all unplayed matches sequentially to ensure proper saving
+        for (const match of targetGroup.matches) {
           if (!match.isPlayed) {
-            get().simulateMatch(match.id, groupId, stage);
+            await get().simulateMatch(match.id, groupId, stage);
           }
-        });
+        }
       },
 
       advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => {
@@ -1247,6 +1260,12 @@ export const useTournamentStore = create<TournamentState>()(
         const state = get();
         if (!state.currentTournament?.worldCup) return;
 
+        // Prevent simultaneous match simulations
+        if (state.isSavingMatch) {
+          console.warn('⚠️ Another match is being saved. Please wait...');
+          return;
+        }
+
         const knockout = state.currentTournament.worldCup.knockout;
 
         // Find match in any round
@@ -1276,11 +1295,17 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (!targetMatch || !roundName || targetMatch.isPlayed) return;
 
+        // Set saving state
+        set({ isSavingMatch: true });
+
         // Get teams
         const homeTeam = state.teams.find((t) => t.id === targetMatch.homeTeamId);
         const awayTeam = state.teams.find((t) => t.id === targetMatch.awayTeamId);
 
-        if (!homeTeam || !awayTeam) return;
+        if (!homeTeam || !awayTeam) {
+          set({ isSavingMatch: false });
+          return;
+        }
 
         // Simulate with penalties
         const result = simulateMatchWithPenalties(homeTeam.skill, awayTeam.skill);
@@ -1489,6 +1514,18 @@ export const useTournamentStore = create<TournamentState>()(
 
           set({ teams: updatedTeams });
           updateTournamentInState(set, get, updatedTournament);
+
+          // Calculate performance for all teams now that tournament is complete
+          if (isSupabaseConfigured() && state.currentTournament) {
+            console.log('🏆 Tournament completed! Calculating all team performances...');
+            teamTournamentPerformanceService
+              .calculateAllPerformancesForTournament(state.currentTournament.id)
+              .then(() => console.log('✅ All team performances calculated'))
+              .catch((error) => console.error('❌ Error calculating performances:', error));
+          }
+
+          // Reset saving state
+          set({ isSavingMatch: false });
           return;
         }
 
@@ -1502,6 +1539,9 @@ export const useTournamentStore = create<TournamentState>()(
 
         set({ teams: updatedTeams });
         updateTournamentInState(set, get, updatedTournament);
+
+        // Reset saving state
+        set({ isSavingMatch: false });
       },
       };
     },

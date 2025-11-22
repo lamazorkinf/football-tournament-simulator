@@ -115,6 +115,7 @@ export interface TournamentState {
   tournaments: Tournament[]; // All tournaments
   currentTournamentId: string | null; // ID of selected tournament
   currentTournament: Tournament | null; // Computed from currentTournamentId
+  isSavingMatch: boolean; // Track if a match is being saved to prevent race conditions
 
   // Actions
   loadTeamsFromDatabase: () => Promise<void>;
@@ -124,8 +125,8 @@ export interface TournamentState {
   deleteTournament: (id: string) => Promise<void>;
   resetCurrentTournamentMatches: () => Promise<void>;
   updateTeam: (teamId: string, updates: Partial<Team>) => Promise<void>;
-  simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => void;
-  simulateAllGroupMatches: (groupId: string, stage: 'qualifier' | 'world-cup') => void;
+  simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => Promise<void>;
+  simulateAllGroupMatches: (groupId: string, stage: 'qualifier' | 'world-cup') => Promise<void>;
   advanceToWorldCup: () => void;
   advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => void;
   advanceToKnockout: () => Promise<void>;

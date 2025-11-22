@@ -10,6 +10,23 @@ import { initializeStandings } from '../../core/scheduler';
 import { WORLD_CUP_FIXTURE_TEMPLATE, type WorldCupFixtureLetter } from '../../constants/fixtureTemplate';
 import type { Match } from '../../types';
 
+// Custom hook to detect screen size
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+
+  return matches;
+}
+
 interface DrawSimulatorProps {
   qualifiedTeams: Team[];
   onComplete: (groups: WorldCupGroup[]) => void;
@@ -29,6 +46,10 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
   const [currentGroup, setCurrentGroup] = useState(0);
   const [animatingTeam, setAnimatingTeam] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [showAllPots, setShowAllPots] = useState(false);
+
+  // Detect if we're on desktop (lg breakpoint)
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   useEffect(() => {
     initializeDraw();
@@ -198,38 +219,40 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-yellow-500" />
-              Simulador de Sorteo del Mundial
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
+              <span className="truncate">Simulador de Sorteo del Mundial</span>
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               {!isComplete && (
                 <>
-                  <Button variant="outline" onClick={onCancel} className="gap-2">
-                    Cancelar
+                  <Button variant="outline" onClick={onCancel} className="gap-1 sm:gap-2 flex-1 sm:flex-initial">
+                    <span className="hidden sm:inline">Cancelar</span>
+                    <span className="sm:hidden">✕</span>
                   </Button>
-                  <Button variant="secondary" onClick={handleReset} className="gap-2">
+                  <Button variant="secondary" onClick={handleReset} className="gap-1 sm:gap-2 flex-1 sm:flex-initial">
                     <RotateCcw className="w-4 h-4" />
-                    Reiniciar
+                    <span className="hidden sm:inline">Reiniciar</span>
                   </Button>
                   <Button
                     variant="primary"
                     onClick={drawNextTeam}
                     disabled={currentPot >= 4 || animatingTeam !== null}
-                    className="gap-2"
+                    className="gap-1 sm:gap-2 flex-1 sm:flex-initial"
                   >
                     <Play className="w-4 h-4" />
-                    Sortear Siguiente
+                    <span className="hidden sm:inline">Sortear Siguiente</span>
+                    <span className="sm:hidden">Sortear</span>
                   </Button>
                 </>
               )}
               {isComplete && (
-                <Button variant="primary" onClick={handleComplete} className="gap-2">
+                <Button variant="primary" onClick={handleComplete} className="gap-2 w-full sm:w-auto">
                   <Zap className="w-4 h-4" />
                   Finalizar y Guardar
                 </Button>
@@ -239,67 +262,92 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-12 gap-4">
-        {/* Left: Pots (40% - 5 columns) */}
-        <div className="col-span-5 space-y-3">
-          {pots.map((pot, potIdx) => (
-            <Card
-              key={pot.number}
-              className={`transition-all ${
-                currentPot === potIdx && !isComplete ? 'ring-2 ring-primary-500 shadow-lg' : ''
-              }`}
-            >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center justify-between">
-                  <span>Bombo {pot.number}</span>
-                  <span className="text-xs text-gray-500">({pot.teams.length} equipos)</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-1 max-h-64 overflow-y-auto">
-                  {pot.teams.map((team) => (
-                    <motion.div
-                      key={team.id}
-                      layout
-                      initial={{ opacity: 1 }}
-                      animate={{
-                        opacity: animatingTeam === team.id ? 0.3 : 1,
-                        scale: animatingTeam === team.id ? 1.1 : 1,
-                      }}
-                      className={`flex items-center gap-1 p-1 rounded border ${
-                        animatingTeam === team.id
-                          ? 'bg-yellow-100 border-yellow-400'
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={16} />
-                      <span className="text-xs truncate flex-1">{team.name}</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Main Content - Responsive Layout */}
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4">
+        {/* Pots Section */}
+        <div className="lg:col-span-5 space-y-3">
+          {/* Mobile: Show only current pot with toggle */}
+          <div className="lg:hidden">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-700">
+                Bombo Actual: {currentPot + 1} de 4
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllPots(!showAllPots)}
+                className="text-xs"
+              >
+                {showAllPots ? 'Ocultar todos' : 'Ver todos'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop: Show all pots | Mobile: Current or All based on toggle */}
+          {pots.map((pot, potIdx) => {
+            // On mobile, only show current pot unless showAllPots is true
+            const shouldShow = isDesktop || showAllPots || potIdx === currentPot;
+            if (!shouldShow) return null;
+
+            return (
+              <Card
+                key={pot.number}
+                className={`transition-all ${
+                  currentPot === potIdx && !isComplete ? 'ring-2 ring-primary-500 shadow-lg' : ''
+                }`}
+              >
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm sm:text-base flex items-center justify-between">
+                    <span>Bombo {pot.number}</span>
+                    <span className="text-xs sm:text-sm text-gray-500">({pot.teams.length} equipos)</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-1 max-h-64 overflow-y-auto">
+                    {pot.teams.map((team) => (
+                      <motion.div
+                        key={team.id}
+                        layout
+                        initial={{ opacity: 1 }}
+                        animate={{
+                          opacity: animatingTeam === team.id ? 0.3 : 1,
+                          scale: animatingTeam === team.id ? 1.1 : 1,
+                        }}
+                        className={`flex items-center gap-1 p-1.5 sm:p-2 rounded border ${
+                          animatingTeam === team.id
+                            ? 'bg-yellow-100 border-yellow-400'
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
+                        <span className="text-xs sm:text-sm truncate flex-1">{team.name}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Right: Groups (60% - 7 columns) */}
-        <div className="col-span-7">
+        {/* Groups Section */}
+        <div className="lg:col-span-7">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Grupos del Mundial</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Grupos del Mundial</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 {groups.map((group, groupIdx) => {
                   const isCurrentGroup = currentGroup === groupIdx && currentPot < 4 && !isComplete;
                   return (
                     <div
                       key={group.id}
-                      className={`border rounded-lg p-2 transition-all ${
+                      className={`border rounded-lg p-2 sm:p-3 transition-all ${
                         isCurrentGroup ? 'ring-2 ring-primary-500 bg-primary-50' : 'bg-white'
                       }`}
                     >
-                      <h3 className="text-xs font-bold text-center mb-2 text-gray-700">
+                      <h3 className="text-sm sm:text-base font-bold text-center mb-2 text-gray-700">
                         {group.name.replace('Grupo ', '')}
                       </h3>
                       <div className="space-y-1">
@@ -342,20 +390,64 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
       {!isComplete && (
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">
-                Bombo {currentPot + 1} de 4 | Grupo {currentGroup + 1} de 16
-              </span>
-              <div className="flex items-center gap-2">
-                <div className="w-48 bg-gray-200 h-2 rounded-full overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Mobile: Circular progress + text */}
+              <div className="flex items-center justify-between sm:justify-start gap-4">
+                {/* Circular Progress */}
+                <div className="relative w-16 h-16 sm:w-12 sm:h-12">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    {/* Background circle */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth="8"
+                    />
+                    {/* Progress circle */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 45}`}
+                      strokeDashoffset={`${2 * Math.PI * 45 * (1 - ((currentPot * 16 + currentGroup) / 64))}`}
+                      className="transition-all duration-300"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs sm:text-[10px] font-bold text-gray-700">
+                      {Math.round(((currentPot * 16 + currentGroup) / 64) * 100)}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Text Info */}
+                <div className="flex flex-col">
+                  <span className="text-sm sm:text-xs font-semibold text-gray-700">
+                    Bombo {currentPot + 1} de 4
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    Grupo {currentGroup + 1} de 16
+                  </span>
+                </div>
+              </div>
+
+              {/* Desktop: Progress bar */}
+              <div className="hidden sm:flex items-center gap-3 flex-1 max-w-md">
+                <div className="flex-1 bg-gray-200 h-3 rounded-full overflow-hidden">
                   <div
-                    className="bg-primary-600 h-2 transition-all duration-300"
+                    className="bg-primary-600 h-3 transition-all duration-300 rounded-full"
                     style={{
                       width: `${((currentPot * 16 + currentGroup) / 64) * 100}%`,
                     }}
                   ></div>
                 </div>
-                <span className="text-gray-700 font-semibold">
+                <span className="text-sm text-gray-700 font-semibold whitespace-nowrap">
                   {currentPot * 16 + currentGroup} / 64
                 </span>
               </div>

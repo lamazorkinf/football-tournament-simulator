@@ -109,6 +109,24 @@ export const matchHistoryService = {
       return [];
     }
 
+    // If limit is very high (>= 10000), get all matches with explicit high limit
+    if (limit >= 10000) {
+      console.log('🔍 [matchHistoryService] Fetching ALL matches with high limit...');
+      const { data, error } = await supabase
+        .from('match_history')
+        .select('*')
+        .order('played_at', { ascending: false })
+        .limit(100000);
+
+      if (error) {
+        console.error('❌ [matchHistoryService] Error fetching matches:', error);
+        throw error;
+      }
+
+      console.log(`✅ [matchHistoryService] Fetched ${data?.length || 0} matches from database`);
+      return data.map(dbMatchToMatch);
+    }
+
     const { data, error } = await supabase
       .from('match_history')
       .select('*')

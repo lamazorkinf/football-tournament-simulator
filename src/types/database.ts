@@ -394,6 +394,59 @@ export interface Database {
           created_at?: string
         }
       }
+      team_tournament_performance: {
+        Row: {
+          id: string
+          tournament_id: string
+          team_id: string
+          final_stage: string
+          qualifier_group_name: string | null
+          qualifier_region: string | null
+          world_cup_group_name: string | null
+          total_matches_played: number
+          total_wins: number
+          total_draws: number
+          total_losses: number
+          total_goals_for: number
+          total_goals_against: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tournament_id: string
+          team_id: string
+          final_stage: string
+          qualifier_group_name?: string | null
+          qualifier_region?: string | null
+          world_cup_group_name?: string | null
+          total_matches_played?: number
+          total_wins?: number
+          total_draws?: number
+          total_losses?: number
+          total_goals_for?: number
+          total_goals_against?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tournament_id?: string
+          team_id?: string
+          final_stage?: string
+          qualifier_group_name?: string | null
+          qualifier_region?: string | null
+          world_cup_group_name?: string | null
+          total_matches_played?: number
+          total_wins?: number
+          total_draws?: number
+          total_losses?: number
+          total_goals_for?: number
+          total_goals_against?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       team_statistics: {

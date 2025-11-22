@@ -27,7 +27,7 @@ type MatchWithContext = {
 };
 
 export function MatchCenter({ tournament, teams }: MatchCenterProps) {
-  const { simulateMatch, resetCurrentTournamentMatches, generateDrawAndFixtures } = useTournamentStore();
+  const { simulateMatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch } = useTournamentStore();
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
   const [selectedStage, setSelectedStage] = useState<MatchStage | 'all'>('all');
   const [selectedMatch, setSelectedMatch] = useState<MatchWithContext | null>(null);
@@ -129,7 +129,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
   const totalMatches = allMatches.length;
   const totalPlayed = allMatches.filter((m) => m.match.isPlayed).length;
 
-  const handleSimulateMatch = (matchWithContext: MatchWithContext) => {
+  const handleSimulateMatch = async (matchWithContext: MatchWithContext) => {
     const { match, stage, groupId } = matchWithContext;
 
     if (stage === 'knockout') {
@@ -137,40 +137,43 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
       return;
     }
 
+    // Don't allow simulation if another match is being saved
+    if (isSavingMatch) {
+      toast.warning('Espera a que se guarde el partido anterior');
+      return;
+    }
+
     const homeTeam = getTeam(match.homeTeamId);
     const awayTeam = getTeam(match.awayTeamId);
 
-    // Simulate the match
-    simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
+    // Simulate the match and WAIT for it to complete
+    await simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
 
-    // Wait a bit for state to update, then show the result
-    setTimeout(() => {
-      const currentTournament = useTournamentStore.getState().currentTournament;
-      if (!currentTournament) return;
+    // Get the updated match after simulation completes
+    const currentTournament = useTournamentStore.getState().currentTournament;
+    if (!currentTournament) return;
 
-      // Find the updated match after simulation
-      let updatedMatch = match;
-      if (stage === 'qualifier' && matchWithContext.region) {
-        const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
-        updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-      } else if (stage === 'world-cup') {
-        const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
-        updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-      }
+    let updatedMatch = match;
+    if (stage === 'qualifier' && matchWithContext.region) {
+      const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
+      updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+    } else if (stage === 'world-cup') {
+      const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
+      updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+    }
 
-      // Show result toast for 5 seconds with the actual scores
-      toast.success(
-        <div className="flex items-center gap-3">
-          <span>⚽</span>
-          <div className="flex items-center gap-2">
-            {homeTeam && <span className="font-semibold">{homeTeam.name}</span>}
-            <span className="font-bold text-lg px-2">{updatedMatch.homeScore} - {updatedMatch.awayScore}</span>
-            {awayTeam && <span className="font-semibold">{awayTeam.name}</span>}
-          </div>
-        </div>,
-        { duration: 5000 }
-      );
-    }, 100);
+    // Show result toast with the actual scores
+    toast.success(
+      <div className="flex items-center gap-3">
+        <span>⚽</span>
+        <div className="flex items-center gap-2">
+          {homeTeam && <span className="font-semibold">{homeTeam.name}</span>}
+          <span className="font-bold text-lg px-2">{updatedMatch.homeScore} - {updatedMatch.awayScore}</span>
+          {awayTeam && <span className="font-semibold">{awayTeam.name}</span>}
+        </div>
+      </div>,
+      { duration: 5000 }
+    );
   };
 
   const handleSimulateNext = () => {
@@ -183,7 +186,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
     handleSimulateMatch(nextMatch);
   };
 
-  const handleSimulateMatchday = () => {
+  const handleSimulateMatchday = async () => {
     // Determine current matchday (first unplayed matchday)
     const currentMatchday = unplayedMatches.length > 0 ? unplayedMatches[0].match.matchday : null;
 
@@ -213,69 +216,67 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
     const loadingToast = toast.loading(`Simulando ${matchdayMatches.length} partidos...`);
 
     try {
-      // Simulate all matches instantaneously
-      matchdayMatches.forEach((matchWithContext) => {
+      // Simulate all matches sequentially to ensure proper saving
+      for (const matchWithContext of matchdayMatches) {
         const { match, stage, groupId } = matchWithContext;
         if (stage !== 'knockout') {
-          simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
+          await simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
+        }
+      }
+
+      // Get updated state after all simulations complete
+      const currentTournament = useTournamentStore.getState().currentTournament;
+      if (!currentTournament) return;
+
+      // Collect results for summary
+      const results: { home: string; away: string; homeScore: number; awayScore: number }[] = [];
+
+      matchdayMatches.forEach((matchWithContext) => {
+        const { match, stage, groupId } = matchWithContext;
+        const homeTeam = getTeam(match.homeTeamId);
+        const awayTeam = getTeam(match.awayTeamId);
+
+        // Find updated match
+        let updatedMatch = match;
+        if (stage === 'qualifier' && matchWithContext.region) {
+          const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
+          updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+        } else if (stage === 'world-cup') {
+          const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
+          updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+        }
+
+        if (homeTeam && awayTeam) {
+          results.push({
+            home: homeTeam.name,
+            away: awayTeam.name,
+            homeScore: updatedMatch.homeScore ?? 0,
+            awayScore: updatedMatch.awayScore ?? 0,
+          });
         }
       });
 
-      // Wait for state to update
-      setTimeout(() => {
-        const currentTournament = useTournamentStore.getState().currentTournament;
-        if (!currentTournament) return;
+      toast.dismiss(loadingToast);
 
-        // Collect results for summary
-        const results: { home: string; away: string; homeScore: number; awayScore: number }[] = [];
-
-        matchdayMatches.forEach((matchWithContext) => {
-          const { match, stage, groupId } = matchWithContext;
-          const homeTeam = getTeam(match.homeTeamId);
-          const awayTeam = getTeam(match.awayTeamId);
-
-          // Find updated match
-          let updatedMatch = match;
-          if (stage === 'qualifier' && matchWithContext.region) {
-            const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
-            updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-          } else if (stage === 'world-cup') {
-            const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
-            updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-          }
-
-          if (homeTeam && awayTeam) {
-            results.push({
-              home: homeTeam.name,
-              away: awayTeam.name,
-              homeScore: updatedMatch.homeScore ?? 0,
-              awayScore: updatedMatch.awayScore ?? 0,
-            });
-          }
-        });
-
-        toast.dismiss(loadingToast);
-
-        // Show success summary
-        toast.success(
-          <div>
-            <div className="font-bold mb-2">✅ Jornada {currentMatchday} Completada</div>
-            <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
-              {results.slice(0, 5).map((r, idx) => (
-                <div key={idx} className="flex justify-between gap-2">
-                  <span className="truncate">{r.home}</span>
-                  <span className="font-bold">{r.homeScore}-{r.awayScore}</span>
-                  <span className="truncate">{r.away}</span>
-                </div>
-              ))}
-              {results.length > 5 && (
-                <div className="text-gray-500 italic">+ {results.length - 5} partidos más</div>
-              )}
-            </div>
-          </div>,
-          { duration: 7000 }
-        );
-      }, 150);
+      // Show success summary
+      toast.success(
+        <div>
+          <div className="font-bold mb-2">✅ Jornada {currentMatchday} Completada</div>
+          <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
+            {results.slice(0, 5).map((r, idx) => (
+              <div key={idx} className="flex justify-between gap-2">
+                <span className="truncate">{r.home}</span>
+                <span className="font-bold">{r.homeScore}-{r.awayScore}</span>
+                <span className="truncate">{r.away}</span>
+              </div>
+            ))}
+            {results.length > 5 && (
+              <div className="text-gray-500 italic">+ {results.length - 5} partidos más</div>
+            )}
+          </div>
+        </div>,
+        { duration: 7000 }
+      );
     } catch (error) {
       console.error('Error simulating matchday:', error);
       toast.dismiss(loadingToast);
@@ -492,18 +493,18 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
               <Button
                 variant="primary"
                 onClick={handleSimulateNext}
-                disabled={unplayedMatches.length === 0}
+                disabled={unplayedMatches.length === 0 || isSavingMatch}
                 className="gap-2"
               >
                 <Zap className="w-4 h-4" />
-                <span className="hidden sm:inline">Simulate Next</span>
-                <span className="sm:hidden">Next</span>
+                <span className="hidden sm:inline">{isSavingMatch ? 'Guardando...' : 'Simulate Next'}</span>
+                <span className="sm:hidden">{isSavingMatch ? '...' : 'Next'}</span>
               </Button>
 
               <Button
                 variant="secondary"
                 onClick={handleSimulateMatchday}
-                disabled={unplayedMatches.length === 0}
+                disabled={unplayedMatches.length === 0 || isSavingMatch}
                 className="gap-2"
                 title="Simular toda la jornada actual"
               >
@@ -557,6 +558,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                     onMatchClick={handleMatchClick}
                     index={idx}
                     compact={true}
+                    disabled={isSavingMatch}
                   />
                 ))}
               </div>
@@ -683,9 +685,10 @@ interface MatchRowProps {
   onMatchClick?: () => void; // Navigate to group when clicking the match container
   index: number;
   compact?: boolean; // Compact mode for recent matches (flags only, no names)
+  disabled?: boolean; // Disable the play button
 }
 
-function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = false }: MatchRowProps) {
+function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = false, disabled = false }: MatchRowProps) {
   const { match, stage, groupName, region } = matchCtx;
   const homeTeam = teams.find((t) => t.id === match.homeTeamId);
   const awayTeam = teams.find((t) => t.id === match.awayTeamId);
@@ -796,10 +799,11 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
               e.stopPropagation();
               onSimulate();
             }}
+            disabled={disabled}
             className="gap-2 w-full sm:w-auto"
           >
             <Play className="w-3 h-3" />
-            Play
+            {disabled ? '...' : 'Play'}
           </Button>
         ) : null}
       </div>

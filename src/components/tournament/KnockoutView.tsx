@@ -28,9 +28,10 @@ interface MatchCardProps {
   teams: Team[];
   onSimulate?: (matchId: string) => void;
   onViewDetails?: (match: KnockoutMatch) => void;
+  disabled?: boolean;
 }
 
-const MatchCard = ({ match, teams, onSimulate, onViewDetails }: MatchCardProps) => {
+const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }: MatchCardProps) => {
   if (!match) {
     return (
       <motion.div
@@ -116,9 +117,10 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails }: MatchCardProps) 
                 e.stopPropagation();
                 onSimulate(match.id);
               }}
+              disabled={disabled}
               className="w-full"
             >
-              Simulate
+              {disabled ? 'Guardando...' : 'Simulate'}
             </Button>
           )}
           {isPlayed && onViewDetails && (
@@ -152,7 +154,7 @@ export const KnockoutView = ({
   onBack,
   onNewTournament,
 }: KnockoutViewProps) => {
-  const { simulateKnockoutMatch } = useTournamentStore();
+  const { simulateKnockoutMatch, isSavingMatch } = useTournamentStore();
   const [showCelebration, setShowCelebration] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<KnockoutMatch | null>(null);
   const bracketRef = useRef<HTMLDivElement>(null);
@@ -168,6 +170,12 @@ export const KnockoutView = ({
   }, []);
 
   const handleSimulate = async (matchId: string) => {
+    // Don't allow simulation if another match is being saved
+    if (isSavingMatch) {
+      toast.warning('Espera a que se guarde el partido anterior');
+      return;
+    }
+
     const allMatches = [
       ...knockout.roundOf32,
       ...knockout.roundOf16,
@@ -398,6 +406,7 @@ export const KnockoutView = ({
                   teams={teams}
                   onSimulate={handleSimulate}
                   onViewDetails={setSelectedMatch}
+                  disabled={isSavingMatch}
                 />
               ))
             ) : (
@@ -427,6 +436,7 @@ export const KnockoutView = ({
                   teams={teams}
                   onSimulate={handleSimulate}
                   onViewDetails={setSelectedMatch}
+                  disabled={isSavingMatch}
                 />
               ))
             ) : (
@@ -456,6 +466,7 @@ export const KnockoutView = ({
                   teams={teams}
                   onSimulate={handleSimulate}
                   onViewDetails={setSelectedMatch}
+                  disabled={isSavingMatch}
                 />
               ))
             ) : (
@@ -485,6 +496,7 @@ export const KnockoutView = ({
                   teams={teams}
                   onSimulate={handleSimulate}
                   onViewDetails={setSelectedMatch}
+                  disabled={isSavingMatch}
                 />
               ))
             ) : (
@@ -518,6 +530,7 @@ export const KnockoutView = ({
                   teams={teams}
                   onSimulate={handleSimulate}
                   onViewDetails={setSelectedMatch}
+                  disabled={isSavingMatch}
                 />
               </div>
             )}
@@ -534,6 +547,7 @@ export const KnockoutView = ({
                   teams={teams}
                   onSimulate={handleSimulate}
                   onViewDetails={setSelectedMatch}
+                  disabled={isSavingMatch}
                 />
               </div>
             ) : knockout.semiFinals.length === 0 ? (

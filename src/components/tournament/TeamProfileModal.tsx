@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, TrendingUp, TrendingDown, Minus, Activity, BarChart3 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
+import { TeamTournamentHistory } from './TeamTournamentHistory';
 import { db } from '../../lib/supabaseNormalized';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import type { Team } from '../../types';
@@ -29,6 +30,8 @@ interface MatchHistoryEntry {
   homeSkillChange: number;
   awaySkillChange: number;
   playedAt: string;
+  tournamentYear?: number;
+  tournamentStage?: string;
 }
 
 interface SkillPoint {
@@ -60,13 +63,17 @@ interface TeamStats {
     score: string;
     opponent: string;
     goalDifference: number;
-    date: string;
+    stage: string;
+    tournamentYear: number;
+    tournamentStage: string;
   };
   worstDefeat?: {
     score: string;
     opponent: string;
     goalDifference: number;
-    date: string;
+    stage: string;
+    tournamentYear: number;
+    tournamentStage: string;
   };
 }
 
@@ -87,6 +94,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
   });
   const [loading, setLoading] = useState(true);
   const [allTeams, setAllTeams] = useState<Map<string, Team>>(new Map());
+  const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; skill: number } | null>(null);
 
   useEffect(() => {
     loadTeamProfile();
@@ -124,25 +132,44 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
 
       if (matchesError) throw matchesError;
 
+      // Load all tournaments to map tournament IDs to years
+      const { data: allTournaments, error: allTournamentsError } = await db
+        .tournaments_new()
+        .select('id, year, status');
+
+      if (allTournamentsError) throw allTournamentsError;
+
+      const tournamentMap = new Map<string, { year: number; status: string }>();
+      allTournaments?.forEach((t: any) => {
+        tournamentMap.set(t.id, { year: t.year, status: t.status });
+      });
+
       const history: MatchHistoryEntry[] =
-        matches?.map((m: any) => ({
-          id: m.id,
-          homeTeamId: m.home_team_id,
-          awayTeamId: m.away_team_id,
-          homeScore: m.home_score,
-          awayScore: m.away_score,
-          stage: m.stage,
-          groupName: m.group_name,
-          region: m.region,
-          tournamentId: m.tournament_id,
-          homeSkillBefore: m.home_skill_before,
-          awaySkillBefore: m.away_skill_before,
-          homeSkillAfter: m.home_skill_after,
-          awaySkillAfter: m.away_skill_after,
-          homeSkillChange: m.home_skill_change,
-          awaySkillChange: m.away_skill_change,
-          playedAt: m.played_at,
-        })) || [];
+        matches?.map((m: any) => {
+          const tournament = m.tournament_id ? tournamentMap.get(m.tournament_id) : null;
+          const tournamentStage = tournament?.status === 'completed' ? 'Mundial' : 'Qualifiers';
+
+          return {
+            id: m.id,
+            homeTeamId: m.home_team_id,
+            awayTeamId: m.away_team_id,
+            homeScore: m.home_score,
+            awayScore: m.away_score,
+            stage: m.stage,
+            groupName: m.group_name,
+            region: m.region,
+            tournamentId: m.tournament_id,
+            homeSkillBefore: m.home_skill_before,
+            awaySkillBefore: m.away_skill_before,
+            homeSkillAfter: m.home_skill_after,
+            awaySkillAfter: m.away_skill_after,
+            homeSkillChange: m.home_skill_change,
+            awaySkillChange: m.away_skill_change,
+            playedAt: m.played_at,
+            tournamentYear: tournament?.year,
+            tournamentStage,
+          };
+        }) || [];
 
       setMatchHistory(history);
 
@@ -206,7 +233,9 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
             score: `${teamScore}-${opponentScore}`,
             opponent: opponent?.name || 'Desconocido',
             goalDifference,
-            date: new Date(match.playedAt).toLocaleDateString(),
+            stage: match.stage,
+            tournamentYear: match.tournamentYear || 0,
+            tournamentStage: match.tournamentStage || 'Desconocido',
           };
         }
       });
@@ -229,7 +258,9 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
             score: `${teamScore}-${opponentScore}`,
             opponent: opponent?.name || 'Desconocido',
             goalDifference,
-            date: new Date(match.playedAt).toLocaleDateString(),
+            stage: match.stage,
+            tournamentYear: match.tournamentYear || 0,
+            tournamentStage: match.tournamentStage || 'Desconocido',
           };
         }
       });
@@ -341,7 +372,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
     return <Minus className="w-4 h-4 text-gray-400" />;
   };
 
-  // Simple line chart calculation (SVG path)
+  // Simple line chart calculation (SVG path) with fixed Y axis 30-100
   const generateSkillChartPath = () => {
     if (skillEvolution.length === 0) return '';
 
@@ -349,8 +380,8 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
     const height = 200;
     const padding = 20;
 
-    const minSkill = Math.min(...skillEvolution.map((p) => p.skill)) - 5;
-    const maxSkill = Math.max(...skillEvolution.map((p) => p.skill)) + 5;
+    const minSkill = 30; // Fixed minimum
+    const maxSkill = 100; // Fixed maximum
 
     const xStep = (width - 2 * padding) / (skillEvolution.length - 1 || 1);
 
@@ -403,39 +434,6 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
             </div>
           ) : (
             <div className="p-6 space-y-6">
-              {/* Current Skill & Stats Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <Activity className="w-8 h-8 mx-auto text-blue-600 mb-2" />
-                      <p className="text-sm text-gray-600">Habilidad Actual</p>
-                      <p className="text-4xl font-bold text-blue-900">{team.skill}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-green-50 to-green-100">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <Trophy className="w-8 h-8 mx-auto text-green-600 mb-2" />
-                      <p className="text-sm text-gray-600">Títulos</p>
-                      <p className="text-4xl font-bold text-green-900">{titles.length}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <BarChart3 className="w-8 h-8 mx-auto text-purple-600 mb-2" />
-                      <p className="text-sm text-gray-600">Partidos</p>
-                      <p className="text-4xl font-bold text-purple-900">{stats.totalMatches}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Skill Evolution Graph */}
               {skillEvolution.length > 0 && (
                 <Card>
@@ -446,11 +444,12 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto relative">
                       <svg viewBox="0 0 600 200" className="w-full h-48">
                         {/* Grid lines */}
-                        {[0, 25, 50, 75, 100].map((val) => {
-                          const y = 180 - (val * 1.6);
+                        {[0, 17.5, 35, 52.5, 70].map((val) => {
+                          const skillValue = 30 + val;
+                          const y = 180 - (val / 70) * 160;
                           return (
                             <g key={val}>
                               <line
@@ -462,7 +461,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                                 strokeWidth="1"
                               />
                               <text x={5} y={y + 5} fontSize="10" fill="#6b7280">
-                                {val + 30}
+                                {Math.round(skillValue)}
                               </text>
                             </g>
                           );
@@ -483,8 +482,8 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                           const width = 600;
                           const height = 200;
                           const padding = 20;
-                          const minSkill = Math.min(...skillEvolution.map((p) => p.skill)) - 5;
-                          const maxSkill = Math.max(...skillEvolution.map((p) => p.skill)) + 5;
+                          const minSkill = 30;
+                          const maxSkill = 100;
                           const xStep = (width - 2 * padding) / (skillEvolution.length - 1 || 1);
                           const x = padding + idx * xStep;
                           const y =
@@ -493,9 +492,42 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                             ((point.skill - minSkill) / (maxSkill - minSkill)) * (height - 2 * padding);
 
                           return (
-                            <circle key={point.matchId} cx={x} cy={y} r="4" fill="#3b82f6" />
+                            <circle
+                              key={point.matchId}
+                              cx={x}
+                              cy={y}
+                              r="5"
+                              fill="#3b82f6"
+                              className="cursor-pointer hover:fill-blue-700 transition-colors"
+                              onMouseEnter={() => setHoveredPoint({ x, y, skill: point.skill })}
+                              onMouseLeave={() => setHoveredPoint(null)}
+                            />
                           );
                         })}
+
+                        {/* Tooltip */}
+                        {hoveredPoint && (
+                          <g>
+                            <rect
+                              x={hoveredPoint.x - 25}
+                              y={hoveredPoint.y - 30}
+                              width="50"
+                              height="20"
+                              fill="rgba(0, 0, 0, 0.8)"
+                              rx="4"
+                            />
+                            <text
+                              x={hoveredPoint.x}
+                              y={hoveredPoint.y - 15}
+                              textAnchor="middle"
+                              fontSize="12"
+                              fill="white"
+                              fontWeight="bold"
+                            >
+                              {hoveredPoint.skill}
+                            </text>
+                          </g>
+                        )}
                       </svg>
                     </div>
                     <p className="text-xs text-gray-500 text-center mt-2">
@@ -610,12 +642,14 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                           <div className="mt-2">
                             <p className="text-3xl font-bold text-green-800">{stats.biggestVictory.score}</p>
                             <p className="text-sm text-green-700 mt-1">vs {stats.biggestVictory.opponent}</p>
-                            <div className="flex items-center gap-1 mt-2">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-200 text-green-800">
-                                +{stats.biggestVictory.goalDifference} goles
-                              </span>
+                            <div className="mt-2 space-y-1">
+                              <p className="text-xs text-green-700 font-medium">
+                                {stats.biggestVictory.stage.includes('knockout') ? 'Eliminatorias' : stats.biggestVictory.stage}
+                              </p>
+                              <p className="text-xs text-green-600">
+                                {stats.biggestVictory.tournamentStage} {stats.biggestVictory.tournamentYear}
+                              </p>
                             </div>
-                            <p className="text-xs text-green-600 mt-2">{stats.biggestVictory.date}</p>
                           </div>
                         </div>
                       )}
@@ -630,12 +664,14 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                           <div className="mt-2">
                             <p className="text-3xl font-bold text-red-800">{stats.worstDefeat.score}</p>
                             <p className="text-sm text-red-700 mt-1">vs {stats.worstDefeat.opponent}</p>
-                            <div className="flex items-center gap-1 mt-2">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-200 text-red-800">
-                                -{stats.worstDefeat.goalDifference} goles
-                              </span>
+                            <div className="mt-2 space-y-1">
+                              <p className="text-xs text-red-700 font-medium">
+                                {stats.worstDefeat.stage.includes('knockout') ? 'Eliminatorias' : stats.worstDefeat.stage}
+                              </p>
+                              <p className="text-xs text-red-600">
+                                {stats.worstDefeat.tournamentStage} {stats.worstDefeat.tournamentYear}
+                              </p>
                             </div>
-                            <p className="text-xs text-red-600 mt-2">{stats.worstDefeat.date}</p>
                           </div>
                         </div>
                       )}
@@ -670,6 +706,9 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Tournament Performance History */}
+              <TeamTournamentHistory teamId={team.id} teamName={team.name} />
 
               {/* Match History */}
               <Card>
@@ -717,8 +756,13 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                                   <div>
                                     <p className="font-medium text-sm">{opponent.name}</p>
                                     <p className="text-xs text-gray-500">
-                                      {match.stage} - {match.groupName}
+                                      {match.stage.includes('knockout') ? 'Eliminatorias' : match.stage} - {match.groupName}
                                     </p>
+                                    {match.tournamentYear && (
+                                      <p className="text-xs text-gray-400">
+                                        {match.tournamentStage} {match.tournamentYear}
+                                      </p>
+                                    )}
                                   </div>
                                 </>
                               )}

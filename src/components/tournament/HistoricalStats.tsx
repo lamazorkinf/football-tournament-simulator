@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
 import { matchHistoryService } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import { Trophy, Target, TrendingUp, Award, BarChart3 } from 'lucide-react';
+import { Trophy, Award, BarChart3 } from 'lucide-react';
 import { calculateTier, getTierColor, getTierIcon, groupTeamsByTier } from '../../core/tiers';
 
 interface HistoricalStatsProps {
@@ -24,13 +24,57 @@ interface TeamStats {
 
 export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any>(null);
   const [teamStats, setTeamStats] = useState<TeamStats[]>([]);
   const [selectedView, setSelectedView] = useState<'overview' | 'teams' | 'tiers'>('overview');
+  const [regionalStatsHistorical, setRegionalStatsHistorical] = useState<any[]>([]);
 
   useEffect(() => {
     loadStats();
   }, []);
+
+  useEffect(() => {
+    const loadRegionalStats = async () => {
+      if (!isSupabaseConfigured()) return;
+
+      try {
+        const allMatches = await matchHistoryService.getAllMatches(10000, 0);
+
+        // Group by region using team data - ONLY qualifier matches
+        const regionMap = new Map<string, { totalGoals: number; matchesPlayed: number }>();
+
+        allMatches.forEach((match) => {
+          // Only count qualifier matches
+          if (match.stage !== 'qualifier') return;
+
+          const homeTeam = teams.find(t => t.id === match.homeTeamId);
+          const region = homeTeam?.region || 'Unknown';
+
+          if (!regionMap.has(region)) {
+            regionMap.set(region, { totalGoals: 0, matchesPlayed: 0 });
+          }
+
+          const stats = regionMap.get(region)!;
+          stats.totalGoals += match.homeScore + match.awayScore;
+          stats.matchesPlayed++;
+        });
+
+        const regionalData = Array.from(regionMap.entries()).map(([region, stats]) => ({
+          region,
+          totalGoals: stats.totalGoals,
+          matchesPlayed: stats.matchesPlayed,
+          avgGoals: stats.matchesPlayed > 0 ? stats.totalGoals / stats.matchesPlayed : 0,
+        }));
+
+        setRegionalStatsHistorical(regionalData);
+      } catch (error) {
+        console.error('Error loading regional stats:', error);
+      }
+    };
+
+    if (teamStats.length > 0) {
+      loadRegionalStats();
+    }
+  }, [teamStats, teams]);
 
   const loadStats = async () => {
     if (!isSupabaseConfigured()) {
@@ -39,8 +83,10 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
     }
 
     try {
-      const globalStats = await matchHistoryService.getMatchStatistics();
-      const allMatches = await matchHistoryService.getAllMatches(1000, 0);
+      console.log('🔄 [HistoricalStats] Fetching all matches...');
+      const allMatches = await matchHistoryService.getAllMatches(10000, 0); // Get more matches
+      console.log(`✅ [HistoricalStats] Total matches fetched: ${allMatches.length}`);
+      console.log('📊 [HistoricalStats] Sample matches:', allMatches.slice(0, 3));
 
       // Calculate per-team statistics
       const teamStatsMap = new Map<string, TeamStats>();
@@ -104,8 +150,16 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
           : 0;
       });
 
-      setStats(globalStats);
-      setTeamStats(Array.from(teamStatsMap.values()));
+      const finalTeamStats = Array.from(teamStatsMap.values());
+      console.log(`📈 [HistoricalStats] Total teams with stats: ${finalTeamStats.length}`);
+      console.log('🔝 [HistoricalStats] Top 5 teams by matches:',
+        finalTeamStats
+          .sort((a, b) => b.totalMatches - a.totalMatches)
+          .slice(0, 5)
+          .map(t => `${t.teamId}: ${t.totalMatches} matches`)
+      );
+
+      setTeamStats(finalTeamStats);
       setLoading(false);
     } catch (error) {
       console.error('Error loading historical stats:', error);
@@ -146,6 +200,17 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
   const topTeams = [...teamStats]
     .sort((a, b) => b.winRate - a.winRate)
     .slice(0, 10);
+
+  // Calculate statistics from teamStats for Overview
+  const topScorersHistorical = [...teamStats]
+    .filter((s) => s.goalsFor > 0)
+    .sort((a, b) => b.goalsFor - a.goalsFor)
+    .slice(0, 5);
+
+  const topAverageHistorical = [...teamStats]
+    .filter((s) => s.totalMatches >= 3)
+    .sort((a, b) => (b.goalsFor / b.totalMatches) - (a.goalsFor / a.totalMatches))
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -192,73 +257,144 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
         </button>
       </div>
 
-      {/* Overview */}
-      {selectedView === 'overview' && stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Matches</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.totalMatches || 0}
+      {/* Overview - Now with same layout as Current Tournament */}
+      {selectedView === 'overview' && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Equipos Más Goleadores</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topScorersHistorical.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">
+                    No hay partidos jugados aún
                   </p>
-                </div>
-                <Target className="w-12 h-12 text-primary-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {topScorersHistorical.map((stat, idx) => {
+                      const team = teams.find((t) => t.id === stat.teamId);
+                      if (!team) return null;
+
+                      return (
+                        <div
+                          key={stat.teamId}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl font-bold text-gray-400 w-6">
+                              {idx + 1}
+                            </span>
+                            <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={32} />
+                            <div>
+                              <p className="font-medium text-gray-900">{team.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {stat.totalMatches} partidos
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-primary-600">
+                              {stat.goalsFor}
+                            </p>
+                            <p className="text-xs text-gray-500">goles</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Mejor Promedio de Goles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topAverageHistorical.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">
+                    No hay suficientes partidos jugados (mín. 3)
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {topAverageHistorical.map((stat, idx) => {
+                      const team = teams.find((t) => t.id === stat.teamId);
+                      if (!team) return null;
+
+                      const avgGoals = stat.goalsFor / stat.totalMatches;
+
+                      return (
+                        <div
+                          key={stat.teamId}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl font-bold text-gray-400 w-6">
+                              {idx + 1}
+                            </span>
+                            <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={32} />
+                            <div>
+                              <p className="font-medium text-gray-900">{team.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {stat.goalsFor} en {stat.totalMatches} partidos
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-blue-600">
+                              {avgGoals.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">prom</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Goals</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.totalGoals || 0}
-                  </p>
-                </div>
-                <Trophy className="w-12 h-12 text-yellow-600 opacity-20" />
+            <CardHeader>
+              <CardTitle>Estadísticas Regionales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {regionalStatsHistorical.map((stat) => (
+                  <div
+                    key={stat.region}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-primary-400 transition-colors"
+                  >
+                    <h4 className="font-semibold text-gray-900 mb-2">{stat.region}</h4>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-gray-600">
+                        Partidos: <span className="font-medium">{stat.matchesPlayed}</span>
+                      </p>
+                      <p className="text-gray-600">
+                        Goles Totales: <span className="font-medium">{stat.totalGoals}</span>
+                      </p>
+                      <p className="text-gray-600">
+                        Prom. Goles:{' '}
+                        <span className="font-medium text-primary-600">
+                          {stat.avgGoals.toFixed(2)}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Avg Goals/Match</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.averageGoals?.toFixed(2) || '0.00'}
-                  </p>
-                </div>
-                <TrendingUp className="w-12 h-12 text-green-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">High Scoring</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.highScoringMatches || 0}
-                  </p>
-                  <p className="text-xs text-gray-500">5+ goals</p>
-                </div>
-                <Award className="w-12 h-12 text-blue-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        </>
       )}
 
       {/* Top Teams */}
       {selectedView === 'teams' && (
         <Card>
           <CardHeader>
-            <CardTitle>Top 10 Teams by Win Rate</CardTitle>
+            <CardTitle>Top 10 Equipos por Tasa de Victoria</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -292,8 +428,8 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                           </span>
                         </div>
                         <div className="text-sm text-gray-600 mt-1">
-                          {teamStat.totalMatches} matches • {teamStat.wins}W {teamStat.draws}D{' '}
-                          {teamStat.losses}L • {teamStat.goalsFor} GF
+                          {teamStat.totalMatches} partidos • {teamStat.wins}V {teamStat.draws}E{' '}
+                          {teamStat.losses}D • {teamStat.goalsFor} GF
                         </div>
                       </div>
                     </div>
@@ -301,7 +437,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                       <div className="text-2xl font-bold text-primary-600">
                         {teamStat.winRate.toFixed(1)}%
                       </div>
-                      <div className="text-xs text-gray-500">Win Rate</div>
+                      <div className="text-xs text-gray-500">Tasa de Victoria</div>
                     </div>
                   </div>
                 );
