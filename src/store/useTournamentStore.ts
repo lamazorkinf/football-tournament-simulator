@@ -32,9 +32,12 @@ import { teamTournamentPerformanceService } from '../services/teamTournamentPerf
 import { isSupabaseConfigured } from '../lib/supabase';
 import { performDraw, generateGroupMatches, initializeStandings } from '../utils/drawSystem';
 import { useProgressStore } from './useProgressStore';
+import { useToastStore } from './useToastStore';
+import { useMatchResultsStore, type MatchResult } from './useMatchResultsStore';
+import { supabase } from '../lib/supabase';
 
 // Helper function to update tournament in state and database
-const updateTournamentInState = (set: any, _get: any, updatedTournament: Tournament) => {
+const updateTournamentInState = (set: any, get: any, updatedTournament: Tournament, skipDbSave = false) => {
   // Update in tournaments list
   set((state: TournamentState) => {
     const updatedTournaments = state.tournaments.map(t =>
@@ -48,8 +51,9 @@ const updateTournamentInState = (set: any, _get: any, updatedTournament: Tournam
     };
   });
 
-  // Save to database
-  if (isSupabaseConfigured()) {
+  // Save to database (skip if in batch mode or explicitly disabled)
+  const state = get();
+  if (isSupabaseConfigured() && !skipDbSave && !state.isBatchProcessing) {
     adaptiveTournamentService
       .saveTournament(updatedTournament)
       .catch((error) => console.error('Error auto-saving tournament:', error));
@@ -65,6 +69,7 @@ export const useTournamentStore = create<TournamentState>()(
         currentTournamentId: null,
         currentTournament: null,
         isSavingMatch: false,
+        isBatchProcessing: false,
 
       loadTeamsFromDatabase: async () => {
         if (!isSupabaseConfigured()) {
@@ -298,6 +303,53 @@ export const useTournamentStore = create<TournamentState>()(
           currentTournamentId: newCurrentId,
           currentTournament: newCurrentTournament
         }));
+      },
+
+      recalculateTournamentPerformances: async (tournamentId: string) => {
+        if (!isSupabaseConfigured()) {
+          useToastStore.getState().error('Supabase no está configurado');
+          return;
+        }
+
+        const tournament = get().tournaments.find(t => t.id === tournamentId);
+        if (!tournament) {
+          useToastStore.getState().error('Torneo no encontrado');
+          return;
+        }
+
+        if (!tournament.worldCup?.champion) {
+          useToastStore.getState().warning('Solo se pueden recalcular los rendimientos de torneos completados');
+          return;
+        }
+
+        if (!confirm(`¿Recalcular rendimientos para el torneo "${tournament.name}"?\n\nEsto eliminará y recreará todos los registros de rendimiento de los equipos para este torneo.`)) {
+          return;
+        }
+
+        const toast = useToastStore.getState();
+
+        try {
+          console.log(`🔄 Recalculando rendimientos para torneo ${tournamentId}...`);
+
+          toast.info('Calculando rendimientos en segundo plano...', 0); // Don't auto-dismiss
+
+          // Call the Edge Function
+          const { data, error } = await supabase.functions.invoke('calculate-tournament-performances', {
+            body: { tournamentId }
+          });
+
+          if (error) {
+            console.error('❌ Error en Edge Function:', error);
+            toast.error('Error al recalcular rendimientos');
+            return;
+          }
+
+          console.log('✅ Edge Function ejecutada:', data);
+          toast.success(`Rendimientos recalculados: ${data.teamsProcessed} equipos procesados`);
+        } catch (error) {
+          console.error('❌ Error recalculando rendimientos:', error);
+          toast.error('Error al recalcular rendimientos');
+        }
       },
 
       resetCurrentTournamentMatches: async () => {
@@ -571,32 +623,272 @@ export const useTournamentStore = create<TournamentState>()(
         set({ isSavingMatch: false });
       },
 
-      simulateAllGroupMatches: async (groupId: string, stage: 'qualifier' | 'world-cup') => {
+      simulateMatchdayBatch: async (matches) => {
         const state = get();
         if (!state.currentTournament) return;
 
-        // Find the group
-        let targetGroup: Group | undefined;
-
-        if (stage === 'qualifier') {
-          for (const region in state.currentTournament.qualifiers) {
-            const groups = state.currentTournament.qualifiers[region as Region];
-            targetGroup = groups.find((g) => g.id === groupId);
-            if (targetGroup) break;
-          }
-        } else if (stage === 'world-cup' && state.currentTournament.worldCup) {
-          targetGroup = state.currentTournament.worldCup.groups.find(
-            (g) => g.id === groupId
-          ) as Group | undefined;
+        // Prevent simultaneous batch processing
+        if (state.isBatchProcessing || state.isSavingMatch) {
+          console.warn('⚠️ Batch processing or saving already in progress. Please wait...');
+          return;
         }
 
-        if (!targetGroup) return;
+        console.log(`🚀 Starting batch simulation for ${matches.length} matches...`);
 
-        // Simulate all unplayed matches sequentially to ensure proper saving
-        for (const match of targetGroup.matches) {
-          if (!match.isPlayed) {
-            await get().simulateMatch(match.id, groupId, stage);
+        // Set batch processing flag
+        set({ isBatchProcessing: true });
+
+        try {
+          // Track all changes
+          const matchHistoryEntries: any[] = [];
+          const teamSkillUpdates: Map<string, number> = new Map();
+          const updatedMatchesByGroup: Map<string, { groupId: string; stage: 'qualifier' | 'world-cup'; region?: Region; matches: Match[] }> = new Map();
+
+          // Get progress store for UI updates
+          const progress = useProgressStore.getState();
+          progress.startProgress('Simulando jornada completa', matches.length);
+
+          // Process each match in memory
+          for (let i = 0; i < matches.length; i++) {
+            const { matchId, groupId, stage, groupName, region } = matches[i];
+
+            // Update progress
+            progress.updateProgress(`Simulando partido ${i + 1}/${matches.length}`, i + 1);
+
+            // Find the group and match
+            let targetGroup: Group | undefined;
+
+            if (stage === 'qualifier') {
+              // Search in qualifiers
+              for (const reg in state.currentTournament.qualifiers) {
+                const groups = state.currentTournament.qualifiers[reg as Region];
+                targetGroup = groups.find((g) => g.id === groupId);
+                if (targetGroup) break;
+              }
+            } else {
+              // Search in world cup groups
+              if (state.currentTournament.worldCup) {
+                targetGroup = state.currentTournament.worldCup.groups.find(
+                  (g) => g.id === groupId
+                ) as Group | undefined;
+              }
+            }
+
+            if (!targetGroup) {
+              console.warn(`⚠️ Group ${groupId} not found for match ${matchId}`);
+              continue;
+            }
+
+            const matchIndex = targetGroup.matches.findIndex((m) => m.id === matchId);
+            if (matchIndex === -1) {
+              console.warn(`⚠️ Match ${matchId} not found in group ${groupId}`);
+              continue;
+            }
+
+            const match = targetGroup.matches[matchIndex];
+            if (match.isPlayed) {
+              console.warn(`⚠️ Match ${matchId} already played, skipping`);
+              continue;
+            }
+
+            // Get current team skills (considering previous updates in this batch)
+            const homeTeam = state.teams.find((t) => t.id === match.homeTeamId);
+            const awayTeam = state.teams.find((t) => t.id === match.awayTeamId);
+
+            if (!homeTeam || !awayTeam) continue;
+
+            const homeSkill = teamSkillUpdates.get(homeTeam.id) ?? homeTeam.skill;
+            const awaySkill = teamSkillUpdates.get(awayTeam.id) ?? awayTeam.skill;
+
+            // Simulate the match
+            const disableHomeAdvantage = stage === 'world-cup';
+            const result = simulateGroupMatch(homeSkill, awaySkill, disableHomeAdvantage);
+
+            // Update match
+            const updatedMatch: Match = {
+              ...match,
+              homeScore: result.homeScore,
+              awayScore: result.awayScore,
+              isPlayed: true,
+            };
+
+            // Calculate new skills
+            const newHomeSkill = updateTeamSkill(homeSkill, result.homeSkillChange);
+            const newAwaySkill = updateTeamSkill(awaySkill, result.awaySkillChange);
+
+            // Track skill updates
+            teamSkillUpdates.set(homeTeam.id, newHomeSkill);
+            teamSkillUpdates.set(awayTeam.id, newAwaySkill);
+
+            // Store match history data
+            matchHistoryEntries.push({
+              homeTeamId: homeTeam.id,
+              awayTeamId: awayTeam.id,
+              homeScore: result.homeScore,
+              awayScore: result.awayScore,
+              stage: stage === 'qualifier' ? 'qualifier' : 'world-cup-group',
+              groupName: groupName,
+              region: region,
+              tournamentId: state.currentTournament.id,
+              homeSkillBefore: homeSkill,
+              awaySkillBefore: awaySkill,
+              homeSkillAfter: newHomeSkill,
+              awaySkillAfter: newAwaySkill,
+              homeSkillChange: result.homeSkillChange,
+              awaySkillChange: result.awaySkillChange,
+            });
+
+            // Store updated match by group
+            const groupKey = `${stage}-${groupId}`;
+            if (!updatedMatchesByGroup.has(groupKey)) {
+              updatedMatchesByGroup.set(groupKey, {
+                groupId,
+                stage,
+                region,
+                matches: [...targetGroup.matches],
+              });
+            }
+            const groupData = updatedMatchesByGroup.get(groupKey)!;
+            groupData.matches[matchIndex] = updatedMatch;
           }
+
+          console.log(`✅ Simulated ${matches.length} matches in memory`);
+
+          // Now save everything to database in batch
+          if (isSupabaseConfigured()) {
+            console.log('💾 Saving batch to database...');
+
+            // Prepare all database operations
+            const dbOperations: Promise<any>[] = [];
+
+            // 1. Batch insert match history
+            if (matchHistoryEntries.length > 0) {
+              dbOperations.push(
+                matchHistoryService.createMatchesBatch(matchHistoryEntries)
+                  .then(() => console.log(`✅ Saved ${matchHistoryEntries.length} match history entries`))
+              );
+            }
+
+            // 2. Batch update team skills
+            if (teamSkillUpdates.size > 0) {
+              const teamUpdates = Array.from(teamSkillUpdates.entries()).map(([id, skill]) => ({
+                id,
+                skill,
+              }));
+              dbOperations.push(
+                teamsService.batchUpdateTeams(teamUpdates)
+                  .then(() => console.log(`✅ Updated ${teamUpdates.length} team skills`))
+              );
+            }
+
+            // 3. Update match results in normalized schema
+            const matchUpdatePromises = matches.map(({ matchId, stage }) => {
+              const entry = matchHistoryEntries.find(
+                e => matchHistoryEntries.indexOf(e) === matches.findIndex(m => m.matchId === matchId)
+              );
+              if (!entry) return Promise.resolve();
+
+              if (stage === 'qualifier') {
+                return normalizedQualifiersService.updateMatchResult(matchId, entry.homeScore, entry.awayScore);
+              } else {
+                return normalizedWorldCupService.updateGroupMatchResult(matchId, entry.homeScore, entry.awayScore);
+              }
+            });
+            dbOperations.push(...matchUpdatePromises);
+
+            // Execute all database operations in parallel
+            await Promise.allSettled(dbOperations);
+            console.log('✅ All database operations completed');
+          }
+
+          // Update local state with all changes at once
+          const updatedTeams = state.teams.map((team) => {
+            const newSkill = teamSkillUpdates.get(team.id);
+            return newSkill !== undefined ? { ...team, skill: newSkill } : team;
+          });
+
+          // Build updated tournament
+          let updatedTournament = { ...state.currentTournament };
+
+          // Update all affected groups
+          updatedMatchesByGroup.forEach((groupData) => {
+            const { groupId, stage, region, matches: updatedMatches } = groupData;
+
+            // Find the target group
+            let targetGroup: Group | undefined;
+            if (stage === 'qualifier' && region) {
+              targetGroup = updatedTournament.qualifiers[region]?.find(g => g.id === groupId);
+            } else if (stage === 'world-cup') {
+              targetGroup = updatedTournament.worldCup?.groups.find(g => g.id === groupId) as Group | undefined;
+            }
+
+            if (!targetGroup) return;
+
+            // Reset standings to initial state (all zeros) then recalculate from ALL played matches
+            const resetStandings = targetGroup.standings.map(s => ({
+              ...s,
+              played: 0,
+              won: 0,
+              drawn: 0,
+              lost: 0,
+              goalsFor: 0,
+              goalsAgainst: 0,
+              goalDifference: 0,
+              points: 0,
+            }));
+
+            // Recalculate standings from ALL played matches
+            const updatedStandings = updatedMatches
+              .filter(m => m.isPlayed)
+              .reduce((standings, match) => updateStandings(standings, match), resetStandings);
+            const sortedStandings = sortStandings(updatedStandings, updatedTeams);
+
+            const updatedGroup = {
+              ...targetGroup,
+              matches: updatedMatches,
+              standings: sortedStandings,
+            };
+
+            // Update in tournament
+            if (stage === 'qualifier' && region) {
+              updatedTournament = {
+                ...updatedTournament,
+                qualifiers: {
+                  ...updatedTournament.qualifiers,
+                  [region]: updatedTournament.qualifiers[region].map((g) =>
+                    g.id === groupId ? updatedGroup as Group : g
+                  ),
+                },
+              };
+            } else if (stage === 'world-cup' && updatedTournament.worldCup) {
+              updatedTournament = {
+                ...updatedTournament,
+                worldCup: {
+                  ...updatedTournament.worldCup,
+                  groups: updatedTournament.worldCup.groups.map((g) =>
+                    g.id === groupId ? updatedGroup as WorldCupGroup : g
+                  ),
+                },
+              };
+            }
+          });
+
+          updatedTournament.hasAnyMatchPlayed = true;
+
+          // Single state update with all changes
+          set({ teams: updatedTeams });
+
+          // Save tournament to database (will execute now that isBatchProcessing is about to be false)
+          set({ isBatchProcessing: false });
+          updateTournamentInState(set, get, updatedTournament);
+
+          console.log(`✅ Batch simulation completed successfully for ${matches.length} matches`);
+          progress.completeProgress();
+
+        } catch (error) {
+          console.error('❌ Error in batch simulation:', error);
+          set({ isBatchProcessing: false });
+          throw error;
         }
       },
 
@@ -1518,10 +1810,28 @@ export const useTournamentStore = create<TournamentState>()(
           // Calculate performance for all teams now that tournament is complete
           if (isSupabaseConfigured() && state.currentTournament) {
             console.log('🏆 Tournament completed! Calculating all team performances...');
-            teamTournamentPerformanceService
-              .calculateAllPerformancesForTournament(state.currentTournament.id)
-              .then(() => console.log('✅ All team performances calculated'))
-              .catch((error) => console.error('❌ Error calculating performances:', error));
+
+            const toast = useToastStore.getState();
+            toast.info('Calculando rendimientos del torneo en segundo plano...', 0);
+
+            // Call the Edge Function
+            supabase.functions
+              .invoke('calculate-tournament-performances', {
+                body: { tournamentId: state.currentTournament.id }
+              })
+              .then(({ data, error }) => {
+                if (error) {
+                  console.error('❌ Error en Edge Function:', error);
+                  toast.error('Error al calcular rendimientos');
+                } else {
+                  console.log('✅ Edge Function ejecutada:', data);
+                  toast.success(`Rendimientos calculados: ${data.teamsProcessed} equipos procesados`);
+                }
+              })
+              .catch((error) => {
+                console.error('❌ Error calling Edge Function:', error);
+                toast.error('Error al calcular rendimientos');
+              });
           }
 
           // Reset saving state

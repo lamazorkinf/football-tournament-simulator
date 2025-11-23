@@ -680,33 +680,6 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                 </Card>
               )}
 
-              {/* Titles & Achievements */}
-              {titles.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="w-5 h-5 text-yellow-500" />
-                      Títulos y Logros
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {titles.map((title, idx) => (
-                        <div
-                          key={idx}
-                          className={`border-2 rounded-lg p-3 text-center ${getPositionColor(
-                            title.position
-                          )}`}
-                        >
-                          <p className="font-bold text-lg">{title.year}</p>
-                          <p className="text-sm mt-1">{getPositionLabel(title.position)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Tournament Performance History */}
               <TeamTournamentHistory teamId={team.id} teamName={team.name} />
 

@@ -263,6 +263,44 @@ export const matchHistoryService = {
     };
   },
 
+  // Batch create multiple match history entries
+  async createMatchesBatch(matchesParams: CreateMatchHistoryParams[]): Promise<MatchHistoryEntry[]> {
+    if (!isSupabaseConfigured()) {
+      // Return mock entries if Supabase is not configured
+      return matchesParams.map(params => ({
+        id: crypto.randomUUID(),
+        ...params,
+        playedAt: new Date().toISOString(),
+      }));
+    }
+
+    const inserts: MatchHistoryInsert[] = matchesParams.map(params => ({
+      home_team_id: params.homeTeamId,
+      away_team_id: params.awayTeamId,
+      home_score: params.homeScore,
+      away_score: params.awayScore,
+      stage: params.stage,
+      group_name: params.groupName,
+      region: params.region,
+      tournament_id: params.tournamentId,
+      home_skill_before: params.homeSkillBefore,
+      away_skill_before: params.awaySkillBefore,
+      home_skill_after: params.homeSkillAfter,
+      away_skill_after: params.awaySkillAfter,
+      home_skill_change: params.homeSkillChange,
+      away_skill_change: params.awaySkillChange,
+      metadata: (params.metadata || {}) as any,
+    }));
+
+    const { data, error } = await supabase
+      .from('match_history')
+      .insert(inserts as any)
+      .select();
+
+    if (error) throw error;
+    return data.map(dbMatchToMatch);
+  },
+
   // Delete all matches for a specific tournament
   async deleteMatchesByTournament(tournamentId: string): Promise<void> {
     if (!isSupabaseConfigured()) {

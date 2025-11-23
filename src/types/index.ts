@@ -116,6 +116,7 @@ export interface TournamentState {
   currentTournamentId: string | null; // ID of selected tournament
   currentTournament: Tournament | null; // Computed from currentTournamentId
   isSavingMatch: boolean; // Track if a match is being saved to prevent race conditions
+  isBatchProcessing: boolean; // Track if batch processing is active to skip individual saves
 
   // Actions
   loadTeamsFromDatabase: () => Promise<void>;
@@ -123,10 +124,11 @@ export interface TournamentState {
   createNewTournament: (year: number) => Promise<void>;
   selectTournament: (id: string) => void;
   deleteTournament: (id: string) => Promise<void>;
+  recalculateTournamentPerformances: (tournamentId: string) => Promise<void>;
   resetCurrentTournamentMatches: () => Promise<void>;
   updateTeam: (teamId: string, updates: Partial<Team>) => Promise<void>;
   simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => Promise<void>;
-  simulateAllGroupMatches: (groupId: string, stage: 'qualifier' | 'world-cup') => Promise<void>;
+  simulateMatchdayBatch: (matches: Array<{ matchId: string; groupId: string; stage: 'qualifier' | 'world-cup'; groupName: string; region?: Region }>) => Promise<void>;
   advanceToWorldCup: () => void;
   advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => void;
   advanceToKnockout: () => Promise<void>;

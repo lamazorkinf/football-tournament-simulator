@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -7,18 +7,39 @@ import { TeamFlag } from '../ui/TeamFlag';
 import { TeamSelector } from './TeamSelector';
 import { ComparisonStats } from './ComparisonStats';
 import { H2HMatchHistory } from './H2HMatchHistory';
-import { calculateHeadToHeadStats, compareOverallStats } from '../../services/headToHeadService';
+import { calculateHeadToHeadStats, compareOverallStats, type HeadToHeadStats } from '../../services/headToHeadService';
 import type { Team } from '../../types';
 
 export function TeamComparison() {
   const { teams } = useTournamentStore();
   const [team1, setTeam1] = useState<Team | null>(null);
   const [team2, setTeam2] = useState<Team | null>(null);
+  const [h2hStats, setH2hStats] = useState<HeadToHeadStats | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load h2h stats when both teams are selected
+  useEffect(() => {
+    if (team1 && team2) {
+      setLoading(true);
+      calculateHeadToHeadStats(team1.id, team2.id)
+        .then((stats) => {
+          setH2hStats(stats);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error calculating h2h stats:', error);
+          setLoading(false);
+        });
+    } else {
+      setH2hStats(null);
+    }
+  }, [team1, team2]);
 
   const handleBack = () => {
     // Reset selection to allow new comparison
     setTeam1(null);
     setTeam2(null);
+    setH2hStats(null);
   };
 
   // If no teams selected, show selection screen
@@ -85,8 +106,23 @@ export function TeamComparison() {
     );
   }
 
-  // Calculate statistics
-  const h2hStats = calculateHeadToHeadStats(team1.id, team2.id);
+  // Show loading state while fetching h2h stats
+  if (loading || !h2hStats) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-12 pb-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando estadísticas...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Calculate overall comparison
   const overallComparison = compareOverallStats(team1, team2);
 
   return (
@@ -159,14 +195,6 @@ export function TeamComparison() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Statistics Cards */}
-      <ComparisonStats
-        team1={team1}
-        team2={team2}
-        h2hStats={h2hStats}
-        overallComparison={overallComparison}
-      />
 
       {/* Match History */}
       {h2hStats.totalMatches > 0 ? (

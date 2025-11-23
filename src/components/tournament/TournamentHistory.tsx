@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { Trophy, Calendar, Award, Users, Trash2, Eye } from 'lucide-react';
+import { Trophy, Calendar, Award, Users, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Tournament } from '../../types';
 
 type FilterType = 'all' | 'qualifiers' | 'world-cup' | 'completed';
 
 export function TournamentHistory() {
-  const { tournaments, selectTournament, deleteTournament, currentTournamentId } = useTournamentStore();
+  const { tournaments, selectTournament, deleteTournament, recalculateTournamentPerformances, currentTournamentId } = useTournamentStore();
   const [filter, setFilter] = useState<FilterType>('all');
 
   const filteredTournaments = useMemo(() => {
@@ -75,6 +75,10 @@ export function TournamentHistory() {
 
   const handleDelete = (tournamentId: string) => {
     deleteTournament(tournamentId);
+  };
+
+  const handleRecalculate = (tournamentId: string) => {
+    recalculateTournamentPerformances(tournamentId);
   };
 
   return (
@@ -216,6 +220,15 @@ export function TournamentHistory() {
                       <Eye className="w-4 h-4" />
                       {isActive ? 'Activo' : 'Ver'}
                     </button>
+                    {tournament.worldCup?.champion && (
+                      <button
+                        onClick={() => handleRecalculate(tournament.id)}
+                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                        title="Recalcular rendimientos de equipos"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDelete(tournament.id)}
                       disabled={tournaments.length === 1}

@@ -31,7 +31,7 @@ function generateWorldCupGroupMatchesWithTemplate(
     homeScore: null,
     awayScore: null,
     isPlayed: false,
-    stage: 'world-cup' as const,
+    stage: 'world-cup-group' as const,
     matchday: fixture.matchday,
   }));
 }

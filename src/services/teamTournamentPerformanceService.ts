@@ -153,22 +153,48 @@ export const teamTournamentPerformanceService = {
       }
     }
 
-    // 5. Get additional context and stats
+    // 5. Get additional context (group names) for THIS tournament
     const { data: qualifierGroup } = await supabase
       .from('qualifier_group_teams')
-      .select('group_id, played, won, drawn, lost, goals_for, goals_against, qualifier_groups!inner(name, region)')
+      .select('group_id, qualifier_groups!inner(name, region, tournament_id)')
       .eq('team_id', teamId)
+      .eq('qualifier_groups.tournament_id', tournamentId)
       .maybeSingle();
 
     const { data: wcGroup } = await supabase
       .from('world_cup_group_teams')
-      .select('group_id, played, won, drawn, lost, goals_for, goals_against, world_cup_groups!inner(name)')
+      .select('group_id, world_cup_groups!inner(name, tournament_id)')
       .eq('team_id', teamId)
+      .eq('world_cup_groups.tournament_id', tournamentId)
       .maybeSingle();
 
-    // Calculate total stats
-    const qualifierStats = qualifierGroup || { played: 0, won: 0, drawn: 0, lost: 0, goals_for: 0, goals_against: 0 };
-    const wcStats = wcGroup || { played: 0, won: 0, drawn: 0, lost: 0, goals_for: 0, goals_against: 0 };
+    // Calculate stats from match_history (single source of truth)
+    const { data: matches } = await supabase
+      .from('match_history')
+      .select('home_team_id, away_team_id, home_score, away_score')
+      .eq('tournament_id', tournamentId)
+      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+
+    let totalPlayed = 0;
+    let totalWins = 0;
+    let totalDraws = 0;
+    let totalLosses = 0;
+    let totalGoalsFor = 0;
+    let totalGoalsAgainst = 0;
+
+    matches?.forEach((match: any) => {
+      const isHome = match.home_team_id === teamId;
+      const teamScore = isHome ? match.home_score : match.away_score;
+      const opponentScore = isHome ? match.away_score : match.home_score;
+
+      totalPlayed++;
+      totalGoalsFor += teamScore;
+      totalGoalsAgainst += opponentScore;
+
+      if (teamScore > opponentScore) totalWins++;
+      else if (teamScore === opponentScore) totalDraws++;
+      else totalLosses++;
+    });
 
     const performanceData: PerformanceInsert = {
       tournament_id: tournamentId,
@@ -177,12 +203,12 @@ export const teamTournamentPerformanceService = {
       qualifier_group_name: (qualifierGroup as any)?.qualifier_groups?.name,
       qualifier_region: (qualifierGroup as any)?.qualifier_groups?.region,
       world_cup_group_name: (wcGroup as any)?.world_cup_groups?.name,
-      total_matches_played: qualifierStats.played + wcStats.played,
-      total_wins: qualifierStats.won + wcStats.won,
-      total_draws: qualifierStats.drawn + wcStats.drawn,
-      total_losses: qualifierStats.lost + wcStats.lost,
-      total_goals_for: qualifierStats.goals_for + wcStats.goals_for,
-      total_goals_against: qualifierStats.goals_against + wcStats.goals_against,
+      total_matches_played: totalPlayed,
+      total_wins: totalWins,
+      total_draws: totalDraws,
+      total_losses: totalLosses,
+      total_goals_for: totalGoalsFor,
+      total_goals_against: totalGoalsAgainst,
       updated_at: new Date().toISOString(),
     };
 
@@ -204,7 +230,10 @@ export const teamTournamentPerformanceService = {
   /**
    * Calculate performance for all teams in a tournament
    */
-  async calculateAllPerformancesForTournament(tournamentId: string): Promise<void> {
+  async calculateAllPerformancesForTournament(
+    tournamentId: string,
+    onProgress?: (current: number, total: number, teamId: string) => void
+  ): Promise<void> {
     if (!isSupabaseConfigured()) return;
 
     console.log(`🔍 Calculating all performances for tournament ${tournamentId}`);
@@ -221,7 +250,14 @@ export const teamTournamentPerformanceService = {
     console.log(`📊 Found ${teamIds.size} teams to process`);
 
     // Calculate performance for each team
+    let currentIndex = 0;
+    const totalTeams = teamIds.size;
+
     for (const teamId of teamIds) {
+      currentIndex++;
+      if (onProgress) {
+        onProgress(currentIndex, totalTeams, teamId);
+      }
       await this.calculateAndStorePerformance(tournamentId, teamId);
     }
 
@@ -264,6 +300,21 @@ export const teamTournamentPerformanceService = {
 
     if (error) throw error;
     return data ? data.map(dbToPerformance) : [];
+  },
+
+  /**
+   * Delete all performance records for a tournament
+   */
+  async deletePerformancesByTournament(tournamentId: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+
+    const { error } = await supabase
+      .from('team_tournament_performance')
+      .delete()
+      .eq('tournament_id', tournamentId);
+
+    if (error) throw error;
+    console.log(`✅ Deleted all performance records for tournament ${tournamentId}`);
   },
 
   /**

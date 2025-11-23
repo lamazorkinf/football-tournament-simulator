@@ -1,5 +1,6 @@
 import type { Team } from '../../types';
 import type { HeadToHeadStats } from '../../services/headToHeadService';
+import { getKnockoutRoundName } from '../../services/headToHeadService';
 import { Trophy } from 'lucide-react';
 import { TeamFlag } from '../ui/TeamFlag';
 
@@ -104,15 +105,20 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
                   )}
                 </div>
 
-                {/* Stage */}
+                {/* Stage and Tournament */}
                 <div className="text-xs text-gray-500 mt-2">
-                  {match.stage === 'qualifier'
-                    ? 'Clasificatorias'
-                    : match.stage === 'world-cup-group'
-                    ? 'Fase de Grupos'
-                    : match.stage === 'world-cup-knockout'
-                    ? 'Eliminatorias'
-                    : 'Torneo'}
+                  {match.tournamentYear && (
+                    <div className="font-semibold text-gray-700">Mundial {match.tournamentYear}</div>
+                  )}
+                  <div>
+                    {match.stage === 'qualifier'
+                      ? 'Clasificatorias'
+                      : match.stage === 'world-cup-group'
+                      ? 'Fase de Grupos'
+                      : match.stage === 'world-cup-knockout'
+                      ? getKnockoutRoundName(match.knockoutRound)
+                      : 'Torneo'}
+                  </div>
                 </div>
               </div>
 

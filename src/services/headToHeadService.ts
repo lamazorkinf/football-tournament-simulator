@@ -1,5 +1,6 @@
 import type { Team, Match } from '../types';
 import { useTournamentStore } from '../store/useTournamentStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export interface HeadToHeadStats {
   totalMatches: number;
@@ -26,10 +27,113 @@ export interface MatchResult {
   result: 'team1Win' | 'team2Win' | 'draw';
   stage: string;
   goalDifference: number;
+  tournamentYear?: number;
+  tournamentName?: string;
+  knockoutRound?: string; // 'round-of-32', 'round-of-16', 'quarter', 'semi', 'third-place', 'final'
 }
 
 /**
- * Gets all matches between two teams from the tournament history
+ * Translates knockout round codes to Spanish display names
+ */
+export function getKnockoutRoundName(knockoutRound: string | undefined): string {
+  if (!knockoutRound) return 'Eliminatorias';
+
+  const roundNames: Record<string, string> = {
+    'round-of-32': 'Dieciseisavos de Final',
+    'round-of-16': 'Octavos de Final',
+    'quarter': 'Cuartos de Final',
+    'semi': 'Semifinales',
+    'third-place': 'Tercer Puesto',
+    'final': 'Final',
+  };
+
+  return roundNames[knockoutRound] || 'Eliminatorias';
+}
+
+/**
+ * Gets all matches between two teams from the database (match_history)
+ */
+async function getMatchesBetweenTeamsFromDB(team1Id: string, team2Id: string): Promise<Match[]> {
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+
+  try {
+    // Query match_history for all matches between these two teams
+    // Direction 1: team1 as home, team2 as away
+    const { data: data1, error: error1 } = await supabase
+      .from('match_history')
+      .select('id, home_team_id, away_team_id, home_score, away_score, stage, knockout_round, tournament_id, played_at')
+      .eq('home_team_id', team1Id)
+      .eq('away_team_id', team2Id);
+
+    // Direction 2: team2 as home, team1 as away
+    const { data: data2, error: error2 } = await supabase
+      .from('match_history')
+      .select('id, home_team_id, away_team_id, home_score, away_score, stage, knockout_round, tournament_id, played_at')
+      .eq('home_team_id', team2Id)
+      .eq('away_team_id', team1Id);
+
+    if (error1 || error2) {
+      console.error('Error fetching head-to-head matches:', error1 || error2);
+      return [];
+    }
+
+    // Combine both results
+    const allMatches = [...(data1 || []), ...(data2 || [])];
+
+    if (allMatches.length === 0) {
+      console.log(`No matches found between ${team1Id} and ${team2Id}`);
+      return [];
+    }
+
+    // Get unique tournament IDs
+    const tournamentIds = Array.from(new Set(allMatches.map((m: any) => m.tournament_id).filter(Boolean)));
+
+    // Fetch tournament information
+    const tournamentMap = new Map();
+    if (tournamentIds.length > 0) {
+      const { data: tournaments } = await supabase
+        .from('tournaments_new')
+        .select('id, year, name')
+        .in('id', tournamentIds);
+
+      tournaments?.forEach((t: any) => {
+        tournamentMap.set(t.id, { year: t.year, name: t.name });
+      });
+    }
+
+    // Sort by played_at descending (most recent first)
+    allMatches.sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime());
+
+    console.log(`Found ${allMatches.length} matches between teams in database`);
+
+    // Convert database format to Match format with tournament info
+    const matches: Match[] = allMatches.map((dbMatch: any) => {
+      const tournamentInfo = tournamentMap.get(dbMatch.tournament_id);
+      return {
+        id: dbMatch.id,
+        homeTeamId: dbMatch.home_team_id,
+        awayTeamId: dbMatch.away_team_id,
+        homeScore: dbMatch.home_score,
+        awayScore: dbMatch.away_score,
+        isPlayed: true,
+        stage: dbMatch.stage || 'unknown',
+        tournamentYear: tournamentInfo?.year,
+        tournamentName: tournamentInfo?.name,
+        knockoutRound: dbMatch.knockout_round,
+      } as any;
+    });
+
+    return matches;
+  } catch (error) {
+    console.error('Error in getMatchesBetweenTeamsFromDB:', error);
+    return [];
+  }
+}
+
+/**
+ * Gets all matches between two teams from the tournament history (LEGACY - only current tournament)
  */
 export function getMatchesBetweenTeams(team1Id: string, team2Id: string): Match[] {
   const { currentTournament } = useTournamentStore.getState();
@@ -85,11 +189,17 @@ export function getMatchesBetweenTeams(team1Id: string, team2Id: string): Match[
 /**
  * Calculates comprehensive head-to-head statistics between two teams
  */
-export function calculateHeadToHeadStats(
+export async function calculateHeadToHeadStats(
   team1Id: string,
   team2Id: string
-): HeadToHeadStats {
-  const matches = getMatchesBetweenTeams(team1Id, team2Id);
+): Promise<HeadToHeadStats> {
+  // Try to get matches from database first
+  let matches = await getMatchesBetweenTeamsFromDB(team1Id, team2Id);
+
+  // Fallback to current tournament if database is not configured
+  if (matches.length === 0 && !isSupabaseConfigured()) {
+    matches = getMatchesBetweenTeams(team1Id, team2Id);
+  }
 
   if (matches.length === 0) {
     return {
@@ -147,6 +257,9 @@ export function calculateHeadToHeadStats(
       result,
       stage: match.stage || 'qualifier',
       goalDifference: goalDiff,
+      tournamentYear: (match as any).tournamentYear,
+      tournamentName: (match as any).tournamentName,
+      knockoutRound: (match as any).knockoutRound,
     };
 
     // Track biggest wins

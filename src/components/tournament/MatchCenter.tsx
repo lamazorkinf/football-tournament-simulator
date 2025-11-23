@@ -6,8 +6,9 @@ import { TeamFlag } from '../ui/TeamFlag';
 import { TeamNameTooltip } from '../ui/TeamNameTooltip';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
-import { Play, Filter, Clock, CheckCircle, Calendar, Zap, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Play, Filter, Clock, CheckCircle, Calendar, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,7 +28,8 @@ type MatchWithContext = {
 };
 
 export function MatchCenter({ tournament, teams }: MatchCenterProps) {
-  const { simulateMatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch } = useTournamentStore();
+  const { simulateMatch, simulateMatchdayBatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch, isBatchProcessing } = useTournamentStore();
+  const { showResults } = useMatchResultsStore();
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
   const [selectedStage, setSelectedStage] = useState<MatchStage | 'all'>('all');
   const [selectedMatch, setSelectedMatch] = useState<MatchWithContext | null>(null);
@@ -176,16 +178,6 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
     );
   };
 
-  const handleSimulateNext = () => {
-    if (unplayedMatches.length === 0) {
-      toast.info('No unplayed matches available');
-      return;
-    }
-
-    const nextMatch = unplayedMatches[0];
-    handleSimulateMatch(nextMatch);
-  };
-
   const handleSimulateMatchday = async () => {
     // Determine current matchday (first unplayed matchday)
     const currentMatchday = unplayedMatches.length > 0 ? unplayedMatches[0].match.matchday : null;
@@ -213,26 +205,30 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
 
     if (!confirmed) return;
 
-    const loadingToast = toast.loading(`Simulando ${matchdayMatches.length} partidos...`);
-
     try {
-      // Simulate all matches sequentially to ensure proper saving
-      for (const matchWithContext of matchdayMatches) {
-        const { match, stage, groupId } = matchWithContext;
-        if (stage !== 'knockout') {
-          await simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
-        }
-      }
+      // Prepare batch data
+      const batchMatches = matchdayMatches
+        .filter(m => m.stage !== 'knockout')
+        .map(m => ({
+          matchId: m.match.id,
+          groupId: m.groupId,
+          stage: m.stage === 'qualifier' ? 'qualifier' as const : 'world-cup' as const,
+          groupName: m.groupName,
+          region: m.region,
+        }));
+
+      // Simulate all matches in batch
+      await simulateMatchdayBatch(batchMatches);
 
       // Get updated state after all simulations complete
       const currentTournament = useTournamentStore.getState().currentTournament;
       if (!currentTournament) return;
 
-      // Collect results for summary
-      const results: { home: string; away: string; homeScore: number; awayScore: number }[] = [];
+      // Collect results for modal
+      const results: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; stage: string; groupName?: string }[] = [];
 
       matchdayMatches.forEach((matchWithContext) => {
-        const { match, stage, groupId } = matchWithContext;
+        const { match, stage, groupId, groupName } = matchWithContext;
         const homeTeam = getTeam(match.homeTeamId);
         const awayTeam = getTeam(match.awayTeamId);
 
@@ -248,38 +244,23 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
 
         if (homeTeam && awayTeam) {
           results.push({
-            home: homeTeam.name,
-            away: awayTeam.name,
+            homeTeam: homeTeam.name,
+            awayTeam: awayTeam.name,
             homeScore: updatedMatch.homeScore ?? 0,
             awayScore: updatedMatch.awayScore ?? 0,
+            stage: stage === 'qualifier' ? 'Eliminatorias' : 'Copa Mundial',
+            groupName: groupName,
           });
         }
       });
 
-      toast.dismiss(loadingToast);
+      // Show results modal
+      showResults(results, `Jornada ${currentMatchday} - Resultados`);
 
-      // Show success summary
-      toast.success(
-        <div>
-          <div className="font-bold mb-2">✅ Jornada {currentMatchday} Completada</div>
-          <div className="text-xs space-y-1 max-h-48 overflow-y-auto">
-            {results.slice(0, 5).map((r, idx) => (
-              <div key={idx} className="flex justify-between gap-2">
-                <span className="truncate">{r.home}</span>
-                <span className="font-bold">{r.homeScore}-{r.awayScore}</span>
-                <span className="truncate">{r.away}</span>
-              </div>
-            ))}
-            {results.length > 5 && (
-              <div className="text-gray-500 italic">+ {results.length - 5} partidos más</div>
-            )}
-          </div>
-        </div>,
-        { duration: 7000 }
-      );
+      // Show success toast
+      toast.success(`✅ Jornada ${currentMatchday} completada - ${results.length} partidos simulados`);
     } catch (error) {
       console.error('Error simulating matchday:', error);
-      toast.dismiss(loadingToast);
       toast.error('Error al simular la jornada');
     }
   };
@@ -492,25 +473,14 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
             <div className="flex gap-2">
               <Button
                 variant="primary"
-                onClick={handleSimulateNext}
-                disabled={unplayedMatches.length === 0 || isSavingMatch}
-                className="gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                <span className="hidden sm:inline">{isSavingMatch ? 'Guardando...' : 'Simulate Next'}</span>
-                <span className="sm:hidden">{isSavingMatch ? '...' : 'Next'}</span>
-              </Button>
-
-              <Button
-                variant="secondary"
                 onClick={handleSimulateMatchday}
-                disabled={unplayedMatches.length === 0 || isSavingMatch}
+                disabled={unplayedMatches.length === 0 || isSavingMatch || isBatchProcessing}
                 className="gap-2"
                 title="Simular toda la jornada actual"
               >
                 <Play className="w-4 h-4" />
-                <span className="hidden sm:inline">Simular Jornada</span>
-                <span className="sm:hidden">Jornada</span>
+                <span className="hidden sm:inline">{isBatchProcessing ? 'Simulando...' : 'Simular Jornada'}</span>
+                <span className="sm:hidden">{isBatchProcessing ? '...' : 'Jornada'}</span>
               </Button>
 
               {/* Danger action: Reset tournament */}

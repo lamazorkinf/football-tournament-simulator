@@ -219,7 +219,7 @@ interface WorldCupGroupDetailProps {
 }
 
 function WorldCupGroupDetail({ group, teams, onBack }: WorldCupGroupDetailProps) {
-  const { simulateMatch, simulateAllGroupMatches } = useTournamentStore();
+  const { simulateMatch } = useTournamentStore();
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
 
   const getTeam = (teamId: string) => {
@@ -242,24 +242,6 @@ function WorldCupGroupDetail({ group, teams, onBack }: WorldCupGroupDetailProps)
         { duration: 3000 }
       );
     }
-  };
-
-  const handleSimulateAll = () => {
-    const unplayedCount = group.matches.filter((m: Match) => !m.isPlayed).length;
-
-    if (unplayedCount === 0) {
-      toast.info('All matches have been played');
-      return;
-    }
-
-    if (unplayedCount > 3) {
-      if (!confirm(`This will simulate ${unplayedCount} matches. Continue?`)) {
-        return;
-      }
-    }
-
-    simulateAllGroupMatches(group.id, 'world-cup');
-    toast.success(`🏆 Simulated ${unplayedCount} World Cup matches!`);
   };
 
   const totalMatches = group.matches.length;
@@ -301,17 +283,6 @@ function WorldCupGroupDetail({ group, teams, onBack }: WorldCupGroupDetailProps)
         <CardContent>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Standings</h3>
-            {playedMatches < totalMatches && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleSimulateAll}
-                className="gap-2"
-              >
-                <PlayCircle className="w-4 h-4" />
-                Simulate All Matches
-              </Button>
-            )}
           </div>
           <StandingsTable
             standings={group.standings}

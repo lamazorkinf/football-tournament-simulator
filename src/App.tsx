@@ -16,6 +16,8 @@ import { MobileDrawer } from './components/ui/MobileDrawer';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
 import { ProgressModal } from './components/ui/ProgressModal';
+import { ToastContainer } from './components/ui/ToastContainer';
+import { MatchResultsModal } from './components/ui/MatchResultsModal';
 import { Menu } from 'lucide-react';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
@@ -71,6 +73,12 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         {/* Progress Modal */}
         <ProgressModal />
+
+        {/* Toast Notifications */}
+        <ToastContainer />
+
+        {/* Match Results Modal */}
+        <MatchResultsModal />
 
         {/* Mobile Drawer */}
         <MobileDrawer

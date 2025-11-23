@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { TeamFlag } from '../ui/TeamFlag';
 import { MatchDetailModal } from './MatchDetailModal';
-import { ArrowLeft, Play, PlayCircle, Info } from 'lucide-react';
+import { ArrowLeft, Play, Info } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { toast } from 'sonner';
 import { useState } from 'react';
@@ -16,7 +16,7 @@ interface GroupViewProps {
 }
 
 export function GroupView({ group, teams, onBack }: GroupViewProps) {
-  const { simulateMatch, simulateAllGroupMatches } = useTournamentStore();
+  const { simulateMatch } = useTournamentStore();
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
 
   const getTeam = (teamId: string) => {
@@ -40,24 +40,6 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
         { duration: 3000 }
       );
     }
-  };
-
-  const handleSimulateAll = () => {
-    const unplayedCount = group.matches.filter((m) => !m.isPlayed).length;
-
-    if (unplayedCount === 0) {
-      toast.info('All matches have been played');
-      return;
-    }
-
-    if (unplayedCount > 5) {
-      if (!confirm(`This will simulate ${unplayedCount} matches. Continue?`)) {
-        return;
-      }
-    }
-
-    simulateAllGroupMatches(group.id, 'qualifier');
-    toast.success(`Simulated ${unplayedCount} matches!`);
   };
 
   const totalMatches = group.matches.length;
@@ -129,17 +111,6 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
         <CardContent>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Standings</h3>
-            {playedMatches < totalMatches && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleSimulateAll}
-                className="gap-2"
-              >
-                <PlayCircle className="w-4 h-4" />
-                Simulate All Matches
-              </Button>
-            )}
           </div>
           <StandingsTable
             standings={group.standings}

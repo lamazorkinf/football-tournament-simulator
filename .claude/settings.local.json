@@ -17,7 +17,9 @@
       "WebFetch(domain:inside.fifa.com)",
       "WebFetch(domain:www.soccerallover.com)",
       "WebFetch(domain:football-ranking.com)",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -99,10 +99,11 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
     );
   }
 
-  // Get trophy counts
-  const championCount = performances.filter(p => p.finalStage === 'champion').length;
-  const runnerUpCount = performances.filter(p => p.finalStage === 'runner-up').length;
-  const thirdPlaceCount = performances.filter(p => p.finalStage === 'third-place').length;
+  // Get trophy counts and years
+  const championYears = performances.filter(p => p.finalStage === 'champion').map(p => p.tournamentYear).filter(Boolean);
+  const runnerUpYears = performances.filter(p => p.finalStage === 'runner-up').map(p => p.tournamentYear).filter(Boolean);
+  const thirdPlaceYears = performances.filter(p => p.finalStage === 'third-place').map(p => p.tournamentYear).filter(Boolean);
+  const fourthPlaceYears = performances.filter(p => p.finalStage === 'fourth-place').map(p => p.tournamentYear).filter(Boolean);
 
   // Get stage icons
   const getStageIcon = (stage: string) => {
@@ -127,39 +128,69 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trophy className="w-5 h-5" />
-          Historial de Torneos
-        </CardTitle>
+        <CardTitle>Historial de Torneos</CardTitle>
       </CardHeader>
       <CardContent>
         {/* Trophy Summary */}
-        {(championCount > 0 || runnerUpCount > 0 || thirdPlaceCount > 0) && (
-          <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-200">
-            {championCount > 0 && (
-              <div className="text-center">
-                <div className="text-3xl mb-1">🏆</div>
-                <div className="text-2xl font-bold text-yellow-600">{championCount}</div>
-                <div className="text-xs text-gray-600">
-                  {championCount === 1 ? 'Campeonato' : 'Campeonatos'}
+        {(championYears.length > 0 || runnerUpYears.length > 0 || thirdPlaceYears.length > 0 || fourthPlaceYears.length > 0) && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-200">
+            {championYears.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🏆</span>
+                  <span className="font-semibold text-yellow-600">
+                    {championYears.length === 1 ? 'Campeón' : 'Campeón'}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-700 space-y-1">
+                  {championYears.map((year, idx) => (
+                    <div key={idx} className="font-medium">{year}</div>
+                  ))}
                 </div>
               </div>
             )}
-            {runnerUpCount > 0 && (
-              <div className="text-center">
-                <div className="text-3xl mb-1">🥈</div>
-                <div className="text-2xl font-bold text-gray-600">{runnerUpCount}</div>
-                <div className="text-xs text-gray-600">
-                  {runnerUpCount === 1 ? 'Subcampeonato' : 'Subcampeonatos'}
+            {runnerUpYears.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🥈</span>
+                  <span className="font-semibold text-gray-600">
+                    Subcampeón
+                  </span>
+                </div>
+                <div className="text-sm text-gray-700 space-y-1">
+                  {runnerUpYears.map((year, idx) => (
+                    <div key={idx} className="font-medium">{year}</div>
+                  ))}
                 </div>
               </div>
             )}
-            {thirdPlaceCount > 0 && (
-              <div className="text-center">
-                <div className="text-3xl mb-1">🥉</div>
-                <div className="text-2xl font-bold text-orange-600">{thirdPlaceCount}</div>
-                <div className="text-xs text-gray-600">
-                  {thirdPlaceCount === 1 ? 'Tercer Lugar' : 'Terceros Lugares'}
+            {thirdPlaceYears.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🥉</span>
+                  <span className="font-semibold text-orange-600">
+                    3° Lugar
+                  </span>
+                </div>
+                <div className="text-sm text-gray-700 space-y-1">
+                  {thirdPlaceYears.map((year, idx) => (
+                    <div key={idx} className="font-medium">{year}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {fourthPlaceYears.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">4️⃣</span>
+                  <span className="font-semibold text-blue-600">
+                    4° Lugar
+                  </span>
+                </div>
+                <div className="text-sm text-gray-700 space-y-1">
+                  {fourthPlaceYears.map((year, idx) => (
+                    <div key={idx} className="font-medium">{year}</div>
+                  ))}
                 </div>
               </div>
             )}
@@ -169,7 +200,6 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
         {/* Performance List */}
         <div className="space-y-3">
           {performances.map((performance) => {
-            const icon = getStageIcon(performance.finalStage);
             const colorClass = getStageColor(performance.finalStage);
             const displayName = teamTournamentPerformanceService.getFinalStageDisplayName(
               performance.finalStage as any
@@ -181,29 +211,26 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
                 className={`p-3 rounded-lg border transition-all ${colorClass}`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {icon && <span className="text-2xl">{icon}</span>}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="font-semibold text-sm">{displayName}</div>
-                        {performance.tournamentYear && (
-                          <div className="text-lg font-bold text-gray-700">
-                            {performance.tournamentYear}
-                          </div>
-                        )}
-                      </div>
-                      {performance.qualifierRegion && (
-                        <div className="text-xs text-gray-600">
-                          Región: {performance.qualifierRegion}
-                          {performance.qualifierGroupName && ` - ${performance.qualifierGroupName}`}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      {performance.tournamentYear && (
+                        <div className="text-lg font-bold text-gray-800">
+                          {performance.tournamentYear}
                         </div>
                       )}
-                      {performance.worldCupGroupName && (
-                        <div className="text-xs text-gray-600">
-                          Grupo Mundial: {performance.worldCupGroupName}
-                        </div>
-                      )}
+                      <div className="font-semibold text-sm">{displayName}</div>
                     </div>
+                    {performance.qualifierRegion && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        Región: {performance.qualifierRegion}
+                        {performance.qualifierGroupName && ` - ${performance.qualifierGroupName}`}
+                      </div>
+                    )}
+                    {performance.worldCupGroupName && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        Grupo Mundial: {performance.worldCupGroupName}
+                      </div>
+                    )}
                   </div>
                 </div>
 
