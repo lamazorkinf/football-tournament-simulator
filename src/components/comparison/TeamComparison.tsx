@@ -5,9 +5,8 @@ import { Button } from '../ui/Button';
 import { ArrowLeft, Trophy, Target, TrendingUp, Calendar } from 'lucide-react';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamSelector } from './TeamSelector';
-import { ComparisonStats } from './ComparisonStats';
 import { H2HMatchHistory } from './H2HMatchHistory';
-import { calculateHeadToHeadStats, compareOverallStats, type HeadToHeadStats } from '../../services/headToHeadService';
+import { calculateHeadToHeadStats, type HeadToHeadStats } from '../../services/headToHeadService';
 import type { Team } from '../../types';
 
 export function TeamComparison() {
@@ -121,9 +120,6 @@ export function TeamComparison() {
       </div>
     );
   }
-
-  // Calculate overall comparison
-  const overallComparison = compareOverallStats(team1, team2);
 
   return (
     <div className="space-y-6">

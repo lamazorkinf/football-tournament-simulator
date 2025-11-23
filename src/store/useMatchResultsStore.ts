@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { Match, KnockoutMatch } from '../types';
 
 export interface MatchResult {
   homeTeam: string;
