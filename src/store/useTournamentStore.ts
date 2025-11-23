@@ -28,12 +28,10 @@ import { teamsService } from '../services/teamsService';
 import { adaptiveTournamentService } from '../services/adaptiveTournamentService';
 import { normalizedQualifiersService } from '../services/normalizedQualifiersService';
 import { normalizedWorldCupService } from '../services/normalizedWorldCupService';
-import { teamTournamentPerformanceService } from '../services/teamTournamentPerformanceService';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { performDraw, generateGroupMatches, initializeStandings } from '../utils/drawSystem';
 import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
-import { useMatchResultsStore, type MatchResult } from './useMatchResultsStore';
 import { supabase } from '../lib/supabase';
 
 // Helper function to update tournament in state and database

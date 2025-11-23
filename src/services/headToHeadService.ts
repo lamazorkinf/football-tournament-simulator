@@ -79,8 +79,8 @@ async function getMatchesBetweenTeamsFromDB(team1Id: string, team2Id: string): P
       return [];
     }
 
-    // Combine both results
-    const allMatches = [...(data1 || []), ...(data2 || [])];
+    // Combine both results with proper typing
+    const allMatches: any[] = [...(data1 || []), ...(data2 || [])];
 
     if (allMatches.length === 0) {
       console.log(`No matches found between ${team1Id} and ${team2Id}`);
@@ -104,7 +104,7 @@ async function getMatchesBetweenTeamsFromDB(team1Id: string, team2Id: string): P
     }
 
     // Sort by played_at descending (most recent first)
-    allMatches.sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime());
+    allMatches.sort((a: any, b: any) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime());
 
     console.log(`Found ${allMatches.length} matches between teams in database`);
 

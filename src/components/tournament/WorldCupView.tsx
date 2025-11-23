@@ -5,7 +5,7 @@ import { StandingsTable } from '../ui/StandingsTable';
 import { TeamFlag } from '../ui/TeamFlag';
 import { MatchDetailModal } from './MatchDetailModal';
 import { WorldCupGridView } from './WorldCupGridView';
-import { ArrowLeft, Play, PlayCircle, Trophy, Award, Info, Grid, List } from 'lucide-react';
+import { ArrowLeft, Play, Trophy, Award, Info, Grid, List } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useState } from 'react';
 import { KnockoutView } from './KnockoutView';

@@ -105,15 +105,6 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
   const thirdPlaceYears = performances.filter(p => p.finalStage === 'third-place').map(p => p.tournamentYear).filter(Boolean);
   const fourthPlaceYears = performances.filter(p => p.finalStage === 'fourth-place').map(p => p.tournamentYear).filter(Boolean);
 
-  // Get stage icons
-  const getStageIcon = (stage: string) => {
-    if (stage === 'champion') return '🏆';
-    if (stage === 'runner-up') return '🥈';
-    if (stage === 'third-place') return '🥉';
-    if (stage === 'fourth-place') return '4️⃣';
-    return null;
-  };
-
   // Get stage color
   const getStageColor = (stage: string) => {
     if (stage === 'champion') return 'text-yellow-600 bg-yellow-50';

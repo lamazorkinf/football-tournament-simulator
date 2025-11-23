@@ -80,7 +80,6 @@ interface TeamStats {
 export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
   const [matchHistory, setMatchHistory] = useState<MatchHistoryEntry[]>([]);
   const [skillEvolution, setSkillEvolution] = useState<SkillPoint[]>([]);
-  const [titles, setTitles] = useState<TournamentTitle[]>([]);
   const [stats, setStats] = useState<TeamStats>({
     totalMatches: 0,
     wins: 0,
@@ -300,7 +299,8 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
         }
       });
 
-      setTitles(teamTitles.sort((a, b) => b.year - a.year));
+      // Sort team titles by year (most recent first)
+      teamTitles.sort((a, b) => b.year - a.year);
 
       // Find best World Cup result (best position achieved)
       let bestWorldCupResult: TeamStats['bestWorldCupResult'];
@@ -338,21 +338,6 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
         return '4° Lugar';
       default:
         return position;
-    }
-  };
-
-  const getPositionColor = (position: string) => {
-    switch (position) {
-      case 'champion':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'runner_up':
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-      case 'third_place':
-        return 'bg-amber-100 text-amber-800 border-amber-300';
-      case 'fourth_place':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
