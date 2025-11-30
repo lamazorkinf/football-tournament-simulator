@@ -541,6 +541,29 @@ export const normalizedTournamentService = {
   },
 
   /**
+   * Get lightweight tournament metadata (for lazy loading)
+   * Returns basic info without loading all matches/groups
+   */
+  async getTournamentsList(): Promise<Array<{ id: string; name: string; year: number; status: string }>> {
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await db
+        .tournaments_new()
+        .select('id, name, year, status')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error loading tournaments list:', error);
+      return [];
+    }
+  },
+
+  /**
    * Delete tournament from database
    */
   async deleteTournament(tournamentId: string): Promise<void> {

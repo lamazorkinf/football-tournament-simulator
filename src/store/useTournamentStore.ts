@@ -91,23 +91,22 @@ export const useTournamentStore = create<TournamentState>()(
       },
 
       initializeTournament: async () => {
-        // Try to load all tournaments from database first
+        // Try to load only the latest tournament from database (fast load)
         if (isSupabaseConfigured()) {
           try {
-            const allTournaments = await adaptiveTournamentService.getAllTournaments();
-            if (allTournaments && allTournaments.length > 0) {
-              console.log(`Loaded ${allTournaments.length} tournaments from database`);
-              // Select the most recent tournament
-              const latestTournament = allTournaments[0]; // Already sorted by created_at desc
+            // Load only the most recent tournament (optimized - single tournament load)
+            const latestTournament = await adaptiveTournamentService.getLatestTournament();
+            if (latestTournament) {
+              console.log(`Loaded latest tournament: ${latestTournament.name}`);
               set({
-                tournaments: allTournaments,
+                tournaments: [latestTournament], // Start with just the latest
                 currentTournamentId: latestTournament.id,
                 currentTournament: latestTournament
               });
               return;
             }
           } catch (error) {
-            console.error('Error loading tournaments from database:', error);
+            console.error('Error loading tournament from database:', error);
           }
         }
 
@@ -780,10 +779,10 @@ export const useTournamentStore = create<TournamentState>()(
             }
 
             // 3. Update match results in normalized schema
-            const matchUpdatePromises = matches.map(({ matchId, stage }) => {
-              const entry = matchHistoryEntries.find(
-                e => matchHistoryEntries.indexOf(e) === matches.findIndex(m => m.matchId === matchId)
-              );
+            // Note: matches and matchHistoryEntries arrays are built in the same order,
+            // so we use the index directly instead of searching
+            const matchUpdatePromises = matches.map(({ matchId, stage }, index) => {
+              const entry = matchHistoryEntries[index];
               if (!entry) return Promise.resolve();
 
               if (stage === 'qualifier') {
