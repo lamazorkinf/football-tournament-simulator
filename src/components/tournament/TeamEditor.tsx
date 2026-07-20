@@ -6,8 +6,7 @@ import { TeamFlag } from '../ui/TeamFlag';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { teamsService } from '../../services/teamsService';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import { Search, Edit2, Save, X, Plus, Trash2, RefreshCw } from 'lucide-react';
-import { nanoid } from 'nanoid';
+import { Search, Edit2, Save, X, Trash2, RefreshCw } from 'lucide-react';
 
 const REGIONS: Region[] = [
   'Europe',
@@ -27,14 +26,6 @@ export function TeamEditor() {
     region: Region;
     flag: string;
   }>({ skill: 50, region: 'Europe', flag: '' });
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState<{
-    name: string;
-    flag: string;
-    region: Region;
-    skill: number;
-  }>({ name: '', flag: '', region: 'Europe', skill: 50 });
-
   const filteredTeams = useMemo(() => {
     return teams.filter((team) => {
       const matchesSearch =
@@ -57,38 +48,6 @@ export function TeamEditor() {
 
   const handleCancel = () => {
     setEditingTeam(null);
-  };
-
-  const handleCreateTeam = async () => {
-    if (!createForm.name.trim() || !createForm.flag.trim()) {
-      alert('Please fill in all fields');
-      return;
-    }
-
-    const newTeam: Team = {
-      id: nanoid(6),
-      name: createForm.name.trim(),
-      flag: createForm.flag.trim(),
-      region: createForm.region,
-      skill: createForm.skill,
-    };
-
-    // Add to local state
-    updateTeam(newTeam.id, newTeam);
-
-    // Add to Supabase
-    if (isSupabaseConfigured()) {
-      try {
-        await teamsService.createTeam(newTeam);
-      } catch (error) {
-        console.error('Error creating team in Supabase:', error);
-        alert('Team created locally but failed to sync with database');
-      }
-    }
-
-    // Reset form and close modal
-    setCreateForm({ name: '', flag: '', region: 'Europe', skill: 50 });
-    setShowCreateModal(false);
   };
 
   const handleDeleteTeam = async (teamId: string, teamName: string) => {
@@ -154,15 +113,6 @@ export function TeamEditor() {
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Refreshing...' : 'Refresh from DB'}
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setShowCreateModal(true)}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Create Team
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -226,106 +176,6 @@ export function TeamEditor() {
       </CardContent>
     </Card>
 
-    {/* Create Team Modal */}
-    {showCreateModal && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <Card className="max-w-md w-full">
-          <CardHeader className="bg-grass text-white">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-white">Create New Team</CardTitle>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-white hover:text-white/70"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div>
-              <label className="block text-sm font-medium text-grass-soft mb-1">
-                Team Name *
-              </label>
-              <input
-                type="text"
-                value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
-                placeholder="e.g., New Zealand"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-grass-soft mb-1">
-                Flag Emoji *
-              </label>
-              <input
-                type="text"
-                value={createForm.flag}
-                onChange={(e) => setCreateForm({ ...createForm, flag: e.target.value })}
-                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
-                placeholder="e.g., 🇳🇿"
-                maxLength={4}
-              />
-              <p className="text-xs text-grass-soft mt-1">
-                Use a flag emoji or country code
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-grass-soft mb-1">Region</label>
-              <select
-                value={createForm.region}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, region: e.target.value as Region })
-                }
-                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
-              >
-                {REGIONS.map((region) => (
-                  <option key={region} value={region}>
-                    {region}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-grass-soft mb-1">
-                Skill Rating (30-100)
-              </label>
-              <input
-                type="number"
-                min="30"
-                max="100"
-                value={createForm.skill}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, skill: parseInt(e.target.value) || 30 })
-                }
-                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="primary"
-                onClick={handleCreateTeam}
-                className="flex-1 gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Create Team
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )}
     </>
   );
 }
