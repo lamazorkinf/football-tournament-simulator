@@ -2,6 +2,7 @@ import type { TeamStanding, Team } from '../../types';
 import { cn } from '../../lib/utils';
 import { calculateTier, getTierColor, getTierIcon } from '../../core/tiers';
 import { TeamFlag } from './TeamFlag';
+import { TeamNameTooltip } from './TeamNameTooltip';
 import { sortStandings } from '../../core/scheduler';
 
 interface StandingsTableProps {
@@ -10,6 +11,9 @@ interface StandingsTableProps {
   highlightQualified?: number;
   className?: string;
 }
+
+const thBase = 'px-2 sm:px-3 py-3 text-center font-arcade text-[10px] text-gold uppercase';
+const tdBase = 'px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-center tabular-nums';
 
 export function StandingsTable({
   standings,
@@ -26,57 +30,57 @@ export function StandingsTable({
 
   return (
     <div className={cn('overflow-x-auto -mx-4 sm:mx-0', className)}>
-      <table className="min-w-full divide-y divide-gray-200">
+      <table className="min-w-full divide-y-2 divide-grass">
         <caption className="sr-only">Team standings table</caption>
-        <thead className="bg-gray-50 sticky top-0">
+        <thead className="bg-grass-dark sticky top-0">
           <tr>
-            <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Position">
+            <th className={cn(thBase, 'text-left')} title="Position">
               Pos
             </th>
-            <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Team
-            </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Played">
+            <th className={cn(thBase, 'px-3 sm:px-6 text-left')}>Team</th>
+            <th className={thBase} title="Played">
               P
             </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Won">
+            <th className={thBase} title="Won">
               W
             </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell" title="Drawn">
+            <th className={cn(thBase, 'hidden sm:table-cell')} title="Drawn">
               D
             </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell" title="Lost">
+            <th className={cn(thBase, 'hidden sm:table-cell')} title="Lost">
               L
             </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell" title="Goals For">
+            <th className={cn(thBase, 'hidden md:table-cell')} title="Goals For">
               GF
             </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell" title="Goals Against">
+            <th className={cn(thBase, 'hidden md:table-cell')} title="Goals Against">
               GA
             </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Goal Difference">
+            <th className={thBase} title="Goal Difference">
               GD
             </th>
-            <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Points">
+            <th className={thBase} title="Points">
               Pts
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="divide-y-2 divide-grass">
           {sortedStandings.map((standing, index) => {
             const isQualified = highlightQualified > 0 && index < highlightQualified;
             return (
               <tr
                 key={standing.teamId}
-                className={cn(
-                  'hover:bg-gray-50 transition-colors',
-                  isQualified && 'bg-primary-50 hover:bg-primary-100'
-                )}
+                className={cn('hover:bg-grass/40 transition-colors', isQualified && 'bg-grass/30')}
               >
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td
+                  className={cn(
+                    'px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap tabular-nums',
+                    isQualified && 'text-led'
+                  )}
+                >
                   {index + 1}
                 </td>
-                <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     {(() => {
                       const team = getTeam(standing.teamId);
@@ -84,13 +88,17 @@ export function StandingsTable({
                         return (
                           <>
                             <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
-                            <span className="truncate max-w-[100px] sm:max-w-none">{team.name}</span>
+                            <TeamNameTooltip teamName={team.name}>
+                              <span className="font-arcade text-[10px] uppercase">
+                                {team.id.toUpperCase()}
+                              </span>
+                            </TeamNameTooltip>
                             {(() => {
                               const tier = team.tier || calculateTier(team.skill);
                               return (
                                 <span
                                   className={cn(
-                                    'px-2 py-0.5 text-xs rounded-full border flex-shrink-0',
+                                    'px-2 py-0.5 text-xs border flex-shrink-0',
                                     getTierColor(tier)
                                   )}
                                   title={`${tier} - Skill: ${team.skill}`}
@@ -102,41 +110,27 @@ export function StandingsTable({
                           </>
                         );
                       }
-                      return <span>{standing.teamId}</span>;
+                      return <span className="font-arcade text-[10px] uppercase">{standing.teamId}</span>;
                     })()}
                   </div>
                 </td>
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center text-gray-700">
-                  {standing.played}
-                </td>
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center text-gray-700">
-                  {standing.won}
-                </td>
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center text-gray-700 hidden sm:table-cell">
-                  {standing.drawn}
-                </td>
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center text-gray-700 hidden sm:table-cell">
-                  {standing.lost}
-                </td>
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center text-gray-700 hidden md:table-cell">
-                  {standing.goalsFor}
-                </td>
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center text-gray-700 hidden md:table-cell">
-                  {standing.goalsAgainst}
-                </td>
+                <td className={tdBase}>{standing.played}</td>
+                <td className={tdBase}>{standing.won}</td>
+                <td className={cn(tdBase, 'hidden sm:table-cell')}>{standing.drawn}</td>
+                <td className={cn(tdBase, 'hidden sm:table-cell')}>{standing.lost}</td>
+                <td className={cn(tdBase, 'hidden md:table-cell')}>{standing.goalsFor}</td>
+                <td className={cn(tdBase, 'hidden md:table-cell')}>{standing.goalsAgainst}</td>
                 <td
                   className={cn(
-                    'px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center font-medium',
-                    standing.goalDifference > 0 && 'text-primary-700',
-                    standing.goalDifference < 0 && 'text-red-600'
+                    tdBase,
+                    standing.goalDifference > 0 && 'text-led',
+                    standing.goalDifference < 0 && 'text-loss'
                   )}
                 >
                   {standing.goalDifference > 0 ? '+' : ''}
                   {standing.goalDifference}
                 </td>
-                <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-sm text-center font-bold text-gray-900">
-                  {standing.points}
-                </td>
+                <td className={cn(tdBase, 'text-led')}>{String(standing.points).padStart(2, '0')}</td>
               </tr>
             );
           })}
