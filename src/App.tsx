@@ -101,7 +101,7 @@ function App() {
       />
 
       {/* Main content area with dynamic left margin based on sidebar state */}
-      <div className={`transition-all duration-300 pb-36 lg:pb-0 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+      <div className={`transition-all duration-300 pb-[calc(9rem+env(safe-area-inset-bottom))] lg:pb-0 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* Mobile Header */}
         <header className="lg:hidden bg-grass-dark border-b-4 border-grass sticky top-0 z-30 pt-[env(safe-area-inset-top)]">
           <div className="px-4 py-2 flex items-center justify-between gap-3">
@@ -163,7 +163,7 @@ function App() {
         isOpen={isPauseOpen}
         onClose={() => setIsPauseOpen(false)}
         currentView={currentView}
-        onViewChange={(view) => setCurrentView(view)}
+        onViewChange={handleTabChange}
       />
       </MobileActionProvider>
     </TeamProfileProvider>
