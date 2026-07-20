@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import type { Tournament, Team, Match, Region } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { TeamFlag } from '../ui/TeamFlag';
-import { TeamNameTooltip } from '../ui/TeamNameTooltip';
+import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
 import { Play, Filter, Clock, CheckCircle, Calendar, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
@@ -377,10 +376,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Matches</p>
-                <p className="text-3xl font-bold text-gray-900">{totalMatches}</p>
+                <p className="text-sm text-grass-soft">Total Matches</p>
+                <p className="text-3xl font-terminal text-led tabular-nums">{totalMatches}</p>
               </div>
-              <Calendar className="w-10 h-10 text-primary-600" />
+              <Calendar className="w-10 h-10 text-gold" />
             </div>
           </CardContent>
         </Card>
@@ -389,10 +388,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
-                <p className="text-3xl font-bold text-green-600">{totalPlayed}</p>
+                <p className="text-sm text-grass-soft">Completed</p>
+                <p className="text-3xl font-terminal text-led tabular-nums">{totalPlayed}</p>
               </div>
-              <CheckCircle className="w-10 h-10 text-green-600" />
+              <CheckCircle className="w-10 h-10 text-led" />
             </div>
           </CardContent>
         </Card>
@@ -401,10 +400,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Remaining</p>
-                <p className="text-3xl font-bold text-orange-600">{totalMatches - totalPlayed}</p>
+                <p className="text-sm text-grass-soft">Remaining</p>
+                <p className="text-3xl font-terminal text-gold tabular-nums">{totalMatches - totalPlayed}</p>
               </div>
-              <Clock className="w-10 h-10 text-orange-600" />
+              <Clock className="w-10 h-10 text-gold" />
             </div>
           </CardContent>
         </Card>
@@ -415,13 +414,13 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
         <CardContent className="pt-6">
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between min-w-0">
             <div className="flex flex-wrap gap-3 items-center w-full lg:w-auto">
-              <Filter className="w-5 h-5 text-gray-600 flex-shrink-0" />
+              <Filter className="w-5 h-5 text-grass-soft flex-shrink-0" />
 
               {/* Region Filter */}
               <select
                 value={selectedRegion}
                 onChange={(e) => setSelectedRegion(e.target.value as Region | 'all')}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 max-w-full truncate"
+                className="px-3 py-2 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
               >
                 <option value="all">All Regions</option>
                 {regions.map((region) => (
@@ -435,7 +434,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
               <select
                 value={selectedStage}
                 onChange={(e) => setSelectedStage(e.target.value as MatchStage | 'all')}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 max-w-full truncate"
+                className="px-3 py-2 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
               >
                 <option value="all">All Stages</option>
                 <option value="qualifier">Qualifiers</option>
@@ -445,22 +444,22 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
 
               {/* Matchday Pagination */}
               {availableMatchdays.length > 0 && (
-                <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-2 py-1">
+                <div className="flex items-center gap-2 border-2 border-grass px-2 py-1">
                   <button
                     onClick={handlePrevMatchday}
                     disabled={selectedMatchday === 'all' || selectedMatchday === availableMatchdays[0]}
-                    className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title="Previous Matchday"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-sm font-medium min-w-[80px] text-center">
+                  <span className="font-arcade text-[10px] text-gold uppercase min-w-[80px] text-center">
                     {selectedMatchday === 'all' ? 'All J.' : `Jornada ${selectedMatchday}`}
                   </span>
                   <button
                     onClick={handleNextMatchday}
                     disabled={selectedMatchday === availableMatchdays[availableMatchdays.length - 1]}
-                    className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title="Next Matchday"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -488,7 +487,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                 <Button
                   variant="outline"
                   onClick={handleResetTournamentMatches}
-                  className="gap-2 border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
+                  className="gap-2 border-loss text-loss hover:bg-loss/20"
                   title="Regenerar fixture completo (elimina todos los partidos jugados)"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -507,10 +506,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 flex-wrap min-w-0">
-              <Clock className="w-5 h-5 text-orange-600 flex-shrink-0" />
+              <Clock className="w-5 h-5 text-gold flex-shrink-0" />
               <span className="truncate">Próximos Partidos ({unplayedMatches.length})</span>
               {selectedMatchday !== 'all' && (
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 flex-shrink-0">
+                <span className="px-2 py-1 font-arcade text-[10px] text-gold uppercase bg-grass/30 flex-shrink-0">
                   J{selectedMatchday}
                 </span>
               )}
@@ -533,10 +532,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                 ))}
               </div>
             ) : (
-              <div className="text-center text-gray-500 py-12">
-                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
-                <p className="text-lg font-semibold">Sin partidos próximos</p>
-                <p className="text-sm">Todos los partidos han sido jugados</p>
+              <div className="text-center text-grass-soft py-12">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
+                <p className="text-lg font-arcade text-xs text-white text-shadow-retro uppercase">Sin partidos próximos</p>
+                <p className="text-sm mt-2">Todos los partidos han sido jugados</p>
               </div>
             )}
           </CardContent>
@@ -561,11 +560,18 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
               <Card className="flex flex-col">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 flex-wrap min-w-0">
-                    <Eye className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                    <Eye className="w-5 h-5 text-gold flex-shrink-0" />
                     <span className="truncate">Preview del Próximo Partido</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 overflow-auto">
+                <CardContent className="flex-1 overflow-auto space-y-4">
+                  <ScoreBug
+                    size="lg"
+                    homeTeam={homeTeam}
+                    awayTeam={awayTeam}
+                    homeScore={nextMatch.match.isPlayed ? nextMatch.match.homeScore : null}
+                    awayScore={nextMatch.match.isPlayed ? nextMatch.match.awayScore : null}
+                  />
                   <MatchPreview
                     homeTeam={homeTeam}
                     awayTeam={awayTeam}
@@ -577,8 +583,8 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
             ) : (
               <Card className="flex flex-col">
                 <CardContent className="pt-6">
-                  <div className="text-center text-gray-500 py-12">
-                    <Eye className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <div className="text-center text-grass-soft py-12">
+                    <Eye className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
                     <p className="text-sm">No hay datos disponibles para este partido</p>
                   </div>
                 </CardContent>
@@ -619,18 +625,25 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="fixed inset-4 bg-white rounded-lg shadow-xl z-50 overflow-auto lg:hidden"
+                className="fixed inset-4 bg-grass-dark border-4 border-line shadow-hard-panel z-50 overflow-auto lg:hidden"
               >
-                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                  <h3 className="font-bold text-lg">Preview del Partido</h3>
+                <div className="sticky top-0 bg-grass-dark border-b-4 border-grass p-4 flex items-center justify-between">
+                  <h3 className="font-arcade text-sm text-white text-shadow-retro">Preview del Partido</h3>
                   <button
                     onClick={() => setShowMobilePreview(false)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 text-grass-soft hover:bg-grass/40 transition-colors"
                   >
                     <CheckCircle className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="p-4">
+                <div className="p-4 space-y-4">
+                  <ScoreBug
+                    size="lg"
+                    homeTeam={homeTeam}
+                    awayTeam={awayTeam}
+                    homeScore={nextMatch.match.isPlayed ? nextMatch.match.homeScore : null}
+                    awayScore={nextMatch.match.isPlayed ? nextMatch.match.awayScore : null}
+                  />
                   <MatchPreview
                     homeTeam={homeTeam}
                     awayTeam={awayTeam}
@@ -665,13 +678,13 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
 
   const getStageBadge = () => {
     const colors = {
-      qualifier: 'bg-blue-100 text-blue-800',
-      'world-cup': 'bg-purple-100 text-purple-800',
-      knockout: 'bg-red-100 text-red-800',
+      qualifier: 'bg-black/40 text-grass-soft border border-grass',
+      'world-cup': 'bg-black/40 text-gold border border-gold',
+      knockout: 'bg-black/40 text-loss border border-loss',
     };
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[stage]}`}>
+      <span className={`px-2 py-1 font-arcade text-[10px] uppercase ${colors[stage]}`}>
         {stage === 'qualifier' ? 'Qualifier' : stage === 'world-cup' ? 'World Cup' : 'Knockout'}
       </span>
     );
@@ -682,10 +695,10 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.02 }}
-      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border cursor-pointer ${
+      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-2 cursor-pointer ${
         match.isPlayed
-          ? 'bg-gray-50 border-gray-200 hover:shadow-md transition-all'
-          : 'bg-white border-primary-200 hover:border-primary-400 transition-colors'
+          ? 'bg-grass-dark border-grass hover:bg-grass/20 transition-colors'
+          : 'bg-grass-dark border-gold hover:border-led transition-colors'
       }`}
       onClick={onMatchClick}
     >
@@ -694,69 +707,29 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
         <div className="flex items-center gap-2 mb-2 overflow-hidden">
           {getStageBadge()}
           {match.matchday && (
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 flex-shrink-0">
+            <span className="px-2 py-1 font-arcade text-[10px] text-gold uppercase bg-grass/30 flex-shrink-0">
               J{match.matchday}
             </span>
           )}
-          <span className="text-xs text-gray-600 truncate">
+          <span className="text-xs text-grass-soft truncate">
             {region && `${region} • `}{groupName}
           </span>
         </div>
 
         {/* Teams */}
-        {compact ? (
-          // Compact mode: only flags and scores with tooltips on tap/click
-          <div className="flex items-center justify-center gap-2 min-w-0">
-            {homeTeam && (
-              <TeamNameTooltip teamName={homeTeam.name} position="top">
-                <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={24} />
-              </TeamNameTooltip>
-            )}
-            {match.isPlayed ? (
-              <div className="flex items-center gap-1.5 font-bold text-base flex-shrink-0">
-                <span className="text-gray-900">{match.homeScore}</span>
-                <span className="text-gray-400">-</span>
-                <span className="text-gray-900">{match.awayScore}</span>
-              </div>
-            ) : (
-              <span className="text-gray-400 font-medium text-xs flex-shrink-0">vs</span>
-            )}
-            {awayTeam && (
-              <TeamNameTooltip teamName={awayTeam.name} position="top">
-                <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={24} />
-              </TeamNameTooltip>
-            )}
-          </div>
-        ) : (
-          // Normal mode: flags + names
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              {homeTeam && <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={32} />}
-              <span className="font-medium text-sm sm:text-base truncate">
-                {homeTeam?.name || match.homeTeamId}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {match.isPlayed ? (
-                <div className="flex items-center gap-2 font-bold text-lg">
-                  <span className="text-gray-900">{match.homeScore}</span>
-                  <span className="text-gray-400">-</span>
-                  <span className="text-gray-900">{match.awayScore}</span>
-                </div>
-              ) : (
-                <span className="text-gray-400 font-medium text-sm">vs</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 flex-1 justify-end">
-              <span className="font-medium text-sm sm:text-base text-right truncate">
-                {awayTeam?.name || match.awayTeamId}
-              </span>
-              {awayTeam && <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={32} />}
-            </div>
-          </div>
-        )}
+        <div className={`flex items-center ${compact ? 'justify-center' : 'justify-between'} gap-2 min-w-0`}>
+          {homeTeam && awayTeam ? (
+            <ScoreBug
+              size="md"
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+              homeScore={match.isPlayed ? match.homeScore : null}
+              awayScore={match.isPlayed ? match.awayScore : null}
+            />
+          ) : (
+            <span className="text-grass-soft text-xs">{match.homeTeamId} vs {match.awayTeamId}</span>
+          )}
+        </div>
       </div>
 
       {/* Action Button */}
