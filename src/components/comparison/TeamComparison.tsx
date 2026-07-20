@@ -156,7 +156,7 @@ export function TeamComparison() {
               <p className="text-sm text-grass-soft">{team1.region}</p>
               <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-black/40 border border-gold text-gold text-sm font-semibold">
                 <TrendingUp className="w-4 h-4" />
-                Skill: {team1.skill}
+                Skill: {Math.round(team1.skill)}
               </div>
               <div className="mt-2 max-w-[160px] mx-auto">
                 <PixelBar value={team1.skill} max={100} color="led" />
@@ -189,7 +189,7 @@ export function TeamComparison() {
               <p className="text-sm text-grass-soft">{team2.region}</p>
               <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-black/40 border border-gold text-gold text-sm font-semibold">
                 <TrendingUp className="w-4 h-4" />
-                Skill: {team2.skill}
+                Skill: {Math.round(team2.skill)}
               </div>
               <div className="mt-2 max-w-[160px] mx-auto">
                 <PixelBar value={team2.skill} max={100} color="led" />

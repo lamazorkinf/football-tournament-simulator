@@ -5,13 +5,13 @@ import { Settings, RotateCcw, Info, Zap, Home, Target } from 'lucide-react';
 import { useState } from 'react';
 
 export function EngineSettings() {
-  const { config, updateKFactor, updateHomeAdvantage, updateSkillLimits, resetToDefaults } = useConfigStore();
+  const { config, updateKFactor, updateEloDivisor, updateHomeAdvantage, updateSkillLimits, resetToDefaults } = useConfigStore();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const getKFactorLabel = (value: number): { label: string; color: string } => {
-    if (value <= 5) return { label: 'Muy Estable', color: 'text-led' };
-    if (value <= 15) return { label: 'Moderado', color: 'text-led' };
-    if (value <= 30) return { label: 'Rápido', color: 'text-gold' };
+    if (value <= 2) return { label: 'Muy Estable', color: 'text-led' };
+    if (value <= 4) return { label: 'Moderado', color: 'text-led' };
+    if (value <= 7) return { label: 'Rápido', color: 'text-gold' };
     return { label: 'Muy Volátil', color: 'text-loss' };
   };
 
@@ -72,33 +72,61 @@ export function EngineSettings() {
               </div>
               <input
                 type="range"
-                min="1"
-                max="50"
+                min="0.5"
+                max="10"
+                step="0.5"
                 value={config.kFactor}
                 onChange={(e) => updateKFactor(Number(e.target.value))}
                 className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led"
               />
               <div className="flex justify-between text-xs text-grass-soft mt-1">
-                <span>1 (Muy estable)</span>
-                <span>25</span>
-                <span>50 (Muy volátil)</span>
+                <span>0.5 (Muy estable)</span>
+                <span>5</span>
+                <span>10 (Muy volátil)</span>
               </div>
             </div>
 
             <div className="bg-night border-2 border-grass p-4 space-y-2">
               <p className="text-sm font-semibold text-white">¿Qué significa el K-Factor?</p>
               <div className="text-sm text-grass-soft space-y-1">
-                <p>• <strong className="text-white">Valores bajos (1-5):</strong> Cambios lentos y estables. Ideal para ligas largas.</p>
-                <p>• <strong className="text-white">Valores medios (6-15):</strong> Balance entre estabilidad y adaptabilidad.</p>
-                <p>• <strong className="text-white">Valores altos (16-50):</strong> Cambios rápidos. Los equipos pueden subir/bajar mucho.</p>
+                <p>• <strong className="text-white">Valores bajos (0.5-2):</strong> Cambios lentos y estables. Ideal para jugar muchas temporadas.</p>
+                <p>• <strong className="text-white">Valores medios (2.5-4):</strong> Balance entre estabilidad y adaptabilidad.</p>
+                <p>• <strong className="text-white">Valores altos (4.5-10):</strong> Cambios rápidos. Los equipos pueden subir/bajar mucho.</p>
               </div>
               <div className="mt-3 pt-3 border-t-2 border-grass">
                 <p className="text-xs text-grass-soft">
                   <strong className="text-white">Ejemplo con K={config.kFactor}:</strong> Si un equipo de 70 skill gana a uno de 85 skill,
-                  ganará aproximadamente <strong className="text-led font-terminal tabular-nums">+{Math.round(config.kFactor * 0.76)}</strong> puntos
-                  (el favorito perdería <strong className="text-loss font-terminal tabular-nums">-{Math.round(config.kFactor * 0.76)}</strong>).
+                  ganará aproximadamente <strong className="text-led font-terminal tabular-nums">+{(config.kFactor * 0.61).toFixed(1)}</strong> puntos
+                  (el favorito perdería <strong className="text-loss font-terminal tabular-nums">-{(config.kFactor * 0.61).toFixed(1)}</strong>).
                 </p>
               </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-grass-soft">
+                  Divisor Elo: <span className="text-led font-terminal tabular-nums font-bold">{config.eloDivisor}</span>
+                </label>
+                <span className="text-sm text-grass-soft">
+                  {config.eloDivisor === 75 && 'Calibrado'}
+                  {config.eloDivisor < 75 && 'Favoritos ganan más rating'}
+                  {config.eloDivisor > 75 && 'Sorpresas pagan de más'}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="25"
+                max="200"
+                step="5"
+                value={config.eloDivisor}
+                onChange={(e) => updateEloDivisor(Number(e.target.value))}
+                className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led"
+              />
+              <p className="text-xs text-grass-soft mt-2">
+                Controla qué tan &quot;sorpresa&quot; se considera cada resultado. El valor <strong className="text-white">75</strong> está
+                calibrado para que la expectativa Elo coincida con la probabilidad real de victoria del simulador:
+                con él, los ratings se mantienen estables durante décadas de temporadas. No lo cambies salvo que sepas lo que hacés.
+              </p>
             </div>
           </div>
         </CardContent>
@@ -226,7 +254,7 @@ export function EngineSettings() {
             <div>
               <p className="font-semibold text-white">Restaurar valores predeterminados</p>
               <p className="text-sm text-grass-soft mt-1">
-                K-Factor: 5, Ventaja local: 3, Límites: 30-100
+                K-Factor: 1.5, Divisor Elo: 75, Ventaja local: 3, Límites: 30-100
               </p>
             </div>
             <Button

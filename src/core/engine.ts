@@ -42,24 +42,23 @@ export function simulateMatch(homeSkill: number, awaySkill: number, disableHomeA
 }
 
 /**
- * Generates goals based on expected goals using Poisson-like distribution
+ * Generates goals based on expected goals using a Poisson distribution
+ * (Knuth's algorithm), capped at 7 goals per team
  */
 function generateGoals(expectedGoals: number): number {
   // Clamp expected goals to reasonable range
-  const lambda = Math.max(0, Math.min(4, expectedGoals));
+  const lambda = Math.max(0.05, Math.min(4, expectedGoals));
 
-  // Simple Poisson approximation using random numbers
-  const random = Math.random();
+  const limit = Math.exp(-lambda);
+  let goals = -1;
+  let product = 1;
 
-  if (random < Math.exp(-lambda)) return 0;
-  if (random < Math.exp(-lambda) * (1 + lambda)) return 1;
-  if (random < Math.exp(-lambda) * (1 + lambda + lambda * lambda / 2)) return 2;
-  if (random < Math.exp(-lambda) * (1 + lambda + lambda * lambda / 2 + Math.pow(lambda, 3) / 6)) return 3;
+  do {
+    goals++;
+    product *= Math.random();
+  } while (product > limit);
 
-  // Add some variance for higher scores
-  if (Math.random() > 0.9) return 4 + Math.floor(Math.random() * 3);
-
-  return Math.floor(Math.random() * 5);
+  return Math.min(goals, 7);
 }
 
 /**
@@ -77,8 +76,11 @@ function calculateSkillChanges(
   // K-factor: how much ratings can change (configured by user)
   const kFactor = config.kFactor;
 
-  // Expected result (0-1 scale)
-  const expectedHome = 1 / (1 + Math.pow(10, (awaySkill - homeSkill) / 400));
+  // Expected result (0-1 scale). The divisor is calibrated so the Elo
+  // expectation matches the actual win probability of the goal model
+  // on the 30-100 skill scale (~75); chess-style 400 would treat every
+  // match as a near coin flip and make ratings drift without bound.
+  const expectedHome = 1 / (1 + Math.pow(10, (awaySkill - homeSkill) / config.eloDivisor));
 
   // Actual result (1 = win, 0.5 = draw, 0 = loss)
   let actualHome: number;
@@ -86,8 +88,9 @@ function calculateSkillChanges(
   else if (homeScore === awayScore) actualHome = 0.5;
   else actualHome = 0;
 
-  // Calculate changes
-  const homeChange = Math.round(kFactor * (actualHome - expectedHome));
+  // Fractional changes (rounded to 2 decimals to avoid float noise);
+  // integer rounding is far too coarse on a 60-point scale
+  const homeChange = Math.round(kFactor * (actualHome - expectedHome) * 100) / 100;
   const awayChange = -homeChange;
 
   return { homeChange, awayChange };
@@ -98,7 +101,7 @@ function calculateSkillChanges(
  */
 export function updateTeamSkill(currentSkill: number, change: number): number {
   const config = getEngineConfig();
-  const newSkill = currentSkill + change;
+  const newSkill = Math.round((currentSkill + change) * 100) / 100;
   // Keep skill between configured limits
   return Math.max(config.skillMin, Math.min(config.skillMax, newSkill));
 }

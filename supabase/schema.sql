@@ -9,7 +9,7 @@ CREATE TABLE teams (
   name TEXT NOT NULL,
   flag TEXT NOT NULL,
   region TEXT NOT NULL CHECK (region IN ('Europe', 'America', 'Africa', 'Asia')),
-  skill INTEGER NOT NULL CHECK (skill >= 30 AND skill <= 100),
+  skill NUMERIC(5,2) NOT NULL CHECK (skill >= 30 AND skill <= 100),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
@@ -29,12 +29,12 @@ CREATE TABLE match_history (
   group_name TEXT,
   region TEXT,
   tournament_id TEXT,
-  home_skill_before INTEGER NOT NULL,
-  away_skill_before INTEGER NOT NULL,
-  home_skill_after INTEGER NOT NULL,
-  away_skill_after INTEGER NOT NULL,
-  home_skill_change INTEGER NOT NULL,
-  away_skill_change INTEGER NOT NULL,
+  home_skill_before NUMERIC(5,2) NOT NULL,
+  away_skill_before NUMERIC(5,2) NOT NULL,
+  home_skill_after NUMERIC(5,2) NOT NULL,
+  away_skill_after NUMERIC(5,2) NOT NULL,
+  home_skill_change NUMERIC(5,2) NOT NULL,
+  away_skill_change NUMERIC(5,2) NOT NULL,
   played_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   metadata JSONB DEFAULT '{}'::jsonb
 );

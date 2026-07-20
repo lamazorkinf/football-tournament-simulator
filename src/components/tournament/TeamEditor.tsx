@@ -38,7 +38,7 @@ export function TeamEditor() {
 
   const handleEdit = (team: Team) => {
     setEditingTeam(team.id);
-    setEditForm({ skill: team.skill, region: team.region, flag: team.flag });
+    setEditForm({ skill: Math.round(team.skill), region: team.region, flag: team.flag });
   };
 
   const handleSave = (teamId: string) => {
@@ -288,7 +288,7 @@ function TeamRow({
                     style={{ width: `${team.skill}%` }}
                   />
                 </div>
-                <span className="font-semibold text-sm w-8 text-gold font-terminal tabular-nums">{team.skill}</span>
+                <span className="font-semibold text-sm w-8 text-gold font-terminal tabular-nums">{Math.round(team.skill)}</span>
               </div>
             </div>
             <span className="text-sm text-grass-soft hidden md:block">{team.region}</span>

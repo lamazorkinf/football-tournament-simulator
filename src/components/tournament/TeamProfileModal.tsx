@@ -508,7 +508,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                               fill="white"
                               fontWeight="bold"
                             >
-                              {hoveredPoint.skill}
+                              {Math.round(hoveredPoint.skill)}
                             </text>
                           </g>
                         )}

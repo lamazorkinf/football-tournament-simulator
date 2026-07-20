@@ -117,7 +117,7 @@ export function StandingsTable({
                                       'px-2 py-0.5 text-xs border flex-shrink-0',
                                       getTierColor(tier)
                                     )}
-                                    title={`${tier} - Skill: ${team.skill}`}
+                                    title={`${tier} - Skill: ${Math.round(team.skill)}`}
                                   >
                                     {getTierIcon(tier)} <span className="hidden sm:inline ml-1">{tier}</span>
                                   </span>

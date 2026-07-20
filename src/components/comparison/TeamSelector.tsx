@@ -49,7 +49,7 @@ export function TeamSelector({
               <h4 className="font-bold text-white">{selectedTeam.name}</h4>
               <p className="text-sm text-grass-soft">{selectedTeam.region}</p>
               <p className="text-xs text-gold font-semibold mt-1">
-                Skill: {selectedTeam.skill}
+                Skill: {Math.round(selectedTeam.skill)}
               </p>
             </div>
           </div>
@@ -117,7 +117,7 @@ export function TeamSelector({
                   <p className="text-xs text-grass-soft">{team.region}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-bold text-gold font-terminal tabular-nums">{team.skill}</div>
+                  <div className="text-sm font-bold text-gold font-terminal tabular-nums">{Math.round(team.skill)}</div>
                   <div className="text-xs text-grass-soft">Skill</div>
                 </div>
               </button>

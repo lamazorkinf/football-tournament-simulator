@@ -6,7 +6,19 @@
 -- Drop existing objects if they exist (for clean migration)
 DROP VIEW IF EXISTS world_cup_standings CASCADE;
 DROP VIEW IF EXISTS qualifier_standings CASCADE;
-DROP TRIGGER IF EXISTS trigger_update_group_standings_new ON matches_new CASCADE;
+
+-- DROP TRIGGER ... ON matches_new requires the table to exist even with
+-- IF EXISTS (Postgres only tolerates a missing trigger, not a missing
+-- relation), so this fails on a brand-new DB where matches_new was never
+-- created. Guard it so the migration works both on a fresh install and
+-- when re-running against an existing schema.
+DO $$
+BEGIN
+  IF to_regclass('public.matches_new') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trigger_update_group_standings_new ON matches_new CASCADE';
+  END IF;
+END $$;
+
 DROP FUNCTION IF EXISTS update_group_standings_new() CASCADE;
 DROP FUNCTION IF EXISTS get_qualifier_matches(TEXT) CASCADE;
 
@@ -179,7 +191,7 @@ CREATE TABLE team_tournament_skills (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   tournament_id TEXT NOT NULL REFERENCES tournaments_new(id) ON DELETE CASCADE,
   team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-  skill_snapshot INTEGER NOT NULL CHECK (skill_snapshot BETWEEN 30 AND 100),
+  skill_snapshot NUMERIC(5,2) NOT NULL CHECK (skill_snapshot BETWEEN 30 AND 100),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(tournament_id, team_id)
 );

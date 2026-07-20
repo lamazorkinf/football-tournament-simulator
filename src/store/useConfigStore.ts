@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export interface EngineConfig {
   kFactor: number;
+  eloDivisor: number;
   homeAdvantage: number;
   skillMin: number;
   skillMax: number;
@@ -11,6 +12,7 @@ export interface EngineConfig {
 interface ConfigStore {
   config: EngineConfig;
   updateKFactor: (value: number) => void;
+  updateEloDivisor: (value: number) => void;
   updateHomeAdvantage: (value: number) => void;
   updateSkillLimits: (min: number, max: number) => void;
   resetToDefaults: () => void;
@@ -18,8 +20,13 @@ interface ConfigStore {
   toggleScanlines: () => void;
 }
 
+// kFactor 1.5 + eloDivisor 75: calibrados por simulación para que los
+// rankings sigan siendo reconocibles tras 50 temporadas (el divisor 75
+// hace que la expectativa Elo coincida con la probabilidad real de
+// victoria del modelo de goles en la escala de skills 30-100)
 const DEFAULT_CONFIG: EngineConfig = {
-  kFactor: 5,
+  kFactor: 1.5,
+  eloDivisor: 75,
   homeAdvantage: 3,
   skillMin: 30,
   skillMax: 100,
@@ -32,7 +39,12 @@ export const useConfigStore = create<ConfigStore>()(
 
       updateKFactor: (value: number) =>
         set((state) => ({
-          config: { ...state.config, kFactor: Math.max(1, Math.min(50, value)) },
+          config: { ...state.config, kFactor: Math.max(0.5, Math.min(50, value)) },
+        })),
+
+      updateEloDivisor: (value: number) =>
+        set((state) => ({
+          config: { ...state.config, eloDivisor: Math.max(10, Math.min(400, value)) },
         })),
 
       updateHomeAdvantage: (value: number) =>
@@ -57,7 +69,15 @@ export const useConfigStore = create<ConfigStore>()(
     }),
     {
       name: 'football-engine-config',
-      version: 1,
+      version: 2,
+      migrate: (persistedState, version) => {
+        const state = persistedState as ConfigStore;
+        if (version < 2) {
+          // v2: nuevo motor Elo calibrado — resetear config a los nuevos defaults
+          return { ...state, config: DEFAULT_CONFIG };
+        }
+        return state;
+      },
     }
   )
 );

@@ -502,7 +502,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                                 <span className="text-white">{team.name}</span>
                               </div>
                               <span className="font-terminal text-led tabular-nums">
-                                {team.skill}
+                                {Math.round(team.skill)}
                               </span>
                             </div>
                           ))}

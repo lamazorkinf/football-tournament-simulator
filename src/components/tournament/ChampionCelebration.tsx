@@ -55,7 +55,7 @@ export const ChampionCelebration = ({
             <span className="text-8xl">{champion.flag}</span>
             <div className="text-left">
               <h2 className="font-arcade text-lg text-white text-shadow-retro">{champion.name}</h2>
-              <p className="text-grass-soft text-xl">Skill Rating: {champion.skill}</p>
+              <p className="text-grass-soft text-xl">Skill Rating: {Math.round(champion.skill)}</p>
             </div>
           </div>
           <p className="text-2xl text-white font-semibold mt-4">
@@ -77,7 +77,7 @@ export const ChampionCelebration = ({
               <div className="text-6xl">{runnerUp.flag}</div>
               <h3 className="font-arcade text-sm text-white text-shadow-retro">{runnerUp.name}</h3>
               <p className="text-sm text-grass-soft">Runner-up</p>
-              <p className="text-sm text-grass-soft">Skill: {runnerUp.skill}</p>
+              <p className="text-sm text-grass-soft">Skill: {Math.round(runnerUp.skill)}</p>
             </div>
           </Card>
         </div>
@@ -93,7 +93,7 @@ export const ChampionCelebration = ({
               <div className="text-7xl">{champion.flag}</div>
               <h3 className="font-arcade text-base text-white text-shadow-retro">{champion.name}</h3>
               <p className="text-sm text-gold font-semibold">Champion</p>
-              <p className="text-sm text-gold">Skill: {champion.skill}</p>
+              <p className="text-sm text-gold">Skill: {Math.round(champion.skill)}</p>
             </div>
           </Card>
         </div>
@@ -110,7 +110,7 @@ export const ChampionCelebration = ({
                 <div className="text-6xl">{thirdPlace.flag}</div>
                 <h3 className="font-arcade text-sm text-white text-shadow-retro">{thirdPlace.name}</h3>
                 <p className="text-sm text-led">Third Place</p>
-                <p className="text-sm text-grass-soft">Skill: {thirdPlace.skill}</p>
+                <p className="text-sm text-grass-soft">Skill: {Math.round(thirdPlace.skill)}</p>
               </div>
             </Card>
           </div>
@@ -131,7 +131,7 @@ export const ChampionCelebration = ({
                 <span className="text-4xl">{fourthPlace.flag}</span>
                 <div>
                   <h3 className="font-arcade text-xs text-white text-shadow-retro">{fourthPlace.name}</h3>
-                  <p className="text-xs text-grass-soft">Skill: {fourthPlace.skill}</p>
+                  <p className="text-xs text-grass-soft">Skill: {Math.round(fourthPlace.skill)}</p>
                 </div>
               </div>
             </div>

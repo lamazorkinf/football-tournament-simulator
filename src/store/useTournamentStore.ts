@@ -34,6 +34,22 @@ import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
 import { supabase } from '../lib/supabase';
 
+// Regresión hacia el skill base entre temporadas: evita que la caminata
+// aleatoria del Elo disperse los ratings indefinidamente tras muchas
+// temporadas, sin impedir ascensos/descensos graduales
+const SEASON_REGRESSION = 0.03;
+const BASE_SKILLS: Record<string, number> = Object.fromEntries(
+  (teamsData as Team[]).map((team) => [team.id, team.skill])
+);
+
+const applySeasonRegression = (teams: Team[]): Team[] =>
+  teams.map((team) => {
+    const base = BASE_SKILLS[team.id];
+    if (base === undefined) return team; // equipos creados por el usuario, sin baseline
+    const skill = Math.round((team.skill + SEASON_REGRESSION * (base - team.skill)) * 100) / 100;
+    return { ...team, skill };
+  });
+
 // Helper function to update tournament in state and database
 const updateTournamentInState = (set: any, get: any, updatedTournament: Tournament, skipDbSave = false) => {
   // Update in tournaments list
@@ -158,7 +174,9 @@ export const useTournamentStore = create<TournamentState>()(
 
         try {
           progress.updateProgress('Actualizando rankings de equipos...', 1);
-          const teamsWithTiers = updateTeamsTiers(get().teams);
+          // Nueva temporada: los skills regresan un 3% hacia su valor base
+          const regressedTeams = applySeasonRegression(get().teams);
+          const teamsWithTiers = updateTeamsTiers(regressedTeams);
 
           // Capture original skills at tournament start
           const originalSkills: Record<string, number> = {};
@@ -186,8 +204,9 @@ export const useTournamentStore = create<TournamentState>()(
             originalSkills,
           };
 
-          // Add to tournaments list
+          // Add to tournaments list and apply regressed skills
           set((state) => ({
+            teams: teamsWithTiers,
             tournaments: [tournament, ...state.tournaments],
           }));
 
@@ -195,6 +214,10 @@ export const useTournamentStore = create<TournamentState>()(
           if (isSupabaseConfigured()) {
             try {
               progress.updateProgress('Guardando torneo en base de datos...', 4);
+              // Persist regressed skills
+              teamsService
+                .batchUpdateTeams(teamsWithTiers.map((t) => ({ id: t.id, skill: t.skill })))
+                .catch((error) => console.error('Error saving regressed skills:', error));
               await adaptiveTournamentService.saveTournament(tournament);
               console.log(`Tournament ${year} created and saved to database`);
 
