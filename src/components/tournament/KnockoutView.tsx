@@ -9,6 +9,7 @@ import { BracketLine } from './BracketLine';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamNameTooltip } from '../ui/TeamNameTooltip';
 import { useState, useEffect, useRef } from 'react';
+import { useMobileAction } from '../../hooks/useMobileAction';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { matchCardVariants, matchContainerVariants } from './animations';
@@ -210,6 +211,25 @@ export const KnockoutView = ({
       { duration: 2000 }
     );
   };
+
+  const nextPendingMatch = [
+    ...knockout.roundOf32,
+    ...knockout.roundOf16,
+    ...knockout.quarterFinals,
+    ...knockout.semiFinals,
+    ...(knockout.thirdPlace ? [knockout.thirdPlace] : []),
+    ...(knockout.final ? [knockout.final] : []),
+  ].find((m) => !m.isPlayed && m.homeTeamId && m.awayTeamId);
+
+  useMobileAction(
+    nextPendingMatch
+      ? {
+          label: isSavingMatch ? 'GUARDANDO…' : '▶ SIMULAR PARTIDO',
+          onPress: () => handleSimulate(nextPendingMatch.id),
+          disabled: isSavingMatch,
+        }
+      : null
+  );
 
   const tournamentComplete = championId && runnerUpId;
 

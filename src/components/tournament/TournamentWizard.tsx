@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useMobileAction } from '../../hooks/useMobileAction';
 import {
   getQualifierProgress,
   getWorldCupGroupProgress,
@@ -39,6 +40,30 @@ export function TournamentWizard() {
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
 
+  const handleGenerateDraw = () => {
+    if (!currentTournament) return;
+    const hasOriginalSkills = currentTournament.originalSkills &&
+      Object.keys(currentTournament.originalSkills).length > 0;
+
+    const message = hasOriginalSkills
+      ? '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.\n\n⚠️ Las habilidades de los equipos se restaurarán a sus valores originales del inicio del torneo.'
+      : '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.';
+
+    if (confirm(message)) {
+      generateDrawAndFixtures();
+      const successMsg = hasOriginalSkills
+        ? '✅ Sorteo generado y habilidades restauradas!'
+        : '✅ Sorteo y fixtures generados correctamente';
+      toast.success(successMsg);
+    }
+  };
+
+  useMobileAction(
+    currentTournament && !currentTournament.hasAnyMatchPlayed
+      ? { label: '▶ PRESS START', onPress: handleGenerateDraw }
+      : null
+  );
+
   if (!currentTournament) {
     return null;
   }
@@ -76,24 +101,6 @@ export function TournamentWizard() {
   const canStartKnockout =
     currentTournament.worldCup &&
     canAdvanceToKnockout(currentTournament.worldCup.groups);
-
-  // Handle action clicks with confirmations
-  const handleGenerateDraw = () => {
-    const hasOriginalSkills = currentTournament.originalSkills &&
-      Object.keys(currentTournament.originalSkills).length > 0;
-
-    const message = hasOriginalSkills
-      ? '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.\n\n⚠️ Las habilidades de los equipos se restaurarán a sus valores originales del inicio del torneo.'
-      : '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.';
-
-    if (confirm(message)) {
-      generateDrawAndFixtures();
-      const successMsg = hasOriginalSkills
-        ? '✅ Sorteo generado y habilidades restauradas!'
-        : '✅ Sorteo y fixtures generados correctamente';
-      toast.success(successMsg);
-    }
-  };
 
   const handleAdvanceToWorldCup = () => {
     if (

@@ -8,6 +8,7 @@ import { MatchPreview } from './MatchPreview';
 import { Play, Filter, Clock, CheckCircle, Calendar, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
+import { useMobileAction } from '../../hooks/useMobileAction';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -263,6 +264,12 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
       toast.error('Error al simular la jornada');
     }
   };
+
+  useMobileAction({
+    label: isBatchProcessing ? 'SIMULANDO…' : '▶ SIMULAR JORNADA',
+    onPress: handleSimulateMatchday,
+    disabled: unplayedMatches.length === 0 || isSavingMatch || isBatchProcessing,
+  });
 
   const handleMatchClick = () => {
     // Open modal on mobile, do nothing on desktop

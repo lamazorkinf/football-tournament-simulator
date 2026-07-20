@@ -20,6 +20,8 @@ import { ToastContainer } from './components/ui/ToastContainer';
 import { MatchResultsModal } from './components/ui/MatchResultsModal';
 import { GameTabBar } from './components/ui/GameTabBar';
 import { PauseMenu } from './components/ui/PauseMenu';
+import { ActionDock } from './components/ui/ActionDock';
+import { MobileActionProvider } from './hooks/useMobileAction';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
 
@@ -79,6 +81,7 @@ function App() {
 
   return (
     <TeamProfileProvider>
+      <MobileActionProvider>
       <Scanlines />
       <div className="min-h-screen bg-night">
         {/* Progress Modal */}
@@ -148,6 +151,7 @@ function App() {
       </div>
       </div>
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-40">
+        <ActionDock />
         <GameTabBar
           currentView={currentView}
           onViewChange={handleTabChange}
@@ -161,6 +165,7 @@ function App() {
         currentView={currentView}
         onViewChange={(view) => setCurrentView(view)}
       />
+      </MobileActionProvider>
     </TeamProfileProvider>
   );
 }
