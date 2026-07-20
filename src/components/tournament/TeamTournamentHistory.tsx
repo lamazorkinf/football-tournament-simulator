@@ -108,6 +108,9 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
   // Get stage color
   const getStageColor = (stage: string) => {
     if (stage === 'champion') return 'text-gold bg-black/40 border-gold';
+    if (['runner-up', 'third-place', 'fourth-place', 'eliminated-semifinals'].includes(stage)) {
+      return 'text-led bg-black/40 border-led';
+    }
     return 'text-grass-soft bg-black/40 border-grass';
   };
 

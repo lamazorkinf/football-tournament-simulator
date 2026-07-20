@@ -46,6 +46,22 @@ export function TeamNameTooltip({ children, teamName, position = 'top' }: TeamNa
     }
   };
 
+  const handleMouseEnter = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+    setIsVisible(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+    setIsVisible(false);
+  };
+
   const getPositionClasses = () => {
     switch (position) {
       case 'top':
@@ -66,6 +82,8 @@ export function TeamNameTooltip({ children, teamName, position = 'top' }: TeamNa
       <div
         onClick={handleInteraction}
         onTouchStart={handleInteraction}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className="cursor-pointer touch-manipulation"
       >
         {children}
