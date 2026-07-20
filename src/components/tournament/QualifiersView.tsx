@@ -6,6 +6,7 @@ import { RunnersUpModal } from './RunnersUpModal';
 import type { Region, Group } from '../../types';
 import { Globe2, Filter, Trophy } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Card, CardHeader } from '../ui/Card';
 
 interface QualifiersViewProps {
   initialRegion?: string;
@@ -37,7 +38,7 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
   if (!currentTournament) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">No tournament available</p>
+        <p className="text-grass-soft">No tournament available</p>
       </div>
     );
   }
@@ -88,43 +89,43 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
   return (
     <div className="space-y-6">
       {/* Header with Filter */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 text-white">
+      <Card className="overflow-hidden">
+        <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <Globe2 className="w-8 h-8" />
+              <Globe2 className="w-8 h-8 text-gold" />
               <div>
-                <h2 className="text-2xl font-bold">Clasificatorias</h2>
-                <p className="text-blue-100 text-sm mt-1">
+                <h2 className="font-arcade text-lg text-white text-shadow-retro">Clasificatorias</h2>
+                <p className="text-grass-soft text-sm mt-1">
                   {currentTournament.name}
                 </p>
               </div>
             </div>
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowRunnersUpModal(true)}
-              className="bg-white text-blue-600 hover:bg-blue-50 border-white gap-2"
+              className="gap-2"
             >
               <Trophy className="w-4 h-4" />
               <span className="hidden sm:inline">Clasificación Segundos Lugares</span>
               <span className="sm:hidden">Segundos</span>
             </Button>
           </div>
-        </div>
+        </CardHeader>
 
         {/* Region Filter */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="px-6 py-4">
           <div className="flex items-center gap-3 mb-4">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <span className="font-medium text-gray-700">Filtrar por región</span>
+            <Filter className="w-5 h-5 text-grass-soft" />
+            <span className="font-arcade text-[10px] text-gold uppercase">Filtrar por región</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedRegion('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 py-2 font-arcade text-[10px] uppercase border-2 transition-colors ${
                 selectedRegion === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-grass text-white border-line'
+                  : 'text-grass-soft border-transparent hover:bg-grass/40'
               }`}
             >
               Todas las regiones
@@ -135,15 +136,15 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
                 <button
                   key={region}
                   onClick={() => setSelectedRegion(region)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-4 py-2 font-arcade text-[10px] uppercase border-2 transition-colors ${
                     selectedRegion === region
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-grass text-white border-line'
+                      : 'text-grass-soft border-transparent hover:bg-grass/40'
                   }`}
                 >
                   {region}
                   {stats && stats.progress > 0 && (
-                    <span className="ml-2 text-xs opacity-75">
+                    <span className="ml-2 opacity-75">
                       {stats.progress}%
                     </span>
                   )}
@@ -155,36 +156,36 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
 
         {/* Region Stats Summary */}
         {selectedRegion !== 'all' && selectedStats && (
-          <div className="p-6 bg-gray-50">
+          <div className="px-6 py-4 border-t-4 border-grass bg-night">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <div className="text-sm text-gray-600">Grupos</div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-sm text-grass-soft">Grupos</div>
+                <div className="text-2xl font-terminal text-led tabular-nums">
                   {selectedStats.groups}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Grupos completados</div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-sm text-grass-soft">Grupos completados</div>
+                <div className="text-2xl font-terminal text-led tabular-nums">
                   {selectedStats.completedGroups}/{selectedStats.groups}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Partidos jugados</div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-sm text-grass-soft">Partidos jugados</div>
+                <div className="text-2xl font-terminal text-led tabular-nums">
                   {selectedStats.playedMatches}/{selectedStats.totalMatches}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Progreso</div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-sm text-grass-soft">Progreso</div>
+                <div className="text-2xl font-terminal text-gold tabular-nums">
                   {selectedStats.progress}%
                 </div>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Regions List */}
       <div className="space-y-6">

@@ -2,7 +2,7 @@ import type { Group, Team, Match } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
-import { TeamFlag } from '../ui/TeamFlag';
+import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
 import { ArrowLeft, Play, Info } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
@@ -58,15 +58,17 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
         </div>
 
         <Card>
-          <CardHeader className="bg-primary-600 text-white rounded-t-lg">
-            <CardTitle className="text-white">
+          <CardHeader>
+            <CardTitle>
               {group.region} - {group.name}
             </CardTitle>
           </CardHeader>
           <CardContent className="py-12">
             <div className="text-center">
-              <p className="text-lg text-gray-600 mb-2">⚽ Draw not yet completed</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">
+                ⚽ Draw not yet completed
+              </p>
+              <p className="text-sm text-grass-soft">
                 Please generate the draw and fixtures to assign teams to this group
               </p>
             </div>
@@ -97,20 +99,20 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
           <span className="hidden sm:inline">Back to Regions</span>
           <span className="sm:hidden">Back</span>
         </Button>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-grass-soft">
           {playedMatches} / {totalMatches} matches played
         </div>
       </div>
 
       <Card>
-        <CardHeader className="bg-primary-600 text-white rounded-t-lg">
-          <CardTitle className="text-white">
+        <CardHeader>
+          <CardTitle>
             {group.region} - {group.name}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Standings</h3>
+            <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Standings</h3>
           </div>
           <StandingsTable
             standings={group.standings}
@@ -154,42 +156,30 @@ function MatchCard({ match, getTeam, onSimulate, onViewDetails }: MatchCardProps
   const awayTeam = getTeam(match.awayTeamId);
   return (
     <div
-      className={`flex items-center justify-between p-4 rounded-lg border ${
+      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-2 transition-colors ${
         match.isPlayed
-          ? 'bg-gray-50 border-gray-200 cursor-pointer hover:shadow-md transition-all'
-          : 'bg-white border-primary-200 hover:border-primary-400 transition-colors'
+          ? 'bg-grass-dark border-grass cursor-pointer hover:bg-grass/20'
+          : 'bg-grass-dark border-gold hover:border-led'
       }`}
       onClick={match.isPlayed ? onViewDetails : undefined}
     >
-      <div className="flex-1 flex items-center justify-between min-w-0">
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-          {homeTeam && <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={32} />}
-          <span className="font-medium text-sm sm:text-base truncate">
-            {homeTeam?.name || match.homeTeamId}
+      <div className="flex-1 min-w-0">
+        {homeTeam && awayTeam ? (
+          <ScoreBug
+            size="md"
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            homeScore={match.isPlayed ? match.homeScore : null}
+            awayScore={match.isPlayed ? match.awayScore : null}
+          />
+        ) : (
+          <span className="text-grass-soft text-xs">
+            {match.homeTeamId} vs {match.awayTeamId}
           </span>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-4 mx-2 sm:mx-4 flex-shrink-0">
-          {match.isPlayed ? (
-            <div className="flex items-center gap-1.5 sm:gap-3 font-bold text-base sm:text-lg">
-              <span className="text-gray-900">{match.homeScore}</span>
-              <span className="text-gray-400">-</span>
-              <span className="text-gray-900">{match.awayScore}</span>
-            </div>
-          ) : (
-            <span className="text-gray-400 font-medium text-sm">vs</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end min-w-0">
-          <span className="font-medium text-sm sm:text-base text-right truncate">
-            {awayTeam?.name || match.awayTeamId}
-          </span>
-          {awayTeam && <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={32} />}
-        </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-2 ml-2 sm:ml-4 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {match.isPlayed ? (
           <Button
             variant="ghost"
