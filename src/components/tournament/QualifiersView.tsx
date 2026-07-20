@@ -7,6 +7,7 @@ import type { Region, Group } from '../../types';
 import { Globe2, Filter, Trophy } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Card';
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 
 interface QualifiersViewProps {
   initialRegion?: string;
@@ -23,6 +24,18 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
     region: Region;
   } | null>(null);
   const [showRunnersUpModal, setShowRunnersUpModal] = useState(false);
+
+  const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
+  const regionOrder: (Region | 'all')[] = ['all', ...regions];
+  const regionIndex = regionOrder.indexOf(selectedRegion);
+  const swipeHandlers = useSwipeNavigation(
+    () => {
+      if (regionIndex > 0) setSelectedRegion(regionOrder[regionIndex - 1]);
+    },
+    () => {
+      if (regionIndex < regionOrder.length - 1) setSelectedRegion(regionOrder[regionIndex + 1]);
+    }
+  );
 
   // Auto-select group if initialGroupId is provided
   useEffect(() => {
@@ -42,8 +55,6 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
       </div>
     );
   }
-
-  const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
 
   const handleBack = () => {
     setSelectedGroup(null);
@@ -187,8 +198,31 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
         )}
       </Card>
 
+      {/* Region indicator: mobile only */}
+      <div className="sm:hidden flex items-center justify-center gap-4">
+        <button
+          onClick={() => regionIndex > 0 && setSelectedRegion(regionOrder[regionIndex - 1])}
+          disabled={regionIndex === 0}
+          className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
+          aria-label="Región anterior"
+        >
+          ◀
+        </button>
+        <span className="font-arcade text-[10px] text-gold uppercase min-w-[100px] text-center">
+          {selectedRegion === 'all' ? 'Todas' : selectedRegion}
+        </span>
+        <button
+          onClick={() => regionIndex < regionOrder.length - 1 && setSelectedRegion(regionOrder[regionIndex + 1])}
+          disabled={regionIndex === regionOrder.length - 1}
+          className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
+          aria-label="Región siguiente"
+        >
+          ▶
+        </button>
+      </div>
+
       {/* Regions List */}
-      <div className="space-y-6">
+      <div className="space-y-6 animate-slide-in lg:animate-none" key={selectedRegion} {...swipeHandlers}>
         {filteredRegions.map((region) => {
           const groups = currentTournament.qualifiers[region] || [];
           return (

@@ -9,6 +9,7 @@ import { Play, Filter, Clock, CheckCircle, Calendar, RefreshCw, ChevronLeft, Che
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -306,6 +307,8 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
     }
   };
 
+  const swipeHandlers = useSwipeNavigation(handlePrevMatchday, handleNextMatchday);
+
   const handleResetTournamentMatches = async () => {
     // Count how many matches have been played
     const playedMatchesCount = allMatches.filter((m) => m.match.isPlayed).length;
@@ -451,7 +454,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
 
               {/* Matchday Pagination */}
               {availableMatchdays.length > 0 && (
-                <div className="flex items-center gap-2 border-2 border-grass px-2 py-1">
+                <div className="hidden sm:flex items-center gap-2 border-2 border-grass px-2 py-1">
                   <button
                     onClick={handlePrevMatchday}
                     disabled={selectedMatchday === 'all' || selectedMatchday === availableMatchdays[0]}
@@ -507,10 +510,35 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
         </CardContent>
       </Card>
 
+      {/* Matchday indicator: mobile only */}
+      {availableMatchdays.length > 0 && (
+        <div className="sm:hidden flex items-center justify-center gap-4">
+          <button
+            onClick={handlePrevMatchday}
+            disabled={selectedMatchday === 'all' || selectedMatchday === availableMatchdays[0]}
+            className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
+            aria-label="Jornada anterior"
+          >
+            ◀
+          </button>
+          <span className="font-arcade text-[10px] text-gold uppercase min-w-[100px] text-center">
+            {selectedMatchday === 'all' ? 'Todas' : `Jornada ${selectedMatchday}`}
+          </span>
+          <button
+            onClick={handleNextMatchday}
+            disabled={selectedMatchday === availableMatchdays[availableMatchdays.length - 1]}
+            className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
+            aria-label="Jornada siguiente"
+          >
+            ▶
+          </button>
+        </div>
+      )}
+
       {/* Two Column Layout: Upcoming vs Preview (60%-40%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-6" {...swipeHandlers}>
         {/* Left Column: Upcoming Matches (60%) */}
-        <Card className="flex flex-col">
+        <Card className="flex flex-col animate-slide-in lg:animate-none" key={String(selectedMatchday)}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 flex-wrap min-w-0">
               <Clock className="w-5 h-5 text-gold flex-shrink-0" />
