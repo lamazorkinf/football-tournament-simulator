@@ -307,7 +307,18 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
     }
   };
 
-  const swipeHandlers = useSwipeNavigation(handlePrevMatchday, handleNextMatchday);
+  const swipeHandlers = useSwipeNavigation(
+    () => {
+      if (selectedMatchday !== 'all' && selectedMatchday !== availableMatchdays[0]) {
+        handlePrevMatchday();
+      }
+    },
+    () => {
+      if (selectedMatchday !== availableMatchdays[availableMatchdays.length - 1]) {
+        handleNextMatchday();
+      }
+    }
+  );
 
   const handleResetTournamentMatches = async () => {
     // Count how many matches have been played
