@@ -25,6 +25,7 @@
   --color-gold: #ffd23f;
   --color-led: #7dff9e;
   --color-loss: #ff4757;
+  --color-mint: #e8f8e8;
 
   /* Tipografías */
   --font-arcade: 'Press Start 2P', monospace;
@@ -58,11 +59,15 @@
 }
 
 @layer base {
+  html {
+    touch-action: manipulation;
+  }
   body {
     background-color: var(--color-night);
-    color: #e8f8e8;
+    color: var(--color-mint);
     font-family: var(--font-terminal);
     font-size: 1.125rem; /* VT323 es chica: base 18px */
+    overscroll-behavior-y: contain;
   }
   :focus-visible {
     outline: 2px solid var(--color-gold);
@@ -91,6 +96,14 @@
   z-index: 9999;
   pointer-events: none;
   background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.14) 0 1px, transparent 1px 3px);
+}
+
+@keyframes pause-in {
+  from { opacity: 0; transform: scale(1.06); }
+  to { opacity: 1; transform: scale(1); }
+}
+.pause-in {
+  animation: pause-in 0.18s steps(3);
 }
 
 @media (prefers-reduced-motion: reduce) {

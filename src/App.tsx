@@ -60,11 +60,14 @@ function App() {
 
   if (!currentTournament) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-night">
-        <div className="text-center">
-          <p className="font-arcade text-gold blink text-sm">LOADING…</p>
+      <>
+        <Scanlines />
+        <div className="min-h-screen flex items-center justify-center bg-night">
+          <div className="text-center">
+            <p className="font-arcade text-gold blink text-sm">LOADING…</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
