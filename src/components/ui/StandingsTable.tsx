@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import type { TeamStanding, Team } from '../../types';
+import type { TeamStanding, Team, Match } from '../../types';
 import { cn } from '../../lib/utils';
 import { calculateTier, getTierColor, getTierIcon } from '../../core/tiers';
 import { TeamFlag } from './TeamFlag';
@@ -9,6 +9,8 @@ import { sortStandings } from '../../core/scheduler';
 interface StandingsTableProps {
   standings: TeamStanding[];
   teams: Team[];
+  /** Partidos del grupo: necesarios para desempatar por enfrentamiento directo. */
+  matches?: Match[];
   highlightQualified?: number;
   className?: string;
 }
@@ -19,11 +21,12 @@ const tdBase = 'px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-center tabular-
 export function StandingsTable({
   standings,
   teams,
+  matches,
   highlightQualified = 0,
   className,
 }: StandingsTableProps) {
   // Always sort standings to ensure correct order
-  const sortedStandings = sortStandings(standings, teams);
+  const sortedStandings = sortStandings(standings, teams, matches);
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
   const getTeam = (teamId: string) => {

@@ -73,6 +73,7 @@ export function GroupDetailModal({
                 <StandingsTable
                   standings={group.standings}
                   teams={teams}
+                  matches={group.matches}
                   highlightQualified={2}
                 />
               </div>

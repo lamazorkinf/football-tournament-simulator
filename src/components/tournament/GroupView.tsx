@@ -117,6 +117,7 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
           <StandingsTable
             standings={group.standings}
             teams={teams}
+            matches={group.matches}
             highlightQualified={2}
           />
         </CardContent>

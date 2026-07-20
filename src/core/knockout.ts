@@ -25,7 +25,7 @@ export function generateRoundOf32(groups: WorldCupGroup[], teams?: Team[]): Knoc
 
   // Get top 2 from each group
   const groupResults = sortedGroups.map((group) => {
-    const sorted = sortStandings(group.standings, teams);
+    const sorted = sortStandings(group.standings, teams, group.matches);
     return {
       groupName: group.name,
       winner: sorted[0]?.teamId,

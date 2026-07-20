@@ -69,7 +69,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
 
                   {/* Standings Mini Table */}
                   <div className="space-y-2 mb-4">
-                    {sortStandings(group.standings, teams).slice(0, 4).map((standing, idx) => {
+                    {sortStandings(group.standings, teams, group.matches).slice(0, 4).map((standing, idx) => {
                       const team = getTeam(standing.teamId);
                       const isQualified = idx < 2;
 

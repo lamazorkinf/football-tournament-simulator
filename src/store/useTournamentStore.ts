@@ -592,15 +592,16 @@ export const useTournamentStore = create<TournamentState>()(
         });
 
         // Update standings
+        const updatedGroupMatches = targetGroup.matches.map((m, i) =>
+          i === matchIndex ? updatedMatch : m
+        );
         const updatedStandings = updateStandings(targetGroup.standings, updatedMatch);
-        const sortedStandings = sortStandings(updatedStandings, updatedTeams);
+        const sortedStandings = sortStandings(updatedStandings, updatedTeams, updatedGroupMatches);
 
         // Update the group
         const updatedGroup = {
           ...targetGroup,
-          matches: targetGroup.matches.map((m, i) =>
-            i === matchIndex ? updatedMatch : m
-          ),
+          matches: updatedGroupMatches,
           standings: sortedStandings,
         };
 
@@ -861,7 +862,7 @@ export const useTournamentStore = create<TournamentState>()(
             const updatedStandings = updatedMatches
               .filter(m => m.isPlayed)
               .reduce((standings, match) => updateStandings(standings, match), resetStandings);
-            const sortedStandings = sortStandings(updatedStandings, updatedTeams);
+            const sortedStandings = sortStandings(updatedStandings, updatedTeams, updatedMatches);
 
             const updatedGroup = {
               ...targetGroup,
@@ -1018,7 +1019,7 @@ export const useTournamentStore = create<TournamentState>()(
           for (const region in state.currentTournament.qualifiers) {
             const groups = state.currentTournament.qualifiers[region as Region];
             groups.forEach((group) => {
-              const sorted = sortStandings(group.standings, state.teams);
+              const sorted = sortStandings(group.standings, state.teams, group.matches);
               if (sorted.length === 0) {
                 console.error(`❌ Group ${group.name} has no standings!`);
                 return;
@@ -1231,7 +1232,7 @@ export const useTournamentStore = create<TournamentState>()(
         for (const region in state.currentTournament.qualifiers) {
           const groups = state.currentTournament.qualifiers[region as Region];
           groups.forEach((group) => {
-            const sorted = sortStandings(group.standings, state.teams);
+            const sorted = sortStandings(group.standings, state.teams, group.matches);
             if (sorted.length === 0) {
               console.error(`❌ Group ${group.name} has no standings!`);
               return;

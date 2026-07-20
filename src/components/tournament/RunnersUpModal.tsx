@@ -37,7 +37,7 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
   regions.forEach((region) => {
     const groups = qualifiers[region] || [];
     groups.forEach((group) => {
-      const sortedStandings = sortStandings(group.standings, teams);
+      const sortedStandings = sortStandings(group.standings, teams, group.matches);
       if (sortedStandings.length >= 2) {
         const secondPlace = sortedStandings[1];
         const team = teams.find((t) => t.id === secondPlace.teamId);

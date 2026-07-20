@@ -128,7 +128,7 @@ export function TournamentWizard() {
     for (const region in currentTournament.qualifiers) {
       const groups = currentTournament.qualifiers[region as Region];
       groups.forEach((group) => {
-        const sorted = sortStandings(group.standings, teams);
+        const sorted = sortStandings(group.standings, teams, group.matches);
         if (sorted.length > 0) {
           const firstPlace = sorted[0].teamId;
           qualifiedTeamIds.push(firstPlace);
