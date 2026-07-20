@@ -115,7 +115,9 @@ ls -la public/fonts/  # ambos archivos > 4 KB
   --shadow-hard-panel: 6px 6px 0 rgb(0 0 0 / 0.5);
   --shadow-hard-btn: 4px 4px 0 #7a2b0e;
 
-  /* Radio global a 0: mata todos los rounded-* existentes de una vez */
+  /* Radio global a 0: mata los rounded-* con escala. rounded-full NO usa
+     esta escala (staticValues en Tailwind 4) — lo cubre la regla global
+     `* { border-radius: 0 !important }` de más abajo. */
   --radius-xs: 0px;
   --radius-sm: 0px;
   --radius-md: 0px;

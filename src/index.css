@@ -84,6 +84,12 @@
   }
 }
 
+/* rounded-full no pasa por la escala --radius-*; este kill global garantiza
+   "sin border-radius en toda la app" (spec Modo Retro). */
+*, *::before, *::after {
+  border-radius: 0 !important;
+}
+
 @utility text-shadow-retro {
   text-shadow: 3px 3px 0 var(--color-grass);
 }
