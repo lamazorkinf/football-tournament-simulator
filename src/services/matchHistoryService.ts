@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, escapeOrValue } from '../lib/supabase';
 import type { Database } from '../types/database';
 
 type MatchHistoryRow = Database['public']['Tables']['match_history']['Row'];
@@ -109,22 +109,35 @@ export const matchHistoryService = {
       return [];
     }
 
-    // If limit is very high (>= 10000), get all matches with explicit high limit
+    // Para traer "todo", paginar con .range(): PostgREST recorta cualquier
+    // .limit() contra db-max-rows (1000 por defecto), así que pedir 100000 no
+    // desbloqueaba nada y las estadísticas se truncaban desde el segundo torneo
+    // (~900 partidos por torneo).
     if (limit >= 10000) {
-      console.log('🔍 [matchHistoryService] Fetching ALL matches with high limit...');
-      const { data, error } = await supabase
-        .from('match_history')
-        .select('*')
-        .order('played_at', { ascending: false })
-        .limit(100000);
+      console.log('🔍 [matchHistoryService] Fetching ALL matches (paginated)...');
+      const pageSize = 1000;
+      const all: MatchHistoryEntry[] = [];
 
-      if (error) {
-        console.error('❌ [matchHistoryService] Error fetching matches:', error);
-        throw error;
+      for (let page = 0; ; page++) {
+        const from = page * pageSize;
+        const { data, error } = await supabase
+          .from('match_history')
+          .select('*')
+          .order('played_at', { ascending: false })
+          .range(from, from + pageSize - 1);
+
+        if (error) {
+          console.error('❌ [matchHistoryService] Error fetching matches:', error);
+          throw error;
+        }
+
+        if (!data || data.length === 0) break;
+        all.push(...data.map(dbMatchToMatch));
+        if (data.length < pageSize) break;
       }
 
-      console.log(`✅ [matchHistoryService] Fetched ${data?.length || 0} matches from database`);
-      return data.map(dbMatchToMatch);
+      console.log(`✅ [matchHistoryService] Fetched ${all.length} matches from database`);
+      return all;
     }
 
     const { data, error } = await supabase
@@ -146,7 +159,7 @@ export const matchHistoryService = {
     const { data, error } = await supabase
       .from('match_history')
       .select('*')
-      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+      .or(`home_team_id.eq.${escapeOrValue(teamId)},away_team_id.eq.${escapeOrValue(teamId)}`)
       .order('played_at', { ascending: false })
       .limit(limit);
 
@@ -232,11 +245,24 @@ export const matchHistoryService = {
       };
     }
 
-    const { data, error } = await supabase
-      .from('match_history')
-      .select('home_score, away_score, home_team_id, away_team_id, played_at');
+    // Paginar con .range() en vez de un SELECT plano: sin esto PostgREST
+    // devolvía como mucho db-max-rows filas (1000) y las estadísticas
+    // globales quedaban truncadas al superar ese umbral.
+    const pageSize = 1000;
+    const data: Array<{ home_score: number; away_score: number }> = [];
 
-    if (error) throw error;
+    for (let page = 0; ; page++) {
+      const from = page * pageSize;
+      const { data: pageData, error } = await supabase
+        .from('match_history')
+        .select('home_score, away_score, home_team_id, away_team_id, played_at')
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+      if (!pageData || pageData.length === 0) break;
+      data.push(...(pageData as any[]));
+      if (pageData.length < pageSize) break;
+    }
 
     const totalMatches = data.length;
     const totalGoals = data.reduce((sum: number, match: any) => sum + match.home_score + match.away_score, 0);

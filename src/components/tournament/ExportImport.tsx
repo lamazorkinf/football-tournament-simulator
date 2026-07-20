@@ -4,6 +4,47 @@ import { Button } from '../ui/Button';
 import { Download, Upload, FileJson, AlertCircle } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 
+// Debe coincidir con la version del middleware persist en useTournamentStore.
+const STORAGE_KEY = 'football-tournament-storage';
+const STORAGE_VERSION = 8;
+
+const REGIONS = ['Europe', 'America', 'Africa', 'Asia'] as const;
+
+/**
+ * Valida la FORMA del JSON importado, no solo la presencia de campos. Antes
+ * bastaba con que existieran `version`, `teams` y `tournament`: un JSON con
+ * `teams: "hola"` pasaba, se escribía en localStorage y el store crasheaba al
+ * arrancar en un bucle de recarga, sin estado válido al que volver.
+ */
+function validateImportData(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return 'El archivo no es un objeto JSON válido.';
+  const d = data as Record<string, unknown>;
+
+  if (!Array.isArray(d.teams) || d.teams.length === 0) {
+    return 'El archivo no contiene una lista de equipos válida.';
+  }
+  const teamsOk = d.teams.every(
+    (t) =>
+      t && typeof t === 'object' &&
+      typeof (t as any).id === 'string' &&
+      typeof (t as any).name === 'string' &&
+      typeof (t as any).skill === 'number' &&
+      REGIONS.includes((t as any).region)
+  );
+  if (!teamsOk) return 'Algún equipo tiene un formato o una región inválidos.';
+
+  const tournament = d.tournament as Record<string, unknown> | null | undefined;
+  if (!tournament || typeof tournament !== 'object' || typeof tournament.id !== 'string') {
+    return 'El torneo del archivo no tiene un formato válido.';
+  }
+  const qualifiers = tournament.qualifiers as Record<string, unknown> | undefined;
+  if (!qualifiers || REGIONS.some((r) => !Array.isArray(qualifiers[r]))) {
+    return 'Las clasificatorias del torneo tienen un formato inválido.';
+  }
+
+  return null;
+}
+
 export function ExportImport() {
   const { teams, currentTournament } = useTournamentStore();
   const [importError, setImportError] = useState<string | null>(null);
@@ -43,20 +84,24 @@ export function ExportImport() {
         const content = e.target?.result as string;
         const data = JSON.parse(content);
 
-        // Validate the data structure
-        if (!data.version || !data.teams || !data.tournament) {
-          throw new Error('Invalid tournament file format');
+        // Validar la forma completa antes de tocar localStorage.
+        const validationError = validateImportData(data);
+        if (validationError) {
+          throw new Error(validationError);
         }
 
-        // Save to localStorage directly
+        // Escribir en el formato que el store persiste HOY: partialize guarda
+        // { tournaments, currentTournamentId } bajo la version actual. El
+        // formato viejo ({ teams, currentTournament }, version 1) ya no era
+        // compatible y migrate lo habría descartado.
         localStorage.setItem(
-          'football-tournament-storage',
+          STORAGE_KEY,
           JSON.stringify({
             state: {
-              teams: data.teams,
-              currentTournament: data.tournament,
+              tournaments: [data.tournament],
+              currentTournamentId: data.tournament.id,
             },
-            version: 1,
+            version: STORAGE_VERSION,
           })
         );
 

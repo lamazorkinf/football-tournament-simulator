@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, escapeOrValue } from '../lib/supabase';
 import type { Database } from '../types/database';
 
 type PerformanceRow = Database['public']['Tables']['team_tournament_performance']['Row'];
@@ -90,7 +90,7 @@ export const teamTournamentPerformanceService = {
         .eq('tournament_id', tournamentId)
         .eq('match_type', 'world-cup-knockout')
         .eq('is_played', true)
-        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)) as any;
+        .or(`home_team_id.eq.${escapeOrValue(teamId)},away_team_id.eq.${escapeOrValue(teamId)}`)) as any;
 
       if (knockoutMatches && knockoutMatches.length > 0) {
         // Find the furthest round reached
@@ -173,7 +173,7 @@ export const teamTournamentPerformanceService = {
       .from('match_history')
       .select('home_team_id, away_team_id, home_score, away_score')
       .eq('tournament_id', tournamentId)
-      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+      .or(`home_team_id.eq.${escapeOrValue(teamId)},away_team_id.eq.${escapeOrValue(teamId)}`);
 
     let totalPlayed = 0;
     let totalWins = 0;

@@ -21,14 +21,18 @@ export const normalizedWorldCupService = {
 
     try {
       for (const group of groups) {
-        // Create world cup group
+        // Upsert en vez de insert: con insert plano, regenerar el sorteo del
+        // Mundial sobre un torneo existente violaba UNIQUE(tournament_id, name)
+        // (23505) y dejaba la fase de grupos a medio crear.
         const { error: groupError } = await db
           .world_cup_groups()
-          .insert({
+          .upsert({
             id: group.id,
             tournament_id: tournamentId,
             name: group.name,
             num_qualify: 2, // Top 2 qualify from each group
+          }, {
+            onConflict: 'id'
           });
 
         if (groupError) throw groupError;
@@ -37,7 +41,7 @@ export const normalizedWorldCupService = {
         for (const teamId of group.teamIds) {
           const { error: teamError } = await db
             .world_cup_group_teams()
-            .insert({
+            .upsert({
               group_id: group.id,
               team_id: teamId,
               points: 0,
@@ -48,6 +52,8 @@ export const normalizedWorldCupService = {
               goals_for: 0,
               goals_against: 0,
               qualified: false,
+            }, {
+              onConflict: 'group_id,team_id'
             });
 
           if (teamError) throw teamError;

@@ -394,12 +394,17 @@ export const normalizedTournamentService = {
     }
 
     try {
-      // Check if tournament exists
-      const { data: existing } = await db
+      // Check if tournament exists. Se comprueba el error: descartarlo hacía
+      // que un fallo de red o de RLS (existing = null) cayera en la rama INSERT
+      // sobre un torneo que sí existía, violando la PK. PGRST116 = "no rows",
+      // que aquí es el caso legítimo de "no existe".
+      const { data: existing, error: existingError } = await db
         .tournaments_new()
         .select('id')
         .eq('id', tournament.id)
-        .single();
+        .maybeSingle();
+
+      if (existingError) throw existingError;
 
       // Determine status
       const status = tournament.worldCup

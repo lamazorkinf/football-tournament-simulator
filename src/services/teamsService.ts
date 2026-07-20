@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, escapeOrValue } from '../lib/supabase';
 import type { Team } from '../types';
 import type { Database } from '../types/database';
 
@@ -173,7 +173,7 @@ export const teamsService = {
     const { data, error } = await supabase
       .from('teams')
       .select('*')
-      .or(`name.ilike.%${query}%,id.ilike.%${query}%`)
+      .or(`name.ilike.%${escapeOrValue(query)}%,id.ilike.%${escapeOrValue(query)}%`)
       .order('name');
 
     if (error) throw error;

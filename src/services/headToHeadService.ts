@@ -63,14 +63,14 @@ async function getMatchesBetweenTeamsFromDB(team1Id: string, team2Id: string): P
     // Direction 1: team1 as home, team2 as away
     const { data: data1, error: error1 } = await supabase
       .from('match_history')
-      .select('id, home_team_id, away_team_id, home_score, away_score, stage, knockout_round, tournament_id, played_at')
+      .select('id, home_team_id, away_team_id, home_score, away_score, stage, tournament_id, played_at')
       .eq('home_team_id', team1Id)
       .eq('away_team_id', team2Id);
 
     // Direction 2: team2 as home, team1 as away
     const { data: data2, error: error2 } = await supabase
       .from('match_history')
-      .select('id, home_team_id, away_team_id, home_score, away_score, stage, knockout_round, tournament_id, played_at')
+      .select('id, home_team_id, away_team_id, home_score, away_score, stage, tournament_id, played_at')
       .eq('home_team_id', team2Id)
       .eq('away_team_id', team1Id);
 
@@ -121,7 +121,6 @@ async function getMatchesBetweenTeamsFromDB(team1Id: string, team2Id: string): P
         stage: dbMatch.stage || 'unknown',
         tournamentYear: tournamentInfo?.year,
         tournamentName: tournamentInfo?.name,
-        knockoutRound: dbMatch.knockout_round,
       } as any;
     });
 
