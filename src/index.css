@@ -1,6 +1,32 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/press-start-2p-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/vt323-latin.woff2') format('woff2');
+}
+
 @theme {
+  /* Paleta Modo Retro */
+  --color-night: #0a0c12;
+  --color-grass: #1f6f38;
+  --color-grass-dark: #05270f;
+  --color-grass-soft: #6fae7d;
+  --color-line: #2fbf5f;
+  --color-gold: #ffd23f;
+  --color-led: #7dff9e;
+  --color-loss: #ff4757;
+
+  /* Escala primary vieja: NO borrar hasta Task 15 (vistas sin migrar la usan) */
   --color-primary-50: #f0fdf4;
   --color-primary-100: #dcfce7;
   --color-primary-200: #bbf7d0;
@@ -13,16 +39,71 @@
   --color-primary-900: #14532d;
   --color-primary-950: #052e16;
 
-  --animate-slide-in: slide-in 0.3s ease-out;
+  /* Tipografías */
+  --font-arcade: 'Press Start 2P', monospace;
+  --font-terminal: 'VT323', monospace;
+
+  /* Sombras duras */
+  --shadow-hard-panel: 6px 6px 0 rgb(0 0 0 / 0.5);
+  --shadow-hard-btn: 4px 4px 0 #7a2b0e;
+
+  /* Radio global a 0: mata todos los rounded-* existentes de una vez */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+
+  --animate-slide-in: slide-in 0.3s steps(4);
 }
 
 @keyframes slide-in {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+
+@layer base {
+  body {
+    background-color: var(--color-night);
+    color: #e8f8e8;
+    font-family: var(--font-terminal);
+    font-size: 1.125rem; /* VT323 es chica: base 18px */
   }
-  to {
-    transform: translateX(0);
-    opacity: 1;
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+    border-radius: 0;
+  }
+}
+
+@utility text-shadow-retro {
+  text-shadow: 3px 3px 0 var(--color-grass);
+}
+
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.14) 0 1px, transparent 1px 3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
