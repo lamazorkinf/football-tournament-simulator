@@ -14,6 +14,8 @@ interface ConfigStore {
   updateHomeAdvantage: (value: number) => void;
   updateSkillLimits: (min: number, max: number) => void;
   resetToDefaults: () => void;
+  scanlines: boolean;
+  toggleScanlines: () => void;
 }
 
 const DEFAULT_CONFIG: EngineConfig = {
@@ -48,6 +50,10 @@ export const useConfigStore = create<ConfigStore>()(
         })),
 
       resetToDefaults: () => set({ config: DEFAULT_CONFIG }),
+
+      scanlines: true,
+
+      toggleScanlines: () => set((state) => ({ scanlines: !state.scanlines })),
     }),
     {
       name: 'football-engine-config',

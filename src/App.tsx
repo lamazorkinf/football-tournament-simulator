@@ -16,6 +16,7 @@ import { MobileDrawer } from './components/ui/MobileDrawer';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
 import { ProgressModal } from './components/ui/ProgressModal';
+import { Scanlines } from './components/ui/Scanlines';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { MatchResultsModal } from './components/ui/MatchResultsModal';
 import { Menu } from 'lucide-react';
@@ -70,6 +71,7 @@ function App() {
 
   return (
     <TeamProfileProvider>
+      <Scanlines />
       <div className="min-h-screen bg-gray-50">
         {/* Progress Modal */}
         <ProgressModal />
