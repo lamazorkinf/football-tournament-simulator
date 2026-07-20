@@ -31,7 +31,7 @@ export function StandingsTable({
   };
 
   return (
-    <div className={cn('overflow-x-auto -mx-4 sm:mx-0', className)}>
+    <div className={cn('overflow-x-auto', className)}>
       <table className="min-w-full divide-y-2 divide-grass">
         <caption className="sr-only">Team standings table</caption>
         <thead className="bg-grass-dark sticky top-0">
