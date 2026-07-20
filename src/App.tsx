@@ -142,12 +142,6 @@ function App() {
           <ChampionsHistory />
         ) : null}
         </main>
-
-        <footer className="bg-grass-dark border-t-4 border-grass mt-12">
-          <div className="px-4 sm:px-6 lg:px-8 py-6 text-center text-grass-soft text-sm">
-            <p>Football Tournament Simulator - World Cup Edition</p>
-          </div>
-        </footer>
       </div>
       </div>
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-40">
