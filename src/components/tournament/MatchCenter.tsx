@@ -534,7 +534,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
             ) : (
               <div className="text-center text-grass-soft py-12">
                 <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
-                <p className="text-lg font-arcade text-xs text-white text-shadow-retro uppercase">Sin partidos próximos</p>
+                <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Sin partidos próximos</p>
                 <p className="text-sm mt-2">Todos los partidos han sido jugados</p>
               </div>
             )}
@@ -667,7 +667,7 @@ interface MatchRowProps {
   onViewDetails?: () => void;
   onMatchClick?: () => void; // Navigate to group when clicking the match container
   index: number;
-  compact?: boolean; // Compact mode for recent matches (flags only, no names)
+  compact?: boolean; // Compact centered layout for recent-match rows
   disabled?: boolean; // Disable the play button
 }
 
