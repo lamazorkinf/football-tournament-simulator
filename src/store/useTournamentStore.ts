@@ -249,9 +249,12 @@ export const useTournamentStore = create<TournamentState>()(
             originalSkills,
           };
 
-          // Add to tournaments list and apply regressed skills
+          // Se añade el torneo a la lista, pero los skills regresados NO se
+          // aplican todavía al pool global: si el usuario decide no cambiarse,
+          // alterarían las simulaciones del torneo que está jugando ahora.
+          // El torneo nuevo conserva su snapshot en originalSkills, que
+          // generateDrawAndFixtures restaura cuando se genera su sorteo.
           set((state) => ({
-            teams: teamsWithTiers,
             tournaments: [tournament, ...state.tournaments],
           }));
 
@@ -259,10 +262,6 @@ export const useTournamentStore = create<TournamentState>()(
           if (isSupabaseConfigured()) {
             try {
               progress.updateProgress('Guardando torneo en base de datos...', 4);
-              // Persist regressed skills
-              teamsService
-                .batchUpdateTeams(teamsWithTiers.map((t) => ({ id: t.id, skill: t.skill })))
-                .catch((error) => console.error('Error saving regressed skills:', error));
               await adaptiveTournamentService.saveTournament(tournament);
               console.log(`Tournament ${year} created and saved to database`);
 
@@ -301,10 +300,18 @@ export const useTournamentStore = create<TournamentState>()(
           );
 
           if (shouldSwitch) {
+            // Recién ahora se aplica la regresión de skills al pool global.
             set({
+              teams: teamsWithTiers,
               currentTournamentId: tournament.id,
               currentTournament: tournament
             });
+
+            if (isSupabaseConfigured()) {
+              teamsService
+                .batchUpdateTeams(teamsWithTiers.map((t) => ({ id: t.id, skill: t.skill })))
+                .catch((error) => console.error('Error saving regressed skills:', error));
+            }
           }
         } catch (error) {
           progress.resetProgress();
@@ -393,10 +400,14 @@ export const useTournamentStore = create<TournamentState>()(
 
         const toast = useToastStore.getState();
 
+        // El toast de progreso no expira solo: hay que cerrarlo explícitamente
+        // al terminar, o se acumulan uno por torneo completado.
+        let pendingToastId: string | null = null;
+
         try {
           console.log(`🔄 Recalculando rendimientos para torneo ${tournamentId}...`);
 
-          toast.info('Calculando rendimientos en segundo plano...', 0); // Don't auto-dismiss
+          pendingToastId = toast.info('Calculando rendimientos en segundo plano...', 0);
 
           // Call the Edge Function
           const { data, error } = await supabase.functions.invoke('calculate-tournament-performances', {
@@ -414,6 +425,8 @@ export const useTournamentStore = create<TournamentState>()(
         } catch (error) {
           console.error('❌ Error recalculando rendimientos:', error);
           toast.error('Error al recalcular rendimientos');
+        } finally {
+          if (pendingToastId) toast.removeToast(pendingToastId);
         }
       },
 
@@ -459,6 +472,31 @@ export const useTournamentStore = create<TournamentState>()(
           }));
         });
 
+        // Restaurar los skills iniciales del torneo. Sin esto, el "reinicio"
+        // arrancaba con el Elo acumulado por los partidos que se acaban de
+        // borrar, así que las simulaciones nuevas quedaban sesgadas.
+        const originalSkills = state.currentTournament.originalSkills;
+        if (originalSkills) {
+          const restoredTeams = state.teams.map((team) =>
+            originalSkills[team.id] !== undefined
+              ? { ...team, skill: originalSkills[team.id] }
+              : team
+          );
+
+          set({ teams: updateTeamsTiers(restoredTeams) });
+
+          if (isSupabaseConfigured()) {
+            try {
+              await teamsService.batchUpdateTeams(
+                restoredTeams.map((team) => ({ id: team.id, skill: team.skill }))
+              );
+              console.log('✅ Skills restaurados a los valores de inicio del torneo');
+            } catch (error) {
+              console.error('❌ Error restaurando skills:', error);
+            }
+          }
+        }
+
         // Update tournament
         const updatedTournament: Tournament = {
           ...state.currentTournament,
@@ -502,13 +540,21 @@ export const useTournamentStore = create<TournamentState>()(
               Asia: createQualifierGroups(updatedTeams, 'Asia'),
                 };
 
+            const updatedTournament = {
+              ...state.currentTournament,
+              qualifiers,
+              isQualifiersComplete: false,
+            };
+
             return {
               teams: updatedTeams,
-              currentTournament: {
-                ...state.currentTournament,
-                qualifiers,
-                isQualifiersComplete: false,
-              },
+              currentTournament: updatedTournament,
+              // También hay que actualizar la entrada en `tournaments`: es la
+              // que se persiste y la que lee selectTournament. Si no, cambiar
+              // de torneo y volver revertía los grupos regenerados.
+              tournaments: state.tournaments.map((t) =>
+                t.id === updatedTournament.id ? updatedTournament : t
+              ),
             };
           }
 
@@ -1411,7 +1457,13 @@ export const useTournamentStore = create<TournamentState>()(
           }
 
           progress.updateProgress('Verificando grupos...', ++currentStep);
-          let updatedQualifiers: Record<Region, Group[]> = state.currentTournament.qualifiers;
+          // Copia: asignar sobre state.currentTournament.qualifiers mutaba el
+          // objeto vivo del store, corrompiendo retroactivamente el snapshot
+          // guardado en `tournaments` y dejando la misma referencia en el
+          // torneo "nuevo" (los memos por identidad no se invalidaban).
+          let updatedQualifiers: Record<Region, Group[]> = {
+            ...state.currentTournament.qualifiers,
+          };
 
           console.log('🌍 Processing regions:', regions);
 
@@ -1911,7 +1963,12 @@ export const useTournamentStore = create<TournamentState>()(
             console.log('🏆 Tournament completed! Calculating all team performances...');
 
             const toast = useToastStore.getState();
-            toast.info('Calculando rendimientos del torneo en segundo plano...', 0);
+            // Toast sin auto-cierre: se retira explícitamente al resolverse,
+            // si no se acumula uno por cada Mundial completado en la sesión.
+            const pendingToastId = toast.info(
+              'Calculando rendimientos del torneo en segundo plano...',
+              0
+            );
 
             // Call the Edge Function
             supabase.functions
@@ -1930,10 +1987,30 @@ export const useTournamentStore = create<TournamentState>()(
               .catch((error) => {
                 console.error('❌ Error calling Edge Function:', error);
                 toast.error('Error al calcular rendimientos');
-              });
+              })
+              .finally(() => toast.removeToast(pendingToastId));
           }
 
           // Reset saving state
+          set({ isSavingMatch: false });
+          return;
+        } else if (roundName === 'thirdPlace' && updatedKnockout.thirdPlace?.winnerId) {
+          // El partido por el tercer puesto puede jugarse DESPUÉS de la final.
+          // En ese caso la rama de la final ya corrió leyendo un thirdPlace sin
+          // jugar y dejó el podio a medias; sin esta rama, thirdPlace y
+          // fourthPlace quedaban undefined de forma permanente.
+          const updatedTournament = {
+            ...state.currentTournament,
+            worldCup: {
+              ...state.currentTournament.worldCup,
+              knockout: updatedKnockout,
+              thirdPlace: updatedKnockout.thirdPlace.winnerId,
+              fourthPlace: updatedKnockout.thirdPlace.loserId,
+            },
+          };
+
+          set({ teams: updatedTeams });
+          updateTournamentInState(set, get, updatedTournament);
           set({ isSavingMatch: false });
           return;
         }

@@ -12,12 +12,13 @@ export interface Toast {
 
 interface ToastState {
   toasts: Toast[];
-  addToast: (message: string, type: ToastType, duration?: number) => void;
+  /** Devuelve el id del toast, para poder cerrarlo antes de que expire. */
+  addToast: (message: string, type: ToastType, duration?: number) => string;
   removeToast: (id: string) => void;
-  success: (message: string, duration?: number) => void;
-  error: (message: string, duration?: number) => void;
-  info: (message: string, duration?: number) => void;
-  warning: (message: string, duration?: number) => void;
+  success: (message: string, duration?: number) => string;
+  error: (message: string, duration?: number) => string;
+  info: (message: string, duration?: number) => string;
+  warning: (message: string, duration?: number) => string;
 }
 
 export const useToastStore = create<ToastState>((set) => ({
@@ -41,6 +42,8 @@ export const useToastStore = create<ToastState>((set) => ({
         }));
       }, duration);
     }
+
+    return id;
   },
 
   removeToast: (id: string) => {
@@ -49,19 +52,15 @@ export const useToastStore = create<ToastState>((set) => ({
     }));
   },
 
-  success: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'success', duration);
-  },
+  success: (message: string, duration?: number): string =>
+    useToastStore.getState().addToast(message, 'success', duration),
 
-  error: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'error', duration);
-  },
+  error: (message: string, duration?: number): string =>
+    useToastStore.getState().addToast(message, 'error', duration),
 
-  info: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'info', duration);
-  },
+  info: (message: string, duration?: number): string =>
+    useToastStore.getState().addToast(message, 'info', duration),
 
-  warning: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'warning', duration);
-  },
+  warning: (message: string, duration?: number): string =>
+    useToastStore.getState().addToast(message, 'warning', duration),
 }));
