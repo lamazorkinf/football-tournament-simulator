@@ -11,6 +11,15 @@ import { sortStandings } from './scheduler';
 export function generateRoundOf32(groups: WorldCupGroup[], teams?: Team[]): KnockoutMatch[] {
   const matches: KnockoutMatch[] = [];
 
+  // El cuadro está construido sobre 16 grupos exactos; con menos, los accesos
+  // por índice de abajo darían undefined y romperían la generación.
+  if (groups.length !== 16) {
+    console.warn(
+      `⚠️ generateRoundOf32 requiere 16 grupos, recibió ${groups.length}. No se genera bracket.`
+    );
+    return [];
+  }
+
   // Sort groups A-P (16 groups)
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -65,83 +74,32 @@ export function generateRoundOf32(groups: WorldCupGroup[], teams?: Team[]): Knoc
 }
 
 /**
- * Generates the Round of 16 bracket from Round of 32 results
- * Standard World Cup format:
- * - Winners of groups play runners-up from different groups
- * - Teams from same group can't meet until later rounds
+ * Generates the Round of 16 bracket from Round of 32 results.
+ * Dos equipos del mismo grupo no pueden cruzarse antes de la final.
  */
-export function generateRoundOf16(groups: WorldCupGroup[], teams?: Team[]): KnockoutMatch[];
-export function generateRoundOf16(roundOf32Matches: KnockoutMatch[], teams?: Team[]): KnockoutMatch[];
-export function generateRoundOf16(input: WorldCupGroup[] | KnockoutMatch[], teams?: Team[]): KnockoutMatch[] {
-  // Check if input is Round of 32 matches
-  if (input.length > 0 && 'round' in input[0]) {
-    return generateRoundOf16FromR32(input as KnockoutMatch[]);
-  }
-
-  // Original logic for groups
+export function generateRoundOf16(roundOf32: KnockoutMatch[]): KnockoutMatch[] {
   const matches: KnockoutMatch[] = [];
 
-  // Sort groups A-H
-  const sortedGroups = [...(input as WorldCupGroup[])].sort((a, b) => a.name.localeCompare(b.name));
-
-  // Get top 2 from each group
-  const groupResults = sortedGroups.map((group) => {
-    const sorted = sortStandings(group.standings, teams);
-    return {
-      groupName: group.name,
-      winner: sorted[0]?.teamId,
-      runnerUp: sorted[1]?.teamId,
-    };
-  });
-
-  // Standard World Cup bracket pairings
+  // R32 has 16 matches (positions 0-15), R16 will have 8 matches.
+  //
+  // Cada posición de R32 consume un par de grupos: la posición i y la i+8 salen
+  // de los MISMOS dos grupos (p.ej. p0 = A1 vs B2 y p8 = B1 vs A2). Por eso no
+  // pueden emparejarse entre sí: sería una revancha de grupo en Octavos.
+  //
+  // El emparejamiento correcto combina pares de grupos disjuntos y, además,
+  // manda i e i+8 a mitades opuestas del cuadro (posiciones de distinta
+  // paridad), porque generateQuarterFinals cruza (0,4),(2,6),(1,5),(3,7) y
+  // generateSemiFinals cruza (0,1),(2,3). Así, dos equipos del mismo grupo solo
+  // pueden reencontrarse en la final.
   const pairings = [
-    { home: groupResults[0].winner, away: groupResults[1].runnerUp, position: 0 }, // A1 vs B2
-    { home: groupResults[2].winner, away: groupResults[3].runnerUp, position: 1 }, // C1 vs D2
-    { home: groupResults[4].winner, away: groupResults[5].runnerUp, position: 2 }, // E1 vs F2
-    { home: groupResults[6].winner, away: groupResults[7].runnerUp, position: 3 }, // G1 vs H2
-    { home: groupResults[1].winner, away: groupResults[0].runnerUp, position: 4 }, // B1 vs A2
-    { home: groupResults[3].winner, away: groupResults[2].runnerUp, position: 5 }, // D1 vs C2
-    { home: groupResults[5].winner, away: groupResults[4].runnerUp, position: 6 }, // F1 vs E2
-    { home: groupResults[7].winner, away: groupResults[6].runnerUp, position: 7 }, // H1 vs G2
-  ];
-
-  pairings.forEach((pairing) => {
-    if (pairing.home && pairing.away) {
-      matches.push({
-        id: nanoid(),
-        homeTeamId: pairing.home,
-        awayTeamId: pairing.away,
-        homeScore: null,
-        awayScore: null,
-        isPlayed: false,
-        stage: 'world-cup-knockout',
-        round: 'round-of-16',
-        position: pairing.position,
-      });
-    }
-  });
-
-  return matches;
-}
-
-/**
- * Helper function to generate Round of 16 from Round of 32 results
- */
-function generateRoundOf16FromR32(roundOf32: KnockoutMatch[]): KnockoutMatch[] {
-  const matches: KnockoutMatch[] = [];
-
-  // R32 has 16 matches (positions 0-15), R16 will have 8 matches
-  // Pairing pattern: winners of matches 0-1, 2-3, 4-5, etc.
-  const pairings = [
-    { match1: 0, match2: 8, position: 0 },   // Winner R32-M1 vs Winner R32-M9
-    { match1: 1, match2: 9, position: 1 },   // Winner R32-M2 vs Winner R32-M10
-    { match1: 2, match2: 10, position: 2 },  // Winner R32-M3 vs Winner R32-M11
-    { match1: 3, match2: 11, position: 3 },  // Winner R32-M4 vs Winner R32-M12
-    { match1: 4, match2: 12, position: 4 },  // Winner R32-M5 vs Winner R32-M13
-    { match1: 5, match2: 13, position: 5 },  // Winner R32-M6 vs Winner R32-M14
-    { match1: 6, match2: 14, position: 6 },  // Winner R32-M7 vs Winner R32-M15
-    { match1: 7, match2: 15, position: 7 },  // Winner R32-M8 vs Winner R32-M16
+    { match1: 0, match2: 1, position: 0 },   // {A,B} vs {C,D}
+    { match1: 8, match2: 9, position: 1 },   // {A,B} vs {C,D} — mitad opuesta
+    { match1: 2, match2: 3, position: 2 },   // {E,F} vs {G,H}
+    { match1: 10, match2: 11, position: 3 }, // {E,F} vs {G,H} — mitad opuesta
+    { match1: 4, match2: 5, position: 4 },   // {I,J} vs {K,L}
+    { match1: 12, match2: 13, position: 5 }, // {I,J} vs {K,L} — mitad opuesta
+    { match1: 6, match2: 7, position: 6 },   // {M,N} vs {O,P}
+    { match1: 14, match2: 15, position: 7 }, // {M,N} vs {O,P} — mitad opuesta
   ];
 
   pairings.forEach((pairing) => {
@@ -307,39 +265,3 @@ export function isRoundComplete(matches: KnockoutMatch[]): boolean {
   return matches.length > 0 && matches.every((match) => match.isPlayed && match.winnerId);
 }
 
-/**
- * Determine winner of a knockout match (including penalties)
- */
-export function determineKnockoutWinner(match: KnockoutMatch): {
-  winnerId: string;
-  loserId: string;
-} | null {
-  if (!match.isPlayed || match.homeScore === null || match.awayScore === null) {
-    return null;
-  }
-
-  let winnerId: string;
-  let loserId: string;
-
-  // Check regular time
-  if (match.homeScore > match.awayScore) {
-    winnerId = match.homeTeamId;
-    loserId = match.awayTeamId;
-  } else if (match.awayScore > match.homeScore) {
-    winnerId = match.awayTeamId;
-    loserId = match.homeTeamId;
-  } else if (match.penalties) {
-    // Penalties
-    if (match.penalties.homeScore > match.penalties.awayScore) {
-      winnerId = match.homeTeamId;
-      loserId = match.awayTeamId;
-    } else {
-      winnerId = match.awayTeamId;
-      loserId = match.homeTeamId;
-    }
-  } else {
-    return null;
-  }
-
-  return { winnerId, loserId };
-}

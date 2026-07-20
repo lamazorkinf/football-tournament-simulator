@@ -1736,7 +1736,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Check if we need to generate next round and save to database
         if (roundName === 'roundOf32' && isRoundComplete(updatedKnockout.roundOf32)) {
-          updatedKnockout.roundOf16 = generateRoundOf16(updatedKnockout.roundOf32, state.teams);
+          updatedKnockout.roundOf16 = generateRoundOf16(updatedKnockout.roundOf32);
 
           // Save R16 matches to database
           if (isSupabaseConfigured() && state.currentTournament) {
