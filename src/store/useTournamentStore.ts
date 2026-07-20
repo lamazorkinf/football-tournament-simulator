@@ -42,6 +42,26 @@ const BASE_SKILLS: Record<string, number> = Object.fromEntries(
   (teamsData as Team[]).map((team) => [team.id, team.skill])
 );
 
+/**
+ * Fusiona un torneo cargado con la lista ya existente en vez de reemplazarla:
+ * la lista puede venir rehidratada desde localStorage con otros torneos.
+ */
+const mergeTournament = (existing: Tournament[], incoming: Tournament): Tournament[] => {
+  const index = existing.findIndex((t) => t.id === incoming.id);
+  if (index === -1) return [incoming, ...existing];
+  const next = [...existing];
+  next[index] = incoming;
+  return next;
+};
+
+/**
+ * initializeTournament se dispara desde un efecto que depende de
+ * currentTournament, que sigue siendo null durante todo el await. Sin este
+ * candado, un re-render intermedio lanzaba una segunda inicialización y se
+ * creaban dos torneos distintos (dos nanoid, dos INSERT en Supabase).
+ */
+let initializationInFlight: Promise<void> | null = null;
+
 const applySeasonRegression = (teams: Team[]): Team[] =>
   teams.map((team) => {
     const base = BASE_SKILLS[team.id];
@@ -107,6 +127,12 @@ export const useTournamentStore = create<TournamentState>()(
       },
 
       initializeTournament: async () => {
+        if (initializationInFlight) return initializationInFlight;
+
+        initializationInFlight = (async () => {
+        // Si la rehidratación ya dejó un torneo activo, no hay nada que inicializar.
+        if (get().currentTournament) return;
+
         // Try to load only the latest tournament from database (fast load)
         if (isSupabaseConfigured()) {
           try {
@@ -114,16 +140,28 @@ export const useTournamentStore = create<TournamentState>()(
             const latestTournament = await adaptiveTournamentService.getLatestTournament();
             if (latestTournament) {
               console.log(`Loaded latest tournament: ${latestTournament.name}`);
-              set({
-                tournaments: [latestTournament], // Start with just the latest
+              set((state) => ({
+                // Fusionar, no reemplazar: descartar la lista rehidratada borraba
+                // el historial local de torneos y lo volvía a persistir truncado.
+                tournaments: mergeTournament(state.tournaments, latestTournament),
                 currentTournamentId: latestTournament.id,
-                currentTournament: latestTournament
-              });
+                currentTournament: latestTournament,
+              }));
               return;
             }
           } catch (error) {
             console.error('Error loading tournament from database:', error);
           }
+        }
+
+        // La base no tiene torneos, pero puede haberlos rehidratados localmente.
+        const rehydrated = get().tournaments;
+        if (rehydrated.length > 0) {
+          const selected =
+            rehydrated.find((t) => t.id === get().currentTournamentId) ?? rehydrated[0];
+          console.log(`Restaurado torneo local: ${selected.name}`);
+          set({ currentTournamentId: selected.id, currentTournament: selected });
+          return;
         }
 
         // No tournaments in database, create first one with year 2026
@@ -153,18 +191,25 @@ export const useTournamentStore = create<TournamentState>()(
           originalSkills,
         };
 
-        set({
+        set((state) => ({
           teams: teamsWithTiers,
-          tournaments: [tournament],
+          tournaments: mergeTournament(state.tournaments, tournament),
           currentTournamentId: tournament.id,
           currentTournament: tournament
-        });
+        }));
 
         // Save new tournament to database
         if (isSupabaseConfigured()) {
           adaptiveTournamentService
             .saveTournament(tournament)
             .catch((error) => console.error('Error saving new tournament:', error));
+        }
+        })();
+
+        try {
+          await initializationInFlight;
+        } finally {
+          initializationInFlight = null;
         }
       },
 
@@ -515,7 +560,13 @@ export const useTournamentStore = create<TournamentState>()(
         const homeTeam = state.teams.find((t) => t.id === match.homeTeamId);
         const awayTeam = state.teams.find((t) => t.id === match.awayTeamId);
 
-        if (!homeTeam || !awayTeam) return;
+        if (!homeTeam || !awayTeam) {
+          // Salir sin resetear el flag dejaba isSavingMatch en true para
+          // siempre, deshabilitando todos los botones de simular.
+          console.warn(`⚠️ Equipos no encontrados para el partido ${matchId}`);
+          set({ isSavingMatch: false });
+          return;
+        }
 
         // Simulate the match (disable home advantage for World Cup)
         const disableHomeAdvantage = stage === 'world-cup';
@@ -662,6 +713,15 @@ export const useTournamentStore = create<TournamentState>()(
         try {
           // Track all changes
           const matchHistoryEntries: any[] = [];
+          // Resultados a persistir, cada uno atado a SU matchId. No puede
+          // derivarse por índice de `matches`: el bucle saltea partidos y los
+          // índices se desalinearían (ver comentario en el guardado).
+          const matchResultUpdates: Array<{
+            matchId: string;
+            stage: 'qualifier' | 'world-cup';
+            homeScore: number;
+            awayScore: number;
+          }> = [];
           const teamSkillUpdates: Map<string, number> = new Map();
           const updatedMatchesByGroup: Map<string, { groupId: string; stage: 'qualifier' | 'world-cup'; region?: Region; matches: Match[] }> = new Map();
 
@@ -759,6 +819,13 @@ export const useTournamentStore = create<TournamentState>()(
               awaySkillChange: result.awaySkillChange,
             });
 
+            matchResultUpdates.push({
+              matchId,
+              stage,
+              homeScore: result.homeScore,
+              awayScore: result.awayScore,
+            });
+
             // Store updated match by group
             const groupKey = `${stage}-${groupId}`;
             if (!updatedMatchesByGroup.has(groupKey)) {
@@ -802,19 +869,23 @@ export const useTournamentStore = create<TournamentState>()(
               );
             }
 
-            // 3. Update match results in normalized schema
-            // Note: matches and matchHistoryEntries arrays are built in the same order,
-            // so we use the index directly instead of searching
-            const matchUpdatePromises = matches.map(({ matchId, stage }, index) => {
-              const entry = matchHistoryEntries[index];
-              if (!entry) return Promise.resolve();
-
-              if (stage === 'qualifier') {
-                return normalizedQualifiersService.updateMatchResult(matchId, entry.homeScore, entry.awayScore);
-              } else {
-                return normalizedWorldCupService.updateGroupMatchResult(matchId, entry.homeScore, entry.awayScore);
+            // 3. Update match results in normalized schema.
+            //
+            // Se recorre matchResultUpdates, donde cada resultado lleva su
+            // propio matchId. Antes se recorría `matches` y se leía
+            // matchHistoryEntries[index] asumiendo que ambos arrays estaban
+            // alineados, pero el bucle de simulación hace `continue` (grupo o
+            // partido no encontrado, partido ya jugado, equipo inexistente)
+            // sin registrar entrada: a partir del primer salto, cada partido
+            // se guardaba con el marcador del siguiente.
+            const matchUpdatePromises = matchResultUpdates.map(
+              ({ matchId, stage, homeScore, awayScore }) => {
+                if (stage === 'qualifier') {
+                  return normalizedQualifiersService.updateMatchResult(matchId, homeScore, awayScore);
+                }
+                return normalizedWorldCupService.updateGroupMatchResult(matchId, homeScore, awayScore);
               }
-            });
+            );
             dbOperations.push(...matchUpdatePromises);
 
             // Execute all database operations in parallel
@@ -909,6 +980,9 @@ export const useTournamentStore = create<TournamentState>()(
         } catch (error) {
           console.error('❌ Error in batch simulation:', error);
           set({ isBatchProcessing: false });
+          // Sin esto el modal de progreso queda abierto para siempre: es un
+          // overlay a pantalla completa sin forma de cerrarlo desde la UI.
+          useProgressStore.getState().resetProgress();
           throw error;
         }
       },
@@ -1642,7 +1716,11 @@ export const useTournamentStore = create<TournamentState>()(
             loserId = homeTeam.id;
           }
         } else {
-          return; // Should not happen
+          // Empate sin penales: no debería ocurrir, pero salir sin resetear el
+          // flag bloquearía toda simulación posterior hasta recargar.
+          console.warn(`⚠️ Partido de eliminatorias empatado sin penales: ${matchId}`);
+          set({ isSavingMatch: false });
+          return;
         }
 
         // Update match
@@ -1878,7 +1956,7 @@ export const useTournamentStore = create<TournamentState>()(
     },
     {
       name: 'football-tournament-storage',
-      version: 7, // Incremented: Multi-tournament support
+      version: 8, // Incremented: rehidratación de currentTournament + migrate
       partialize: (state) => ({
         // Persist tournament list and selected ID in localStorage
         // Full tournament state also saved to Supabase for real persistence
@@ -1886,6 +1964,34 @@ export const useTournamentStore = create<TournamentState>()(
         tournaments: state.tournaments,
         currentTournamentId: state.currentTournamentId,
       }),
+      // Sin migrate, Zustand DESCARTA todo el estado guardado cuando la versión
+      // no coincide. Como el shape persistido (tournaments + currentTournamentId)
+      // no cambió, se conserva tal cual en lugar de perder el historial local.
+      migrate: (persistedState) => {
+        const previous = (persistedState ?? {}) as {
+          tournaments?: Tournament[];
+          currentTournamentId?: string | null;
+        };
+        return {
+          tournaments: previous.tournaments ?? [],
+          currentTournamentId: previous.currentTournamentId ?? null,
+        };
+      },
+      onRehydrateStorage: () => (state) => {
+        // currentTournament no se persiste (es derivado), así que hay que
+        // reconstruirlo desde currentTournamentId. Sin esto la app arrancaba
+        // siempre sin torneo activo y volvía a inicializar desde cero.
+        if (!state || state.currentTournament) return;
+
+        const restored =
+          state.tournaments.find((t) => t.id === state.currentTournamentId) ??
+          state.tournaments[0];
+
+        if (restored) {
+          state.currentTournament = restored;
+          state.currentTournamentId = restored.id;
+        }
+      },
     }
   )
 );
