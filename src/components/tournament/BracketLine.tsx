@@ -13,7 +13,8 @@ interface BracketLineProps {
 }
 
 /**
- * Animated SVG line connecting bracket matches
+ * Animated SVG line connecting bracket matches — pixel-style stepped connector
+ * (horizontal/vertical segments only, crisp edges, no anti-aliasing).
  */
 export function BracketLine({
   x1,
@@ -30,14 +31,16 @@ export function BracketLine({
     <motion.path
       d={path}
       fill="none"
-      stroke={highlighted ? '#2563eb' : '#d1d5db'}
-      strokeWidth={highlighted ? 3 : 2}
+      stroke="#2fbf5f"
+      strokeWidth={3}
+      strokeOpacity={highlighted ? 1 : 0.5}
       strokeDasharray={dashed ? '5,5' : undefined}
+      shapeRendering="crispEdges"
       variants={bracketLineVariants}
       initial="hidden"
       animate="visible"
       custom={delay}
-      className="transition-colors duration-300"
+      className="transition-opacity duration-300"
     />
   );
 }

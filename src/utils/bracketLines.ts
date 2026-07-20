@@ -12,7 +12,8 @@ export interface BracketLineCoords {
 
 /**
  * Generates SVG path for connecting two bracket matches
- * Creates a smooth curved line from right of match1 to left of match2
+ * Pixel-art style: horizontal → vertical → horizontal stepped segments only
+ * (no curves/diagonals), preserving the same start/end coordinates as before.
  */
 export function generateBracketPath(
   x1: number,
@@ -22,8 +23,8 @@ export function generateBracketPath(
 ): string {
   const midX = (x1 + x2) / 2;
 
-  // Use cubic bezier curve for smooth connection
-  return `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+  // Right-angle connector: horizontal, then vertical, then horizontal
+  return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
 }
 
 /**

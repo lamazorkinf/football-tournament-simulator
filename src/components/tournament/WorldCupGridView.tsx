@@ -20,17 +20,17 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg p-6 shadow-lg">
+      <Card className="p-6">
         <div className="flex items-center gap-3">
-          <Trophy className="w-8 h-8" />
+          <Trophy className="w-8 h-8 text-gold" />
           <div>
-            <h2 className="text-2xl font-bold">World Cup Group Stage</h2>
-            <p className="text-primary-100">
+            <h2 className="font-arcade text-lg text-white text-shadow-retro">World Cup Group Stage</h2>
+            <p className="text-grass-soft">
               {groups.length} groups • Top 2 from each group advance
             </p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Grid of Groups */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -52,16 +52,16 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
                 onClick={() => setSelectedGroup(group)}
               >
                 <Card
-                  className={`transition-all hover:shadow-xl hover:scale-105 ${
-                    isComplete ? 'border-2 border-green-500' : 'hover:border-primary-400'
+                  className={`transition-colors ${
+                    isComplete ? 'border-led' : 'hover:border-gold'
                   }`}
                 >
                 <CardContent className="pt-6">
                   {/* Group Header */}
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-gray-900">{group.name}</h3>
+                    <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">{group.name}</h3>
                     {isComplete && (
-                      <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
+                      <div className="flex items-center gap-1 text-led font-arcade text-[10px] uppercase">
                         ✓ Complete
                       </div>
                     )}
@@ -76,16 +76,16 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
                       return (
                         <div
                           key={standing.teamId}
-                          className={`flex items-center justify-between p-2 rounded ${
+                          className={`flex items-center justify-between p-2 border ${
                             isQualified
-                              ? 'bg-green-50 border border-green-200'
-                              : 'bg-gray-50'
+                              ? 'bg-grass/30 border-grass'
+                              : 'bg-transparent border-transparent'
                           }`}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <span
-                              className={`text-xs font-bold w-5 text-center ${
-                                isQualified ? 'text-green-700' : 'text-gray-500'
+                              className={`text-xs tabular-nums w-5 text-center ${
+                                isQualified ? 'text-led' : 'text-grass-soft'
                               }`}
                             >
                               {idx + 1}
@@ -98,23 +98,15 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
                                 size={24}
                               />
                             )}
-                            <span
-                              className={`text-sm font-medium truncate ${
-                                isQualified ? 'text-green-900' : 'text-gray-700'
-                              }`}
-                            >
+                            <span className="text-sm truncate text-white">
                               {team?.name}
                             </span>
                           </div>
                           <div className="flex items-center gap-3 ml-2">
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-grass-soft">
                               {standing.played}P
                             </span>
-                            <span
-                              className={`text-sm font-bold min-w-[28px] text-right ${
-                                isQualified ? 'text-green-700' : 'text-gray-900'
-                              }`}
-                            >
+                            <span className="text-sm font-terminal text-led tabular-nums min-w-[28px] text-right">
                               {standing.points}
                             </span>
                           </div>
@@ -125,27 +117,27 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
 
                   {/* Progress Bar */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-gray-600">
+                    <div className="flex items-center justify-between text-xs text-grass-soft">
                       <span>Progress</span>
-                      <span>
+                      <span className="font-terminal text-led tabular-nums">
                         {playedMatches}/{totalMatches}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-night border-2 border-grass h-2 overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ delay: idx * 0.05 + 0.2, duration: 0.5 }}
-                        className={`h-2 rounded-full ${
-                          isComplete ? 'bg-green-600' : 'bg-primary-600'
+                        className={`h-full ${
+                          isComplete ? 'bg-led' : 'bg-grass'
                         }`}
                       />
                     </div>
                   </div>
 
                   {/* View Details Button */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <button className="w-full flex items-center justify-between text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors">
+                  <div className="mt-4 pt-4 border-t-4 border-grass">
+                    <button className="w-full flex items-center justify-between font-arcade text-[10px] uppercase text-gold hover:text-white transition-colors">
                       <span>View Details</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -159,22 +151,22 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
       </div>
 
       {/* Legend */}
-      <Card className="bg-gray-50">
+      <Card className="bg-night">
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
-              <span className="text-gray-700">Qualified for Knockout</span>
+              <div className="w-4 h-4 bg-grass/30 border-2 border-grass"></div>
+              <span className="text-grass-soft">Qualified for Knockout</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
-              <span className="text-gray-700">Eliminated</span>
+              <div className="w-4 h-4 bg-night border-2 border-grass"></div>
+              <span className="text-grass-soft">Eliminated</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-green-600 text-xs font-semibold">
+              <div className="flex items-center gap-1 text-led font-arcade text-[10px] uppercase">
                 ✓ Complete
               </div>
-              <span className="text-gray-700">All matches played</span>
+              <span className="text-grass-soft">All matches played</span>
             </div>
           </div>
         </CardContent>
@@ -184,37 +176,37 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-primary-600">
+            <div className="text-3xl font-terminal text-led tabular-nums">
               {groups.length}
             </div>
-            <div className="text-sm text-gray-600 mt-1">Groups</div>
+            <div className="text-sm text-grass-soft mt-1">Groups</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-primary-600">
+            <div className="text-3xl font-terminal text-led tabular-nums">
               {groups.reduce((acc, g) => acc + g.teamIds.length, 0)}
             </div>
-            <div className="text-sm text-gray-600 mt-1">Teams</div>
+            <div className="text-sm text-grass-soft mt-1">Teams</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-terminal text-led tabular-nums">
               {groups.filter((g) => g.matches.every((m) => m.isPlayed)).length}
             </div>
-            <div className="text-sm text-gray-600 mt-1">Complete</div>
+            <div className="text-sm text-grass-soft mt-1">Complete</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-orange-600">
+            <div className="text-3xl font-terminal text-gold tabular-nums">
               {groups.filter((g) => g.matches.some((m) => !m.isPlayed)).length}
             </div>
-            <div className="text-sm text-gray-600 mt-1">In Progress</div>
+            <div className="text-sm text-grass-soft mt-1">In Progress</div>
           </CardContent>
         </Card>
       </div>
