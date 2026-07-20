@@ -82,13 +82,13 @@ export function WorldCupView({
         </Button>
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 border border-gray-300 rounded-lg p-1">
+          <div className="flex items-center gap-1 border-2 border-grass p-1">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm transition-colors ${
+              className={`px-3 py-1.5 flex items-center gap-2 text-sm transition-colors ${
                 viewMode === 'grid'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-gold text-night'
+                  : 'text-grass-soft hover:bg-grass/40'
               }`}
             >
               <Grid className="w-4 h-4" />
@@ -96,10 +96,10 @@ export function WorldCupView({
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm transition-colors ${
+              className={`px-3 py-1.5 flex items-center gap-2 text-sm transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-gold text-night'
+                  : 'text-grass-soft hover:bg-grass/40'
               }`}
             >
               <List className="w-4 h-4" />
@@ -133,22 +133,22 @@ export function WorldCupView({
       ) : (
         <>
           {/* List View - Original */}
-          <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg p-6 shadow-lg">
+          <div className="bg-grass border-4 border-line shadow-hard-panel text-white p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <Trophy className="w-8 h-8" />
-                  <h2 className="text-2xl font-bold">FIFA World Cup</h2>
+                  <h2 className="font-arcade text-lg text-white text-shadow-retro">FIFA World Cup</h2>
                 </div>
-                <p className="text-primary-100">
+                <p className="text-white/70">
                   {groups.reduce((acc, g) => acc + g.teamIds.length, 0)} teams competing in {groups.length} groups
                 </p>
               </div>
               {groupsComplete && !knockoutStarted && (
                 <Button
-                  variant="outline"
+                  variant="primary"
                   onClick={advanceToKnockout}
-                  className="bg-white text-primary-600 hover:bg-primary-50 border-white gap-2"
+                  className="gap-2"
                 >
                   <Award className="w-5 h-5" />
                   Advance to Knockout
@@ -166,10 +166,10 @@ export function WorldCupView({
               return (
                 <div
                   key={group.id}
-                  className="border-2 border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-primary-400 transition-all cursor-pointer bg-white"
+                  className="border-2 border-grass p-4 hover:border-gold transition-all cursor-pointer bg-grass-dark"
                   onClick={() => setSelectedGroupId(group.id)}
                 >
-                  <h3 className="font-bold text-xl mb-3 text-gray-900">{group.name}</h3>
+                  <h3 className="font-bold text-xl mb-3 text-white">{group.name}</h3>
 
                   <div className="space-y-2 mb-3">
                     {group.standings.slice(0, 4).map((standing, idx) => {
@@ -178,7 +178,7 @@ export function WorldCupView({
                         <div
                           key={standing.teamId}
                           className={`flex items-center justify-between text-sm ${
-                            idx < 2 ? 'font-semibold text-primary-700' : 'text-gray-600'
+                            idx < 2 ? 'font-semibold text-led' : 'text-grass-soft'
                           }`}
                         >
                           <span className="flex items-center gap-2">
@@ -192,14 +192,14 @@ export function WorldCupView({
                     })}
                   </div>
 
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div className="w-full bg-black/40 border border-grass h-2 mb-2">
                     <div
-                      className="bg-primary-600 h-2 rounded-full transition-all"
+                      className="bg-gold h-2 transition-all"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
 
-                  <p className="text-xs text-gray-500 text-center">
+                  <p className="text-xs text-grass-soft text-center">
                     {playedMatches} / {totalMatches} matches
                   </p>
                 </div>
@@ -268,13 +268,13 @@ function WorldCupGroupDetail({ group, teams, onBack }: WorldCupGroupDetailProps)
           <span className="hidden sm:inline">Back to Groups</span>
           <span className="sm:hidden">Back</span>
         </Button>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-grass-soft">
           {playedMatches} / {totalMatches} matches played
         </div>
       </div>
 
       <Card>
-        <CardHeader className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-t-lg">
+        <CardHeader className="bg-grass">
           <CardTitle className="text-white flex items-center gap-2">
             <Trophy className="w-6 h-6" />
             World Cup - {group.name}
@@ -289,7 +289,7 @@ function WorldCupGroupDetail({ group, teams, onBack }: WorldCupGroupDetailProps)
             teams={teams}
             highlightQualified={2}
           />
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-grass-soft mt-2">
             * Top 2 teams advance to knockout stage
           </p>
         </CardContent>
@@ -304,10 +304,10 @@ function WorldCupGroupDetail({ group, teams, onBack }: WorldCupGroupDetailProps)
             {group.matches.map((match: Match) => (
               <div
                 key={match.id}
-                className={`flex items-center justify-between p-4 rounded-lg border ${
+                className={`flex items-center justify-between p-4 border-2 ${
                   match.isPlayed
-                    ? 'bg-gray-50 border-gray-200 cursor-pointer hover:shadow-md transition-all'
-                    : 'bg-white border-primary-200 hover:border-primary-400 transition-colors'
+                    ? 'bg-grass-dark border-grass cursor-pointer hover:bg-grass/20 transition-colors'
+                    : 'bg-grass-dark border-gold hover:border-led transition-colors'
                 }`}
                 onClick={match.isPlayed ? () => setSelectedMatch(match) : undefined}
               >
@@ -324,13 +324,13 @@ function WorldCupGroupDetail({ group, teams, onBack }: WorldCupGroupDetailProps)
 
                   <div className="flex items-center gap-4 mx-4">
                     {match.isPlayed ? (
-                      <div className="flex items-center gap-3 font-bold text-lg">
-                        <span className="text-gray-900">{match.homeScore}</span>
-                        <span className="text-gray-400">-</span>
-                        <span className="text-gray-900">{match.awayScore}</span>
+                      <div className="flex items-center gap-3 font-bold text-lg font-terminal tabular-nums">
+                        <span className="text-white">{match.homeScore}</span>
+                        <span className="text-grass-soft">-</span>
+                        <span className="text-white">{match.awayScore}</span>
                       </div>
                     ) : (
-                      <span className="text-gray-400 font-medium">vs</span>
+                      <span className="text-grass-soft font-medium">vs</span>
                     )}
                   </div>
 

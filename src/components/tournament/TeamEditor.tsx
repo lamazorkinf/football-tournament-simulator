@@ -140,25 +140,25 @@ export function TeamEditor() {
   return (
     <>
       <Card>
-        <CardHeader className="bg-primary-600 text-white rounded-t-lg">
+        <CardHeader className="bg-grass text-white">
           <div className="flex items-center justify-between">
             <CardTitle className="text-white">Team Editor</CardTitle>
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={handleRefreshFromDatabase}
                 disabled={isRefreshing}
-                className="bg-white text-primary-600 hover:bg-primary-50 border-white gap-2"
+                className="gap-2"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Refreshing...' : 'Refresh from DB'}
               </Button>
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={() => setShowCreateModal(true)}
-                className="bg-white text-primary-600 hover:bg-primary-50 border-white gap-2"
+                className="gap-2"
               >
                 <Plus className="w-4 h-4" />
                 Create Team
@@ -169,20 +169,20 @@ export function TeamEditor() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-grass-soft w-5 h-5" />
             <input
               type="text"
               placeholder="Search teams..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
             />
           </div>
 
           <select
             value={selectedRegion}
             onChange={(e) => setSelectedRegion(e.target.value as Region | 'All')}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="px-4 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
           >
             <option value="All">All Regions ({teams.length})</option>
             {REGIONS.map((region) => (
@@ -193,10 +193,10 @@ export function TeamEditor() {
           </select>
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-4 max-h-[500px] overflow-y-auto">
+        <div className="bg-night border-2 border-grass p-4 max-h-[500px] overflow-y-auto">
           <div className="space-y-2">
             {filteredTeams.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No teams found</p>
+              <p className="text-center text-grass-soft py-8">No teams found</p>
             ) : (
               filteredTeams.map((team) => (
                 <TeamRow
@@ -215,9 +215,9 @@ export function TeamEditor() {
           </div>
         </div>
 
-        <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="font-semibold text-blue-900 mb-1">💡 Tips:</p>
-          <ul className="space-y-1 text-blue-800">
+        <div className="text-sm bg-black/40 border-2 border-gold p-3">
+          <p className="font-semibold text-gold mb-1">💡 Tips:</p>
+          <ul className="space-y-1 text-grass-soft">
             <li>• Skill ratings range from 30 to 100</li>
             <li>• Moving teams between regions will affect group composition</li>
             <li>• Changes take effect immediately but won't affect completed matches</li>
@@ -228,14 +228,14 @@ export function TeamEditor() {
 
     {/* Create Team Modal */}
     {showCreateModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <Card className="max-w-md w-full">
-          <CardHeader className="bg-primary-600 text-white rounded-t-lg">
+          <CardHeader className="bg-grass text-white">
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">Create New Team</CardTitle>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-white hover:text-gray-200"
+                className="text-white hover:text-white/70"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -243,43 +243,43 @@ export function TeamEditor() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-grass-soft mb-1">
                 Team Name *
               </label>
               <input
                 type="text"
                 value={createForm.name}
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
                 placeholder="e.g., New Zealand"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-grass-soft mb-1">
                 Flag Emoji *
               </label>
               <input
                 type="text"
                 value={createForm.flag}
                 onChange={(e) => setCreateForm({ ...createForm, flag: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
                 placeholder="e.g., 🇳🇿"
                 maxLength={4}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-grass-soft mt-1">
                 Use a flag emoji or country code
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+              <label className="block text-sm font-medium text-grass-soft mb-1">Region</label>
               <select
                 value={createForm.region}
                 onChange={(e) =>
                   setCreateForm({ ...createForm, region: e.target.value as Region })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
               >
                 {REGIONS.map((region) => (
                   <option key={region} value={region}>
@@ -290,7 +290,7 @@ export function TeamEditor() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-grass-soft mb-1">
                 Skill Rating (30-100)
               </label>
               <input
@@ -301,7 +301,7 @@ export function TeamEditor() {
                 onChange={(e) =>
                   setCreateForm({ ...createForm, skill: parseInt(e.target.value) || 30 })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
               />
             </div>
 
@@ -353,13 +353,13 @@ function TeamRow({
 }: TeamRowProps) {
   if (isEditing) {
     return (
-      <div className="bg-white border-2 border-primary-500 rounded-lg p-4">
+      <div className="bg-grass-dark border-2 border-gold p-4">
         <div className="space-y-3">
           <div className="flex items-center gap-4">
             <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
             <div className="flex-1">
-              <span className="font-semibold text-gray-900">{team.name}</span>
-              <span className="text-xs text-gray-500 ml-2">({team.id})</span>
+              <span className="font-semibold text-white">{team.name}</span>
+              <span className="text-xs text-grass-soft ml-2">({team.id})</span>
             </div>
             <div className="flex gap-2">
               <Button variant="primary" size="sm" onClick={onSave} className="gap-1">
@@ -373,7 +373,7 @@ function TeamRow({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Skill</label>
+              <label className="block text-xs text-grass-soft mb-1">Skill</label>
               <input
                 type="number"
                 min="30"
@@ -382,17 +382,17 @@ function TeamRow({
                 onChange={(e) =>
                   onFormChange({ ...editForm, skill: parseInt(e.target.value) || 30 })
                 }
-                className="w-full px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-1 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Region</label>
+              <label className="block text-xs text-grass-soft mb-1">Region</label>
               <select
                 value={editForm.region}
                 onChange={(e) =>
                   onFormChange({ ...editForm, region: e.target.value as Region })
                 }
-                className="w-full px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-1 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
               >
                 {REGIONS.map((region) => (
                   <option key={region} value={region}>
@@ -402,7 +402,7 @@ function TeamRow({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Flag URL</label>
+              <label className="block text-xs text-grass-soft mb-1">Flag URL</label>
               <input
                 type="url"
                 value={editForm.flag}
@@ -410,7 +410,7 @@ function TeamRow({
                   onFormChange({ ...editForm, flag: e.target.value })
                 }
                 placeholder="https://example.com/flag.png"
-                className="w-full px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 text-sm"
+                className="w-full px-3 py-1 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold text-sm"
               />
             </div>
           </div>
@@ -420,25 +420,25 @@ function TeamRow({
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors">
+    <div className="bg-grass-dark border-2 border-grass hover:border-gold p-4 transition-colors">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
           <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
           <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <span className="font-semibold text-gray-900">{team.name}</span>
+            <span className="font-semibold text-white">{team.name}</span>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Skill:</span>
+              <span className="text-sm text-grass-soft">Skill:</span>
               <div className="flex items-center gap-2">
-                <div className="w-20 bg-gray-200 rounded-full h-2">
+                <div className="w-20 bg-black/40 border border-grass h-2">
                   <div
-                    className="bg-primary-600 h-2 rounded-full"
+                    className="bg-gold h-2"
                     style={{ width: `${team.skill}%` }}
                   />
                 </div>
-                <span className="font-semibold text-sm w-8">{team.skill}</span>
+                <span className="font-semibold text-sm w-8 text-gold font-terminal tabular-nums">{team.skill}</span>
               </div>
             </div>
-            <span className="text-sm text-gray-600">{team.region}</span>
+            <span className="text-sm text-grass-soft">{team.region}</span>
           </div>
         </div>
         <div className="flex gap-2">
@@ -450,7 +450,7 @@ function TeamRow({
             variant="outline"
             size="sm"
             onClick={onDelete}
-            className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
+            className="gap-2 text-loss border-loss hover:bg-loss/20"
           >
             <Trash2 className="w-4 h-4" />
           </Button>

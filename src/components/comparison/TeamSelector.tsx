@@ -36,7 +36,7 @@ export function TeamSelector({
 
   if (selectedTeam) {
     return (
-      <div className="border-2 border-primary-500 rounded-lg p-4 bg-primary-50">
+      <div className="border-2 border-gold bg-black/40 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <TeamFlag
@@ -46,19 +46,19 @@ export function TeamSelector({
               size={48}
             />
             <div>
-              <h4 className="font-bold text-gray-900">{selectedTeam.name}</h4>
-              <p className="text-sm text-gray-600">{selectedTeam.region}</p>
-              <p className="text-xs text-primary-700 font-semibold mt-1">
+              <h4 className="font-bold text-white">{selectedTeam.name}</h4>
+              <p className="text-sm text-grass-soft">{selectedTeam.region}</p>
+              <p className="text-xs text-gold font-semibold mt-1">
                 Skill: {selectedTeam.skill}
               </p>
             </div>
           </div>
           <button
             onClick={() => onSelectTeam(null)}
-            className="p-2 hover:bg-primary-200 rounded-full transition-colors"
+            className="p-2 text-grass-soft hover:bg-grass/40 transition-colors"
             title="Deseleccionar"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <X className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -69,13 +69,13 @@ export function TeamSelector({
     <div className="space-y-3">
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grass-soft" />
         <input
           type="text"
           placeholder="Buscar equipo..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          className="w-full pl-10 pr-4 py-2 bg-night border-2 border-grass text-white placeholder:text-grass-soft focus:outline-none focus:border-gold"
         />
       </div>
 
@@ -85,10 +85,10 @@ export function TeamSelector({
           <button
             key={region}
             onClick={() => setSelectedRegion(region)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`px-3 py-1 text-xs font-medium border-2 transition-colors ${
               selectedRegion === region
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-gold text-night border-gold'
+                : 'bg-black/40 text-grass-soft border-grass hover:bg-grass/40'
             }`}
           >
             {region === 'all' ? 'Todas' : region}
@@ -97,14 +97,14 @@ export function TeamSelector({
       </div>
 
       {/* Team List */}
-      <div className="border border-gray-300 rounded-lg max-h-96 overflow-y-auto">
+      <div className="border-2 border-grass max-h-96 overflow-y-auto bg-night">
         {sortedTeams.length > 0 ? (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y-2 divide-grass">
             {sortedTeams.map((team) => (
               <button
                 key={team.id}
                 onClick={() => onSelectTeam(team)}
-                className="w-full p-3 hover:bg-gray-50 transition-colors text-left flex items-center gap-3"
+                className="w-full p-3 hover:bg-grass/40 transition-colors text-left flex items-center gap-3"
               >
                 <TeamFlag
                   teamId={team.id}
@@ -113,24 +113,24 @@ export function TeamSelector({
                   size={32}
                 />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 truncate">{team.name}</h4>
-                  <p className="text-xs text-gray-600">{team.region}</p>
+                  <h4 className="font-semibold text-white truncate">{team.name}</h4>
+                  <p className="text-xs text-grass-soft">{team.region}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-bold text-primary-700">{team.skill}</div>
-                  <div className="text-xs text-gray-500">Skill</div>
+                  <div className="text-sm font-bold text-gold font-terminal tabular-nums">{team.skill}</div>
+                  <div className="text-xs text-grass-soft">Skill</div>
                 </div>
               </button>
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-grass-soft">
             <p>No se encontraron equipos</p>
           </div>
         )}
       </div>
 
-      <p className="text-xs text-gray-500 text-center">
+      <p className="text-xs text-grass-soft text-center">
         {sortedTeams.length} {sortedTeams.length === 1 ? 'equipo disponible' : 'equipos disponibles'}
       </p>
     </div>

@@ -13,7 +13,7 @@ interface H2HMatchHistoryProps {
 export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps) {
   if (h2hStats.lastFiveResults.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-grass-soft">
         <p>No hay historial de partidos disponible</p>
       </div>
     );
@@ -33,7 +33,7 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
         return (
           <div
             key={match.matchId}
-            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            className="bg-night border-2 border-grass hover:border-line transition-colors p-4"
           >
             <div className="flex items-center justify-between">
               {/* Team 1 */}
@@ -46,9 +46,9 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
                     size={32}
                   />
                 </div>
-                <div className="text-sm font-semibold text-gray-900">{team1.name}</div>
+                <div className="text-sm font-semibold text-white">{team1.name}</div>
                 {isTeam1Home && (
-                  <div className="text-xs text-gray-500 mt-1">Local</div>
+                  <div className="text-xs text-grass-soft mt-1">Local</div>
                 )}
               </div>
 
@@ -56,24 +56,24 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
               <div className="flex-1 text-center">
                 <div className="flex items-center justify-center gap-4 mb-2">
                   <div
-                    className={`text-3xl font-bold ${
+                    className={`text-3xl font-terminal tabular-nums ${
                       team1Won
-                        ? 'text-green-600'
+                        ? 'text-led'
                         : isDraw
-                        ? 'text-gray-700'
-                        : 'text-gray-400'
+                        ? 'text-white'
+                        : 'text-grass-soft'
                     }`}
                   >
                     {team1Score}
                   </div>
-                  <div className="text-xl text-gray-400">-</div>
+                  <div className="text-xl text-grass-soft">-</div>
                   <div
-                    className={`text-3xl font-bold ${
+                    className={`text-3xl font-terminal tabular-nums ${
                       team2Won
-                        ? 'text-green-600'
+                        ? 'text-led'
                         : isDraw
-                        ? 'text-gray-700'
-                        : 'text-gray-400'
+                        ? 'text-white'
+                        : 'text-grass-soft'
                     }`}
                   >
                     {team2Score}
@@ -82,12 +82,12 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
 
                 {/* Result Badge */}
                 <div
-                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                  className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold border ${
                     team1Won
-                      ? 'bg-green-100 text-green-700'
+                      ? 'bg-black/40 text-led border-led'
                       : team2Won
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-700'
+                      ? 'bg-black/40 text-gold border-gold'
+                      : 'bg-black/40 text-grass-soft border-grass'
                   }`}
                 >
                   {team1Won ? (
@@ -106,9 +106,9 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
                 </div>
 
                 {/* Stage and Tournament */}
-                <div className="text-xs text-gray-500 mt-2">
+                <div className="text-xs text-grass-soft mt-2">
                   {match.tournamentYear && (
-                    <div className="font-semibold text-gray-700">Mundial {match.tournamentYear}</div>
+                    <div className="font-semibold text-white">Mundial {match.tournamentYear}</div>
                   )}
                   <div>
                     {match.stage === 'qualifier'
@@ -132,17 +132,17 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
                     size={32}
                   />
                 </div>
-                <div className="text-sm font-semibold text-gray-900">{team2.name}</div>
+                <div className="text-sm font-semibold text-white">{team2.name}</div>
                 {!isTeam1Home && (
-                  <div className="text-xs text-gray-500 mt-1">Local</div>
+                  <div className="text-xs text-grass-soft mt-1">Local</div>
                 )}
               </div>
             </div>
 
             {/* Goal Difference Indicator */}
             {Math.abs(match.goalDifference) >= 3 && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="text-center text-xs text-orange-600 font-semibold">
+              <div className="mt-3 pt-3 border-t-2 border-grass">
+                <div className="text-center text-xs text-gold font-semibold">
                   🔥 Goleada de {Math.abs(match.goalDifference)} goles
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
       })}
 
       {h2hStats.totalMatches > h2hStats.lastFiveResults.length && (
-        <div className="text-center py-3 text-sm text-gray-600">
+        <div className="text-center py-3 text-sm text-grass-soft">
           Mostrando los últimos {h2hStats.lastFiveResults.length} de {h2hStats.totalMatches} partidos
         </div>
       )}

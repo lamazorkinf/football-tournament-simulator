@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
+import { PixelBar } from '../ui/PixelBar';
 import { Play, RotateCcw, Zap, Sparkles } from 'lucide-react';
 import type { Team, WorldCupGroup } from '../../types';
 import { nanoid } from 'nanoid';
@@ -225,7 +226,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-gold flex-shrink-0" />
               <span className="truncate">Simulador de Sorteo del Mundial</span>
             </CardTitle>
             <div className="flex gap-2 w-full sm:w-auto">
@@ -269,7 +270,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
           {/* Mobile: Show only current pot with toggle */}
           <div className="lg:hidden">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-700">
+              <h2 className="text-sm font-semibold text-white">
                 Bombo Actual: {currentPot + 1} de 4
               </h2>
               <Button
@@ -293,13 +294,13 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
               <Card
                 key={pot.number}
                 className={`transition-all ${
-                  currentPot === potIdx && !isComplete ? 'ring-2 ring-primary-500 shadow-lg' : ''
+                  currentPot === potIdx && !isComplete ? 'border-gold' : ''
                 }`}
               >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base flex items-center justify-between">
                     <span>Bombo {pot.number}</span>
-                    <span className="text-xs sm:text-sm text-gray-500">({pot.teams.length} equipos)</span>
+                    <span className="text-xs sm:text-sm text-grass-soft">({pot.teams.length} equipos)</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -313,10 +314,10 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                           opacity: animatingTeam === team.id ? 0.3 : 1,
                           scale: animatingTeam === team.id ? 1.1 : 1,
                         }}
-                        className={`flex items-center gap-1 p-1.5 sm:p-2 rounded border ${
+                        className={`flex items-center gap-1 p-1.5 sm:p-2 border-2 ${
                           animatingTeam === team.id
-                            ? 'bg-yellow-100 border-yellow-400'
-                            : 'bg-gray-50 border-gray-200'
+                            ? 'bg-gold/20 border-gold'
+                            : 'bg-night border-grass'
                         }`}
                       >
                         <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
@@ -343,11 +344,11 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                   return (
                     <div
                       key={group.id}
-                      className={`border rounded-lg p-2 sm:p-3 transition-all ${
-                        isCurrentGroup ? 'ring-2 ring-primary-500 bg-primary-50' : 'bg-white'
+                      className={`border-2 p-2 sm:p-3 transition-all ${
+                        isCurrentGroup ? 'border-gold bg-grass/30' : 'border-grass bg-grass-dark'
                       }`}
                     >
-                      <h3 className="text-sm sm:text-base font-bold text-center mb-2 text-gray-700">
+                      <h3 className="text-sm sm:text-base font-bold text-center mb-2 text-white">
                         {group.name.replace('Grupo ', '')}
                       </h3>
                       <div className="space-y-1">
@@ -359,7 +360,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                               <motion.div
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="flex items-center gap-1 bg-gray-50 rounded p-1"
+                                className="flex items-center gap-1 bg-night p-1"
                               >
                                 <TeamFlag
                                   teamId={team.id}
@@ -374,7 +375,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                         })}
                         {/* Empty slots */}
                         {Array.from({ length: 4 - group.teamIds.length }).map((_, idx) => (
-                          <div key={`empty-${idx}`} className="h-6 bg-gray-100 rounded border border-dashed border-gray-300"></div>
+                          <div key={`empty-${idx}`} className="h-6 bg-night border border-dashed border-grass"></div>
                         ))}
                       </div>
                     </div>
@@ -402,7 +403,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                       cy="50"
                       r="45"
                       fill="none"
-                      stroke="#e5e7eb"
+                      stroke="var(--color-grass)"
                       strokeWidth="8"
                     />
                     {/* Progress circle */}
@@ -411,7 +412,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                       cy="50"
                       r="45"
                       fill="none"
-                      stroke="#3b82f6"
+                      stroke="var(--color-gold)"
                       strokeWidth="8"
                       strokeLinecap="round"
                       strokeDasharray={`${2 * Math.PI * 45}`}
@@ -420,7 +421,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs sm:text-[10px] font-bold text-gray-700">
+                    <span className="text-xs sm:text-[10px] font-bold text-white font-terminal tabular-nums">
                       {Math.round(((currentPot * 16 + currentGroup) / 64) * 100)}%
                     </span>
                   </div>
@@ -428,10 +429,10 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
 
                 {/* Text Info */}
                 <div className="flex flex-col">
-                  <span className="text-sm sm:text-xs font-semibold text-gray-700">
+                  <span className="text-sm sm:text-xs font-semibold text-white">
                     Bombo {currentPot + 1} de 4
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-grass-soft">
                     Grupo {currentGroup + 1} de 16
                   </span>
                 </div>
@@ -439,15 +440,10 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
 
               {/* Desktop: Progress bar */}
               <div className="hidden sm:flex items-center gap-3 flex-1 max-w-md">
-                <div className="flex-1 bg-gray-200 h-3 rounded-full overflow-hidden">
-                  <div
-                    className="bg-primary-600 h-3 transition-all duration-300 rounded-full"
-                    style={{
-                      width: `${((currentPot * 16 + currentGroup) / 64) * 100}%`,
-                    }}
-                  ></div>
+                <div className="flex-1">
+                  <PixelBar value={currentPot * 16 + currentGroup} max={64} color="gold" />
                 </div>
-                <span className="text-sm text-gray-700 font-semibold whitespace-nowrap">
+                <span className="text-sm text-white font-semibold font-terminal tabular-nums whitespace-nowrap">
                   {currentPot * 16 + currentGroup} / 64
                 </span>
               </div>
@@ -457,11 +453,11 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
       )}
 
       {isComplete && (
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-black/40 border-led">
           <CardContent className="pt-4">
             <div className="text-center">
-              <p className="text-green-800 font-semibold">✅ Sorteo Completado</p>
-              <p className="text-sm text-green-700 mt-1">
+              <p className="text-led font-semibold">✅ Sorteo Completado</p>
+              <p className="text-sm text-grass-soft mt-1">
                 Click en "Finalizar y Guardar" para guardar los grupos y generar los partidos
               </p>
             </div>

@@ -20,13 +20,13 @@ export function calculateTier(skill: number): SkillTier {
 export function getTierColor(tier: SkillTier): string {
   switch (tier) {
     case 'Elite':
-      return 'text-yellow-600 bg-yellow-50 border-yellow-300';
+      return 'text-gold bg-black/40 border-gold';
     case 'Strong':
-      return 'text-blue-600 bg-blue-50 border-blue-300';
+      return 'text-led bg-black/40 border-led';
     case 'Average':
-      return 'text-green-600 bg-green-50 border-green-300';
+      return 'text-grass-soft bg-black/40 border-grass';
     case 'Weak':
-      return 'text-gray-600 bg-gray-50 border-gray-300';
+      return 'text-loss bg-black/40 border-loss';
   }
 }
 

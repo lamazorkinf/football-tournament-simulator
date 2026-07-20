@@ -34,25 +34,25 @@ export function MatchDetailModal({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.2 }}
-          className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-6 rounded-t-lg relative">
+          <div className="bg-grass border-b-4 border-line text-white p-6 relative">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
+              className="absolute top-4 right-4 p-1 hover:bg-black/20 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-5 h-5" />
-              <h2 className="text-xl font-bold">Match Details</h2>
+              <h2 className="font-arcade text-sm text-white text-shadow-retro">Match Details</h2>
             </div>
-            <p className="text-primary-100 text-sm">Full Time Result</p>
+            <p className="text-white/70 text-sm">Full Time Result</p>
           </div>
 
           {/* Score Display */}
-          <div className="p-6 bg-gray-50">
+          <div className="p-6 bg-night">
             <div className="grid grid-cols-3 gap-4 items-center">
               {/* Home Team */}
               <div className="text-center">
@@ -62,8 +62,8 @@ export function MatchDetailModal({
                   flagUrl={homeTeam.flag}
                   size={64}
                 />
-                <h3 className="font-bold text-lg mt-3 mb-1">{homeTeam.name}</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="font-bold text-lg mt-3 mb-1 text-white">{homeTeam.name}</h3>
+                <p className="text-sm text-grass-soft">
                   Skill: {homeTeam.skill.toFixed(1)}
                 </p>
               </div>
@@ -75,25 +75,25 @@ export function MatchDetailModal({
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, type: 'spring' }}
-                    className={`text-5xl font-bold ${
-                      homeWon ? 'text-green-600' : draw ? 'text-gray-700' : 'text-gray-400'
+                    className={`text-5xl font-terminal tabular-nums ${
+                      homeWon ? 'text-led' : draw ? 'text-white' : 'text-grass-soft'
                     }`}
                   >
                     {match.homeScore}
                   </motion.div>
-                  <span className="text-2xl text-gray-400">-</span>
+                  <span className="text-2xl text-grass-soft">-</span>
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.3, type: 'spring' }}
-                    className={`text-5xl font-bold ${
-                      !homeWon && !draw ? 'text-green-600' : draw ? 'text-gray-700' : 'text-gray-400'
+                    className={`text-5xl font-terminal tabular-nums ${
+                      !homeWon && !draw ? 'text-led' : draw ? 'text-white' : 'text-grass-soft'
                     }`}
                   >
                     {match.awayScore}
                   </motion.div>
                 </div>
-                <div className="flex items-center justify-center gap-1 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-1 text-sm text-grass-soft">
                   <Clock className="w-4 h-4" />
                   <span>90'</span>
                 </div>
@@ -107,8 +107,8 @@ export function MatchDetailModal({
                   flagUrl={awayTeam.flag}
                   size={64}
                 />
-                <h3 className="font-bold text-lg mt-3 mb-1">{awayTeam.name}</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="font-bold text-lg mt-3 mb-1 text-white">{awayTeam.name}</h3>
+                <p className="text-sm text-grass-soft">
                   Skill: {awayTeam.skill.toFixed(1)}
                 </p>
               </div>
@@ -117,16 +117,16 @@ export function MatchDetailModal({
             {/* Result Badge */}
             <div className="text-center mt-4">
               {homeWon ? (
-                <span className="inline-flex items-center gap-1 px-4 py-2 bg-green-100 text-green-800 rounded-full font-semibold text-sm">
+                <span className="inline-flex items-center gap-1 px-4 py-2 bg-black/40 text-led border border-led font-semibold text-sm">
                   <Users className="w-4 h-4" />
                   {homeTeam.name} wins!
                 </span>
               ) : draw ? (
-                <span className="inline-flex items-center gap-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-full font-semibold text-sm">
+                <span className="inline-flex items-center gap-1 px-4 py-2 bg-black/40 text-grass-soft border border-grass font-semibold text-sm">
                   Draw
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-4 py-2 bg-green-100 text-green-800 rounded-full font-semibold text-sm">
+                <span className="inline-flex items-center gap-1 px-4 py-2 bg-black/40 text-led border border-led font-semibold text-sm">
                   <Users className="w-4 h-4" />
                   {awayTeam.name} wins!
                 </span>
@@ -136,42 +136,42 @@ export function MatchDetailModal({
 
           {/* Stats Grid */}
           <div className="p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Match Statistics</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-3">Match Statistics</h3>
 
             {/* Skill Changes - Only show if available */}
             {(homeSkillChange !== 0 || awaySkillChange !== 0) && (
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="bg-night border-2 border-grass p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">Skill Change</span>
+                    <span className="text-sm font-medium text-grass-soft">Skill Change</span>
                     {homeSkillChange !== 0 && (
                       homeSkillChange > 0 ? (
-                        <TrendingUp className="w-5 h-5 text-green-600" />
+                        <TrendingUp className="w-5 h-5 text-led" />
                       ) : (
-                        <TrendingDown className="w-5 h-5 text-red-600" />
+                        <TrendingDown className="w-5 h-5 text-loss" />
                       )
                     )}
                   </div>
-                  <p className={`text-2xl font-bold ${
-                    homeSkillChange > 0 ? 'text-green-600' : homeSkillChange < 0 ? 'text-red-600' : 'text-gray-400'
+                  <p className={`text-2xl font-bold font-terminal tabular-nums ${
+                    homeSkillChange > 0 ? 'text-led' : homeSkillChange < 0 ? 'text-loss' : 'text-grass-soft'
                   }`}>
                     {homeSkillChange > 0 ? '+' : ''}{homeSkillChange.toFixed(2)}
                   </p>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="bg-night border-2 border-grass p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">Skill Change</span>
+                    <span className="text-sm font-medium text-grass-soft">Skill Change</span>
                     {awaySkillChange !== 0 && (
                       awaySkillChange > 0 ? (
-                        <TrendingUp className="w-5 h-5 text-green-600" />
+                        <TrendingUp className="w-5 h-5 text-led" />
                       ) : (
-                        <TrendingDown className="w-5 h-5 text-red-600" />
+                        <TrendingDown className="w-5 h-5 text-loss" />
                       )
                     )}
                   </div>
-                  <p className={`text-2xl font-bold ${
-                    awaySkillChange > 0 ? 'text-green-600' : awaySkillChange < 0 ? 'text-red-600' : 'text-gray-400'
+                  <p className={`text-2xl font-bold font-terminal tabular-nums ${
+                    awaySkillChange > 0 ? 'text-led' : awaySkillChange < 0 ? 'text-loss' : 'text-grass-soft'
                   }`}>
                     {awaySkillChange > 0 ? '+' : ''}{awaySkillChange.toFixed(2)}
                   </p>
@@ -180,8 +180,8 @@ export function MatchDetailModal({
             )}
 
             {/* Goal Timeline (simulated) */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-3">Goal Timeline</h4>
+            <div className="bg-night p-4">
+              <h4 className="font-arcade text-[10px] text-gold uppercase mb-3">Goal Timeline</h4>
               <div className="space-y-2">
                 {Array.from({ length: (match.homeScore ?? 0) + (match.awayScore ?? 0) }).map((_, idx) => {
                   const isHome = idx < (match.homeScore ?? 0);
@@ -196,10 +196,10 @@ export function MatchDetailModal({
                       transition={{ delay: 0.4 + idx * 0.1 }}
                       className="flex items-center gap-3 text-sm"
                     >
-                      <span className="font-mono text-gray-500 w-8">{minute}'</span>
+                      <span className="font-terminal tabular-nums text-grass-soft w-8">{minute}'</span>
                       <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
-                      <span className="font-medium text-gray-900">{team.name}</span>
-                      <span className="text-gray-500">⚽</span>
+                      <span className="font-medium text-white">{team.name}</span>
+                      <span className="text-grass-soft">⚽</span>
                     </motion.div>
                   );
                 })}
@@ -207,9 +207,9 @@ export function MatchDetailModal({
             </div>
 
             {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-              <p className="font-medium mb-1">About Skill Changes</p>
-              <p className="text-blue-800">
+            <div className="bg-black/40 border-2 border-gold p-4 text-sm">
+              <p className="font-medium mb-1 text-gold">About Skill Changes</p>
+              <p className="text-grass-soft">
                 Team skills are updated after each match using an ELO-style rating system.
                 Winners gain skill points, while losers lose points. The magnitude depends on the
                 expected outcome vs. actual result.
@@ -218,7 +218,7 @@ export function MatchDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+          <div className="p-6 border-t-4 border-grass">
             <Button variant="outline" onClick={onClose} className="w-full">
               Close
             </Button>

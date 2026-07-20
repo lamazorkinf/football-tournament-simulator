@@ -75,7 +75,7 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500 py-4">Cargando...</div>
+          <div className="text-center text-grass-soft py-4">Cargando...</div>
         </CardContent>
       </Card>
     );
@@ -91,7 +91,7 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500 py-4">
+          <div className="text-center text-grass-soft py-4">
             {teamName} aún no ha participado en ningún torneo
           </div>
         </CardContent>
@@ -107,13 +107,8 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
 
   // Get stage color
   const getStageColor = (stage: string) => {
-    if (stage === 'champion') return 'text-yellow-600 bg-yellow-50';
-    if (stage === 'runner-up') return 'text-gray-600 bg-gray-50';
-    if (stage === 'third-place') return 'text-orange-600 bg-orange-50';
-    if (stage === 'fourth-place') return 'text-blue-600 bg-blue-50';
-    if (stage.includes('semifinals')) return 'text-purple-600 bg-purple-50';
-    if (stage.includes('quarterfinals')) return 'text-indigo-600 bg-indigo-50';
-    return 'text-gray-600 bg-gray-50';
+    if (stage === 'champion') return 'text-gold bg-black/40 border-gold';
+    return 'text-grass-soft bg-black/40 border-grass';
   };
 
   return (
@@ -124,18 +119,18 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
       <CardContent>
         {/* Trophy Summary */}
         {(championYears.length > 0 || runnerUpYears.length > 0 || thirdPlaceYears.length > 0 || fourthPlaceYears.length > 0) && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-200">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 pb-6 border-b-2 border-grass">
             {championYears.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">🏆</span>
-                  <span className="font-semibold text-yellow-600">
+                  <span className="font-semibold text-gold">
                     {championYears.length === 1 ? 'Campeón' : 'Campeón'}
                   </span>
                 </div>
-                <div className="text-sm text-gray-700 space-y-1">
+                <div className="text-sm text-grass-soft space-y-1">
                   {championYears.map((year, idx) => (
-                    <div key={idx} className="font-medium">{year}</div>
+                    <div key={idx} className="font-medium text-white font-terminal tabular-nums">{year}</div>
                   ))}
                 </div>
               </div>
@@ -144,13 +139,13 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">🥈</span>
-                  <span className="font-semibold text-gray-600">
+                  <span className="font-semibold text-grass-soft">
                     Subcampeón
                   </span>
                 </div>
-                <div className="text-sm text-gray-700 space-y-1">
+                <div className="text-sm text-grass-soft space-y-1">
                   {runnerUpYears.map((year, idx) => (
-                    <div key={idx} className="font-medium">{year}</div>
+                    <div key={idx} className="font-medium text-white font-terminal tabular-nums">{year}</div>
                   ))}
                 </div>
               </div>
@@ -159,13 +154,13 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">🥉</span>
-                  <span className="font-semibold text-orange-600">
+                  <span className="font-semibold text-grass-soft">
                     3° Lugar
                   </span>
                 </div>
-                <div className="text-sm text-gray-700 space-y-1">
+                <div className="text-sm text-grass-soft space-y-1">
                   {thirdPlaceYears.map((year, idx) => (
-                    <div key={idx} className="font-medium">{year}</div>
+                    <div key={idx} className="font-medium text-white font-terminal tabular-nums">{year}</div>
                   ))}
                 </div>
               </div>
@@ -174,13 +169,13 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">4️⃣</span>
-                  <span className="font-semibold text-blue-600">
+                  <span className="font-semibold text-grass-soft">
                     4° Lugar
                   </span>
                 </div>
-                <div className="text-sm text-gray-700 space-y-1">
+                <div className="text-sm text-grass-soft space-y-1">
                   {fourthPlaceYears.map((year, idx) => (
-                    <div key={idx} className="font-medium">{year}</div>
+                    <div key={idx} className="font-medium text-white font-terminal tabular-nums">{year}</div>
                   ))}
                 </div>
               </div>
@@ -199,26 +194,26 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
             return (
               <div
                 key={performance.id}
-                className={`p-3 rounded-lg border transition-all ${colorClass}`}
+                className={`p-3 border-2 transition-all ${colorClass}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       {performance.tournamentYear && (
-                        <div className="text-lg font-bold text-gray-800">
+                        <div className="text-lg font-bold text-white font-terminal tabular-nums">
                           {performance.tournamentYear}
                         </div>
                       )}
                       <div className="font-semibold text-sm">{displayName}</div>
                     </div>
                     {performance.qualifierRegion && (
-                      <div className="text-xs text-gray-600 mt-1">
+                      <div className="text-xs text-grass-soft mt-1">
                         Región: {performance.qualifierRegion}
                         {performance.qualifierGroupName && ` - ${performance.qualifierGroupName}`}
                       </div>
                     )}
                     {performance.worldCupGroupName && (
-                      <div className="text-xs text-gray-600 mt-1">
+                      <div className="text-xs text-grass-soft mt-1">
                         Grupo Mundial: {performance.worldCupGroupName}
                       </div>
                     )}
@@ -226,24 +221,24 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
                 </div>
 
                 {/* Match Statistics */}
-                <div className="grid grid-cols-4 gap-2 text-xs mt-2 pt-2 border-t border-gray-200">
+                <div className="grid grid-cols-4 gap-2 text-xs mt-2 pt-2 border-t-2 border-grass">
                   <div className="text-center">
-                    <div className="font-semibold text-gray-700">{performance.totalMatchesPlayed}</div>
-                    <div className="text-gray-500">PJ</div>
+                    <div className="font-semibold text-white font-terminal tabular-nums">{performance.totalMatchesPlayed}</div>
+                    <div className="text-grass-soft">PJ</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-semibold text-green-600">
+                    <div className="font-semibold text-led font-terminal tabular-nums">
                       {performance.totalWins}-{performance.totalDraws}-{performance.totalLosses}
                     </div>
-                    <div className="text-gray-500">G-E-P</div>
+                    <div className="text-grass-soft">G-E-P</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-semibold text-blue-600">{performance.totalGoalsFor}</div>
-                    <div className="text-gray-500">GF</div>
+                    <div className="font-semibold text-led font-terminal tabular-nums">{performance.totalGoalsFor}</div>
+                    <div className="text-grass-soft">GF</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-semibold text-red-600">{performance.totalGoalsAgainst}</div>
-                    <div className="text-gray-500">GC</div>
+                    <div className="font-semibold text-loss font-terminal tabular-nums">{performance.totalGoalsAgainst}</div>
+                    <div className="text-grass-soft">GC</div>
                   </div>
                 </div>
               </div>
@@ -252,36 +247,36 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
         </div>
 
         {/* Summary Stats */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t-2 border-grass">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-primary-600">
+              <div className="text-2xl font-bold text-gold font-terminal tabular-nums">
                 {performances.length}
               </div>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-grass-soft">
                 {performances.length === 1 ? 'Torneo' : 'Torneos'}
               </div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-led font-terminal tabular-nums">
                 {performances.reduce((sum, p) => sum + p.totalWins, 0)}
               </div>
-              <div className="text-xs text-gray-600">Victorias Totales</div>
+              <div className="text-xs text-grass-soft">Victorias Totales</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-led font-terminal tabular-nums">
                 {performances.reduce((sum, p) => sum + p.totalGoalsFor, 0)}
               </div>
-              <div className="text-xs text-gray-600">Goles Anotados</div>
+              <div className="text-xs text-grass-soft">Goles Anotados</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary-600">
+              <div className="text-2xl font-bold text-gold font-terminal tabular-nums">
                 {(
                   performances.reduce((sum, p) => sum + p.totalGoalsFor, 0) /
                   Math.max(performances.reduce((sum, p) => sum + p.totalMatchesPlayed, 0), 1)
                 ).toFixed(2)}
               </div>
-              <div className="text-xs text-gray-600">Prom. Goles</div>
+              <div className="text-xs text-grass-soft">Prom. Goles</div>
             </div>
           </div>
         </div>

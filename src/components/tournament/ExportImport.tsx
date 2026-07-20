@@ -97,7 +97,7 @@ export function ExportImport() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="bg-primary-600 text-white rounded-t-lg">
+        <CardHeader className="bg-grass text-white">
           <CardTitle className="text-white flex items-center gap-2">
             <FileJson className="w-6 h-6" />
             Export Tournament
@@ -105,8 +105,8 @@ export function ExportImport() {
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Full Tournament Export</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Full Tournament Export</h3>
+            <p className="text-sm text-grass-soft mb-4">
               Export complete tournament data including teams, groups, matches, and results.
               Use this to backup your progress or share with others.
             </p>
@@ -116,9 +116,9 @@ export function ExportImport() {
             </Button>
           </div>
 
-          <div className="border-t border-gray-200 pt-4">
-            <h3 className="font-semibold text-gray-900 mb-2">Teams Only Export</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="border-t-2 border-grass pt-4">
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Teams Only Export</h3>
+            <p className="text-sm text-grass-soft mb-4">
               Export only team data with current skill ratings and regional assignments.
             </p>
             <Button variant="outline" onClick={exportTeamsOnly} className="gap-2">
@@ -127,9 +127,9 @@ export function ExportImport() {
             </Button>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-            <p className="text-blue-900 font-medium mb-1">💡 Export Tips:</p>
-            <ul className="text-blue-800 space-y-1">
+          <div className="bg-black/40 border-2 border-gold p-4 text-sm">
+            <p className="text-gold font-medium mb-1">💡 Export Tips:</p>
+            <ul className="text-grass-soft space-y-1">
               <li>• Exports are saved as JSON files</li>
               <li>• Files include timestamp for easy identification</li>
               <li>• Keep backups before making major changes</li>
@@ -139,7 +139,7 @@ export function ExportImport() {
       </Card>
 
       <Card>
-        <CardHeader className="bg-blue-600 text-white rounded-t-lg">
+        <CardHeader className="bg-grass text-white">
           <CardTitle className="text-white flex items-center gap-2">
             <Upload className="w-6 h-6" />
             Import Tournament
@@ -147,13 +147,13 @@ export function ExportImport() {
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Load Tournament Data</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Load Tournament Data</h3>
+            <p className="text-sm text-grass-soft mb-4">
               Import a previously exported tournament file. This will replace all current
               data.
             </p>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition-colors">
+            <div className="border-2 border-dashed border-grass p-8 text-center hover:border-gold transition-colors">
               <input
                 type="file"
                 accept=".json"
@@ -165,32 +165,32 @@ export function ExportImport() {
                 htmlFor="import-file"
                 className="cursor-pointer flex flex-col items-center gap-2"
               >
-                <Upload className="w-12 h-12 text-gray-400" />
-                <span className="text-sm font-medium text-gray-700">
+                <Upload className="w-12 h-12 text-grass-soft" />
+                <span className="text-sm font-medium text-white">
                   Click to select a file
                 </span>
-                <span className="text-xs text-gray-500">JSON files only</span>
+                <span className="text-xs text-grass-soft">JSON files only</span>
               </label>
             </div>
 
             {importError && (
-              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="mt-4 bg-black/40 border-2 border-loss p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-loss flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-red-900">Import Failed</p>
-                  <p className="text-sm text-red-700">{importError}</p>
+                  <p className="font-medium text-loss">Import Failed</p>
+                  <p className="text-sm text-grass-soft">{importError}</p>
                 </div>
               </div>
             )}
 
             {importSuccess && (
-              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-                <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-white text-xs">✓</span>
+              <div className="mt-4 bg-black/40 border-2 border-led p-4 flex items-start gap-3">
+                <div className="w-5 h-5 bg-led flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-night text-xs">✓</span>
                 </div>
                 <div>
-                  <p className="font-medium text-green-900">Import Successful!</p>
-                  <p className="text-sm text-green-700">
+                  <p className="font-medium text-led">Import Successful!</p>
+                  <p className="text-sm text-grass-soft">
                     Tournament loaded. Page will reload...
                   </p>
                 </div>
@@ -198,9 +198,9 @@ export function ExportImport() {
             )}
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
-            <p className="text-yellow-900 font-medium mb-1">⚠️ Warning:</p>
-            <ul className="text-yellow-800 space-y-1">
+          <div className="bg-black/40 border-2 border-gold p-4 text-sm">
+            <p className="text-gold font-medium mb-1">⚠️ Warning:</p>
+            <ul className="text-grass-soft space-y-1">
               <li>• Importing will replace ALL current tournament data</li>
               <li>• Make sure to export current progress before importing</li>
               <li>• Only import files from trusted sources</li>
@@ -216,24 +216,24 @@ export function ExportImport() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-gray-600 mb-1">Teams Count</p>
-              <p className="font-semibold text-lg">{teams.length}</p>
+              <p className="text-grass-soft mb-1">Teams Count</p>
+              <p className="font-semibold text-lg text-led font-terminal tabular-nums">{teams.length}</p>
             </div>
             <div>
-              <p className="text-gray-600 mb-1">Tournament Status</p>
-              <p className="font-semibold text-lg">
+              <p className="text-grass-soft mb-1">Tournament Status</p>
+              <p className="font-semibold text-lg text-led font-terminal tabular-nums">
                 {currentTournament?.worldCup ? 'World Cup' : 'Qualifiers'}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 mb-1">Regions</p>
-              <p className="font-semibold text-lg">
+              <p className="text-grass-soft mb-1">Regions</p>
+              <p className="font-semibold text-lg text-led font-terminal tabular-nums">
                 {Object.keys(currentTournament?.qualifiers || {}).length}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 mb-1">Storage Version</p>
-              <p className="font-semibold text-lg">1.0</p>
+              <p className="text-grass-soft mb-1">Storage Version</p>
+              <p className="font-semibold text-lg text-led font-terminal tabular-nums">1.0</p>
             </div>
           </div>
         </CardContent>

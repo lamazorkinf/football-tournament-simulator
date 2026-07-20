@@ -422,7 +422,7 @@ function StepCard({
       case 'complete':
         return <CheckCircle2 className="w-6 h-6 text-led" />;
       case 'in-progress':
-        return <Clock className="w-6 h-6 text-gold animate-pulse" />;
+        return <Clock className="w-6 h-6 text-gold blink" />;
       case 'locked':
         return <Circle className="w-6 h-6 text-grass" />;
       default:

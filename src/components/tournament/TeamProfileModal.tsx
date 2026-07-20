@@ -352,9 +352,9 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
   };
 
   const getSkillChangeIcon = (change: number) => {
-    if (change > 0) return <TrendingUp className="w-4 h-4 text-green-600" />;
-    if (change < 0) return <TrendingDown className="w-4 h-4 text-red-600" />;
-    return <Minus className="w-4 h-4 text-gray-400" />;
+    if (change > 0) return <TrendingUp className="w-4 h-4 text-led" />;
+    if (change < 0) return <TrendingDown className="w-4 h-4 text-loss" />;
+    return <Minus className="w-4 h-4 text-grass-soft" />;
   };
 
   // Simple line chart calculation (SVG path) with fixed Y axis 30-100
@@ -393,20 +393,20 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-6xl w-full max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-4 flex items-center justify-between z-10">
+          <div className="sticky top-0 bg-grass border-b-4 border-line text-white px-6 py-4 flex items-center justify-between z-10">
             <div className="flex items-center gap-4">
               <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
               <div>
                 <h2 className="text-2xl font-bold">{team.name}</h2>
-                <p className="text-primary-100 text-sm">{team.region}</p>
+                <p className="text-white/70 text-sm">{team.region}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              className="p-2 hover:bg-black/20 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -414,8 +414,8 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
 
           {loading ? (
             <div className="p-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Cargando perfil...</p>
+              <div className="animate-spin h-12 w-12 border-b-2 border-led mx-auto"></div>
+              <p className="mt-4 text-grass-soft">Cargando perfil...</p>
             </div>
           ) : (
             <div className="p-6 space-y-6">
@@ -424,7 +424,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-primary-600" />
+                      <TrendingUp className="w-5 h-5 text-gold" />
                       Evolución de Habilidad
                     </CardTitle>
                   </CardHeader>
@@ -442,10 +442,10 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                                 y1={y}
                                 x2={580}
                                 y2={y}
-                                stroke="#e5e7eb"
+                                stroke="var(--color-grass)"
                                 strokeWidth="1"
                               />
-                              <text x={5} y={y + 5} fontSize="10" fill="#6b7280">
+                              <text x={5} y={y + 5} fontSize="10" fill="var(--color-grass-soft)">
                                 {Math.round(skillValue)}
                               </text>
                             </g>
@@ -456,7 +456,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                         <path
                           d={generateSkillChartPath()}
                           fill="none"
-                          stroke="#3b82f6"
+                          stroke="var(--color-gold)"
                           strokeWidth="3"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -482,8 +482,8 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                               cx={x}
                               cy={y}
                               r="5"
-                              fill="#3b82f6"
-                              className="cursor-pointer hover:fill-blue-700 transition-colors"
+                              fill="var(--color-gold)"
+                              className="cursor-pointer hover:fill-led transition-colors"
                               onMouseEnter={() => setHoveredPoint({ x, y, skill: point.skill })}
                               onMouseLeave={() => setHoveredPoint(null)}
                             />
@@ -499,7 +499,6 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                               width="50"
                               height="20"
                               fill="rgba(0, 0, 0, 0.8)"
-                              rx="4"
                             />
                             <text
                               x={hoveredPoint.x}
@@ -515,7 +514,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                         )}
                       </svg>
                     </div>
-                    <p className="text-xs text-gray-500 text-center mt-2">
+                    <p className="text-xs text-grass-soft text-center mt-2">
                       Evolución a través de {skillEvolution.length} partidos
                     </p>
                   </CardContent>
@@ -526,60 +525,60 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-primary-600" />
+                    <BarChart3 className="w-5 h-5 text-gold" />
                     Estadísticas Comparativas
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Victorias</p>
-                      <p className="text-2xl font-bold text-green-600">{stats.wins}</p>
-                      <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
+                    <div className="bg-black/40 border-2 border-grass p-4">
+                      <p className="text-xs text-grass-soft mb-1">Victorias</p>
+                      <p className="text-2xl font-bold text-led font-terminal tabular-nums">{stats.wins}</p>
+                      <div className="w-full bg-black/40 border border-grass h-2 mt-2">
                         <div
-                          className="bg-green-600 h-2 rounded-full"
+                          className="bg-led h-2"
                           style={{ width: `${(stats.wins / stats.totalMatches) * 100}%` }}
                         ></div>
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Empates</p>
-                      <p className="text-2xl font-bold text-gray-600">{stats.draws}</p>
-                      <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
+                    <div className="bg-black/40 border-2 border-grass p-4">
+                      <p className="text-xs text-grass-soft mb-1">Empates</p>
+                      <p className="text-2xl font-bold text-white font-terminal tabular-nums">{stats.draws}</p>
+                      <div className="w-full bg-black/40 border border-grass h-2 mt-2">
                         <div
-                          className="bg-gray-600 h-2 rounded-full"
+                          className="bg-grass-soft h-2"
                           style={{ width: `${(stats.draws / stats.totalMatches) * 100}%` }}
                         ></div>
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Derrotas</p>
-                      <p className="text-2xl font-bold text-red-600">{stats.losses}</p>
-                      <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
+                    <div className="bg-black/40 border-2 border-grass p-4">
+                      <p className="text-xs text-grass-soft mb-1">Derrotas</p>
+                      <p className="text-2xl font-bold text-loss font-terminal tabular-nums">{stats.losses}</p>
+                      <div className="w-full bg-black/40 border border-grass h-2 mt-2">
                         <div
-                          className="bg-red-600 h-2 rounded-full"
+                          className="bg-loss h-2"
                           style={{ width: `${(stats.losses / stats.totalMatches) * 100}%` }}
                         ></div>
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">% Victorias</p>
-                      <p className="text-2xl font-bold text-primary-600">{stats.winRate.toFixed(1)}%</p>
+                    <div className="bg-black/40 border-2 border-grass p-4">
+                      <p className="text-xs text-grass-soft mb-1">% Victorias</p>
+                      <p className="text-2xl font-bold text-gold font-terminal tabular-nums">{stats.winRate.toFixed(1)}%</p>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Goles Favor</p>
-                      <p className="text-2xl font-bold text-blue-600">{stats.goalsFor}</p>
-                      <p className="text-xs text-gray-500 mt-1">Prom: {stats.avgGoalsFor.toFixed(2)}</p>
+                    <div className="bg-black/40 border-2 border-grass p-4">
+                      <p className="text-xs text-grass-soft mb-1">Goles Favor</p>
+                      <p className="text-2xl font-bold text-led font-terminal tabular-nums">{stats.goalsFor}</p>
+                      <p className="text-xs text-grass-soft mt-1">Prom: {stats.avgGoalsFor.toFixed(2)}</p>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Goles Contra</p>
-                      <p className="text-2xl font-bold text-orange-600">{stats.goalsAgainst}</p>
-                      <p className="text-xs text-gray-500 mt-1">Prom: {stats.avgGoalsAgainst.toFixed(2)}</p>
+                    <div className="bg-black/40 border-2 border-grass p-4">
+                      <p className="text-xs text-grass-soft mb-1">Goles Contra</p>
+                      <p className="text-2xl font-bold text-loss font-terminal tabular-nums">{stats.goalsAgainst}</p>
+                      <p className="text-xs text-grass-soft mt-1">Prom: {stats.avgGoalsAgainst.toFixed(2)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -590,7 +589,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Trophy className="w-5 h-5 text-amber-500" />
+                      <Trophy className="w-5 h-5 text-gold" />
                       Récords Históricos
                     </CardTitle>
                   </CardHeader>
@@ -598,19 +597,19 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Best World Cup Result */}
                       {stats.bestWorldCupResult && (
-                        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-lg border-2 border-yellow-200">
+                        <div className="bg-black/40 p-4 border-2 border-gold">
                           <div className="flex items-center gap-2 mb-2">
-                            <Trophy className="w-5 h-5 text-yellow-600" />
-                            <p className="text-sm font-semibold text-gray-700">Mejor Resultado Mundial</p>
+                            <Trophy className="w-5 h-5 text-gold" />
+                            <p className="text-sm font-semibold text-grass-soft">Mejor Resultado Mundial</p>
                           </div>
                           <div className="mt-2">
-                            <p className="text-2xl font-bold text-yellow-800">
+                            <p className="text-2xl font-bold text-gold">
                               {getPositionLabel(stats.bestWorldCupResult.position).split(' ')[0]}
                             </p>
-                            <p className="text-sm text-yellow-700 mt-1">
+                            <p className="text-sm text-grass-soft mt-1">
                               {getPositionLabel(stats.bestWorldCupResult.position).split(' ').slice(1).join(' ')}
                             </p>
-                            <p className="text-xs text-yellow-600 mt-2">
+                            <p className="text-xs text-gold font-terminal tabular-nums mt-2">
                               Mundial {stats.bestWorldCupResult.year}
                             </p>
                           </div>
@@ -619,19 +618,19 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
 
                       {/* Biggest Victory */}
                       {stats.biggestVictory && (
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-2 border-green-200">
+                        <div className="bg-black/40 p-4 border-2 border-led">
                           <div className="flex items-center gap-2 mb-2">
-                            <TrendingUp className="w-5 h-5 text-green-600" />
-                            <p className="text-sm font-semibold text-gray-700">Victoria más Abultada</p>
+                            <TrendingUp className="w-5 h-5 text-led" />
+                            <p className="text-sm font-semibold text-grass-soft">Victoria más Abultada</p>
                           </div>
                           <div className="mt-2">
-                            <p className="text-3xl font-bold text-green-800">{stats.biggestVictory.score}</p>
-                            <p className="text-sm text-green-700 mt-1">vs {stats.biggestVictory.opponent}</p>
+                            <p className="text-3xl font-bold text-led font-terminal tabular-nums">{stats.biggestVictory.score}</p>
+                            <p className="text-sm text-grass-soft mt-1">vs {stats.biggestVictory.opponent}</p>
                             <div className="mt-2 space-y-1">
-                              <p className="text-xs text-green-700 font-medium">
+                              <p className="text-xs text-grass-soft font-medium">
                                 {stats.biggestVictory.stage.includes('knockout') ? 'Eliminatorias' : stats.biggestVictory.stage}
                               </p>
-                              <p className="text-xs text-green-600">
+                              <p className="text-xs text-grass-soft">
                                 {stats.biggestVictory.tournamentStage} {stats.biggestVictory.tournamentYear}
                               </p>
                             </div>
@@ -641,19 +640,19 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
 
                       {/* Worst Defeat */}
                       {stats.worstDefeat && (
-                        <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border-2 border-red-200">
+                        <div className="bg-black/40 p-4 border-2 border-loss">
                           <div className="flex items-center gap-2 mb-2">
-                            <TrendingDown className="w-5 h-5 text-red-600" />
-                            <p className="text-sm font-semibold text-gray-700">Peor Derrota</p>
+                            <TrendingDown className="w-5 h-5 text-loss" />
+                            <p className="text-sm font-semibold text-grass-soft">Peor Derrota</p>
                           </div>
                           <div className="mt-2">
-                            <p className="text-3xl font-bold text-red-800">{stats.worstDefeat.score}</p>
-                            <p className="text-sm text-red-700 mt-1">vs {stats.worstDefeat.opponent}</p>
+                            <p className="text-3xl font-bold text-loss font-terminal tabular-nums">{stats.worstDefeat.score}</p>
+                            <p className="text-sm text-grass-soft mt-1">vs {stats.worstDefeat.opponent}</p>
                             <div className="mt-2 space-y-1">
-                              <p className="text-xs text-red-700 font-medium">
+                              <p className="text-xs text-grass-soft font-medium">
                                 {stats.worstDefeat.stage.includes('knockout') ? 'Eliminatorias' : stats.worstDefeat.stage}
                               </p>
-                              <p className="text-xs text-red-600">
+                              <p className="text-xs text-grass-soft">
                                 {stats.worstDefeat.tournamentStage} {stats.worstDefeat.tournamentYear}
                               </p>
                             </div>
@@ -672,13 +671,13 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-primary-600" />
+                    <Activity className="w-5 h-5 text-gold" />
                     Historial de Partidos ({matchHistory.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {matchHistory.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">No hay partidos registrados</p>
+                    <p className="text-center text-grass-soft py-8">No hay partidos registrados</p>
                   ) : (
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {matchHistory.map((match) => {
@@ -694,12 +693,12 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                         return (
                           <div
                             key={match.id}
-                            className={`border rounded-lg p-3 flex items-center justify-between ${
+                            className={`border-2 p-3 flex items-center justify-between ${
                               result === 'W'
-                                ? 'bg-green-50 border-green-200'
+                                ? 'bg-black/40 border-led'
                                 : result === 'L'
-                                ? 'bg-red-50 border-red-200'
-                                : 'bg-gray-50 border-gray-200'
+                                ? 'bg-black/40 border-loss'
+                                : 'bg-black/40 border-grass'
                             }`}
                           >
                             <div className="flex items-center gap-3 flex-1">
@@ -713,11 +712,11 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                                   />
                                   <div>
                                     <p className="font-medium text-sm">{opponent.name}</p>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-grass-soft">
                                       {match.stage.includes('knockout') ? 'Eliminatorias' : match.stage} - {match.groupName}
                                     </p>
                                     {match.tournamentYear && (
-                                      <p className="text-xs text-gray-400">
+                                      <p className="text-xs text-grass-soft">
                                         {match.tournamentStage} {match.tournamentYear}
                                       </p>
                                     )}
@@ -728,16 +727,16 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
 
                             <div className="flex items-center gap-4">
                               <div className="text-center">
-                                <p className="font-bold text-lg">
+                                <p className="font-bold text-lg font-terminal tabular-nums">
                                   {teamScore} - {opponentScore}
                                 </p>
                                 <p
                                   className={`text-xs font-semibold ${
                                     result === 'W'
-                                      ? 'text-green-600'
+                                      ? 'text-led'
                                       : result === 'L'
-                                      ? 'text-red-600'
-                                      : 'text-gray-600'
+                                      ? 'text-loss'
+                                      : 'text-grass-soft'
                                   }`}
                                 >
                                   {result === 'W' ? 'Victoria' : result === 'L' ? 'Derrota' : 'Empate'}
@@ -747,12 +746,12 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                               <div className="flex items-center gap-1">
                                 {getSkillChangeIcon(skillChange)}
                                 <span
-                                  className={`text-sm font-semibold ${
+                                  className={`text-sm font-semibold font-terminal tabular-nums ${
                                     skillChange > 0
-                                      ? 'text-green-600'
+                                      ? 'text-led'
                                       : skillChange < 0
-                                      ? 'text-red-600'
-                                      : 'text-gray-400'
+                                      ? 'text-loss'
+                                      : 'text-grass-soft'
                                   }`}
                                 >
                                   {skillChange > 0 ? '+' : ''}

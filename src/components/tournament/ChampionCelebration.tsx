@@ -37,7 +37,7 @@ export const ChampionCelebration = ({
             {[...Array(50)].map((_, i) => (
               <div
                 key={i}
-                className="absolute w-2 h-2 bg-gold animate-pulse"
+                className="absolute w-2 h-2 bg-gold blink"
                 style={{
                   left: `${Math.random() * 100}%`,
                   top: `${Math.random() * 100}%`,

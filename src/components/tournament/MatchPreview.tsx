@@ -96,9 +96,9 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
   };
 
   const getResultColor = (result: 'W' | 'D' | 'L') => {
-    if (result === 'W') return 'bg-green-500';
-    if (result === 'D') return 'bg-gray-400';
-    return 'bg-red-500';
+    if (result === 'W') return 'bg-led text-night';
+    if (result === 'D') return 'bg-grass-soft text-night';
+    return 'bg-loss text-white';
   };
 
 
@@ -113,31 +113,29 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-2 font-semibold text-gray-700">#</th>
-                  <th className="text-left py-2 px-2 font-semibold text-gray-700">Equipo</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">Pts</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">PJ</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">PG</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">PE</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">PP</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">GF</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">GC</th>
-                  <th className="text-center py-2 px-1 font-semibold text-gray-700">DG</th>
+                <tr className="border-b-2 border-grass">
+                  <th className="text-left py-2 px-2 font-arcade text-[10px] text-gold uppercase">#</th>
+                  <th className="text-left py-2 px-2 font-arcade text-[10px] text-gold uppercase">Equipo</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">Pts</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">PJ</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">PG</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">PE</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">PP</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">GF</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">GC</th>
+                  <th className="text-center py-2 px-1 font-arcade text-[10px] text-gold uppercase">DG</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y-2 divide-grass">
                 {sortedStandings.map((standing, idx) => {
                   const team = teams.find((t) => t.id === standing.teamId);
                   const isMatchTeam = standing.teamId === homeTeam.id || standing.teamId === awayTeam.id;
                   return (
                     <tr
                       key={standing.teamId}
-                      className={`border-b border-gray-100 ${
-                        isMatchTeam ? 'bg-primary-50 font-semibold' : ''
-                      }`}
+                      className={isMatchTeam ? 'bg-grass/30 font-semibold' : ''}
                     >
-                      <td className="py-2 px-2 text-gray-600">{idx + 1}</td>
+                      <td className="py-2 px-2 tabular-nums">{idx + 1}</td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-2">
                           {team && (
@@ -158,14 +156,14 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                           {!team && <span className="truncate">{standing.teamId}</span>}
                         </div>
                       </td>
-                      <td className="text-center py-2 px-1 font-bold">{standing.points}</td>
-                      <td className="text-center py-2 px-1">{standing.played}</td>
-                      <td className="text-center py-2 px-1">{standing.won}</td>
-                      <td className="text-center py-2 px-1">{standing.drawn}</td>
-                      <td className="text-center py-2 px-1">{standing.lost}</td>
-                      <td className="text-center py-2 px-1">{standing.goalsFor}</td>
-                      <td className="text-center py-2 px-1">{standing.goalsAgainst}</td>
-                      <td className="text-center py-2 px-1">{standing.goalsFor - standing.goalsAgainst}</td>
+                      <td className="text-center py-2 px-1 font-bold text-gold tabular-nums">{standing.points}</td>
+                      <td className="text-center py-2 px-1 tabular-nums">{standing.played}</td>
+                      <td className="text-center py-2 px-1 tabular-nums">{standing.won}</td>
+                      <td className="text-center py-2 px-1 tabular-nums">{standing.drawn}</td>
+                      <td className="text-center py-2 px-1 tabular-nums">{standing.lost}</td>
+                      <td className="text-center py-2 px-1 tabular-nums">{standing.goalsFor}</td>
+                      <td className="text-center py-2 px-1 tabular-nums">{standing.goalsAgainst}</td>
+                      <td className="text-center py-2 px-1 tabular-nums">{standing.goalsFor - standing.goalsAgainst}</td>
                     </tr>
                   );
                 })}
@@ -204,7 +202,7 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                     return (
                       <div
                         key={idx}
-                        className={`w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold ${getResultColor(
+                        className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
                           result
                         )}`}
                         title={`${
@@ -218,7 +216,7 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                     );
                   })
                 ) : (
-                  <span className="text-xs text-gray-500">Sin historial</span>
+                  <span className="text-xs text-grass-soft">Sin historial</span>
                 )}
               </div>
             </div>
@@ -245,7 +243,7 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                     return (
                       <div
                         key={idx}
-                        className={`w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold ${getResultColor(
+                        className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
                           result
                         )}`}
                         title={`${
@@ -259,7 +257,7 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                     );
                   })
                 ) : (
-                  <span className="text-xs text-gray-500">Sin historial</span>
+                  <span className="text-xs text-grass-soft">Sin historial</span>
                 )}
               </div>
             </div>
@@ -287,13 +285,13 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                   onClick={() => openTeamProfile(homeTeam)}
                   clickable
                 />
-                <span className="font-bold text-lg text-green-600">{h2hHistory.home}</span>
+                <span className="font-bold text-lg text-led font-terminal tabular-nums">{h2hHistory.home}</span>
               </div>
-              <span className="text-gray-400">-</span>
-              <span className="font-bold text-lg text-gray-600">{h2hHistory.draw}</span>
-              <span className="text-gray-400">-</span>
+              <span className="text-grass-soft">-</span>
+              <span className="font-bold text-lg text-white font-terminal tabular-nums">{h2hHistory.draw}</span>
+              <span className="text-grass-soft">-</span>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-green-600">{h2hHistory.away}</span>
+                <span className="font-bold text-lg text-led font-terminal tabular-nums">{h2hHistory.away}</span>
                 <TeamFlag
                   teamId={awayTeam.id}
                   teamName={awayTeam.name}
