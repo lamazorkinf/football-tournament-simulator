@@ -178,7 +178,7 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
               </div>
               <div>
                 <div className="text-sm text-grass-soft">Progreso</div>
-                <div className="text-2xl font-terminal text-gold tabular-nums">
+                <div className="text-2xl font-terminal text-led tabular-nums">
                   {selectedStats.progress}%
                 </div>
               </div>
