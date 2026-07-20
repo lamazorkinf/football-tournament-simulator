@@ -89,7 +89,7 @@ export function TournamentSelector() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
-              className="absolute left-0 mt-2 w-full min-w-[280px] bg-grass-dark border-2 border-line shadow-hard-panel z-40 overflow-hidden"
+              className="absolute left-0 max-lg:left-auto max-lg:right-0 mt-2 w-full min-w-[280px] max-w-[calc(100vw-1rem)] bg-grass-dark border-2 border-line shadow-hard-panel z-40 overflow-hidden"
             >
               {/* Header */}
               <div className="px-4 py-3 border-b-2 border-grass bg-night">

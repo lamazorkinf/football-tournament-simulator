@@ -234,7 +234,7 @@ export function TournamentWizard() {
             ]}
             actions={
               canGenerateDraw ? (
-                <Button size="lg" onClick={handleGenerateDraw}>
+                <Button size="lg" onClick={handleGenerateDraw} className="hidden lg:inline-flex">
                   ▶ PRESS START
                 </Button>
               ) : null

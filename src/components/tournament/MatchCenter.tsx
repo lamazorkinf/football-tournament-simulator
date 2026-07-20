@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
-import { Play, Filter, Clock, CheckCircle, Calendar, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Play, Filter, Clock, CheckCircle, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
@@ -129,7 +129,6 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
   // Separate played and unplayed for display
   const unplayedMatches = filteredMatches.filter((m) => !m.match.isPlayed);
 
-  const totalMatches = allMatches.length;
   const totalPlayed = allMatches.filter((m) => m.match.isPlayed).length;
 
   const handleSimulateMatch = async (matchWithContext: MatchWithContext) => {
@@ -391,45 +390,6 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
         ) : null;
       })()}
 
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-grass-soft">Total Matches</p>
-                <p className="text-3xl font-terminal text-led tabular-nums">{totalMatches}</p>
-              </div>
-              <Calendar className="w-10 h-10 text-gold" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-grass-soft">Completed</p>
-                <p className="text-3xl font-terminal text-led tabular-nums">{totalPlayed}</p>
-              </div>
-              <CheckCircle className="w-10 h-10 text-led" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-grass-soft">Remaining</p>
-                <p className="text-3xl font-terminal text-gold tabular-nums">{totalMatches - totalPlayed}</p>
-              </div>
-              <Clock className="w-10 h-10 text-gold" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Filters & Quick Actions */}
       <Card>
         <CardContent className="pt-6">
@@ -495,7 +455,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                 variant="primary"
                 onClick={handleSimulateMatchday}
                 disabled={unplayedMatches.length === 0 || isSavingMatch || isBatchProcessing}
-                className="gap-2"
+                className="gap-2 hidden lg:inline-flex"
                 title="Simular toda la jornada actual"
               >
                 <Play className="w-4 h-4" />
