@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Trophy, Calendar, Award, Users, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Card, CardHeader, CardContent } from '../ui/Card';
+import { Button } from '../ui/Button';
 import type { Tournament } from '../../types';
 
 type FilterType = 'all' | 'qualifiers' | 'world-cup' | 'completed';
@@ -28,9 +30,9 @@ export function TournamentHistory() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'completed': return { label: 'Completado', color: 'green' };
-      case 'world-cup': return { label: 'Mundial', color: 'yellow' };
-      default: return { label: 'Clasificatorias', color: 'blue' };
+      case 'completed': return { label: 'Completado', className: 'text-led border-led' };
+      case 'world-cup': return { label: 'Mundial', className: 'text-gold border-gold' };
+      default: return { label: 'Clasificatorias', className: 'text-grass-soft border-grass' };
     }
   };
 
@@ -84,21 +86,21 @@ export function TournamentHistory() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-6 text-white">
+      <Card className="overflow-hidden">
+        <CardHeader>
           <div className="flex items-center gap-3">
-            <Trophy className="w-8 h-8" />
+            <Trophy className="w-8 h-8 text-gold" />
             <div>
-              <h2 className="text-2xl font-bold">Historial de Torneos</h2>
-              <p className="text-gray-300 text-sm mt-1">
+              <h2 className="font-arcade text-lg text-white text-shadow-retro">Historial de Torneos</h2>
+              <p className="text-grass-soft text-sm mt-1">
                 Visualiza y gestiona todos tus torneos
               </p>
             </div>
           </div>
-        </div>
+        </CardHeader>
 
         {/* Filter Tabs */}
-        <div className="border-b border-gray-200 px-6 py-4">
+        <div className="px-6 py-4">
           <div className="flex gap-2 flex-wrap">
             {[
               { id: 'all' as const, label: 'Todos' },
@@ -109,10 +111,10 @@ export function TournamentHistory() {
               <button
                 key={filterOption.id}
                 onClick={() => setFilter(filterOption.id)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 font-arcade text-[10px] uppercase border-2 transition-colors ${
                   filter === filterOption.id
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-grass text-white border-line'
+                    : 'text-grass-soft border-transparent hover:bg-grass/40'
                 }`}
               >
                 {filterOption.label}
@@ -120,21 +122,23 @@ export function TournamentHistory() {
             ))}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Tournament Cards */}
       {filteredTournaments.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No hay torneos
-          </h3>
-          <p className="text-gray-600">
-            {filter === 'all'
-              ? 'Crea tu primer torneo para comenzar'
-              : 'No hay torneos en esta categoría'}
-          </p>
-        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Trophy className="w-16 h-16 text-grass-soft mx-auto mb-4" />
+            <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">
+              No hay torneos
+            </p>
+            <p className="text-sm text-grass-soft">
+              {filter === 'all'
+                ? 'Crea tu primer torneo para comenzar'
+                : 'No hay torneos en esta categoría'}
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTournaments.map((tournament) => {
@@ -152,21 +156,21 @@ export function TournamentHistory() {
                 key={tournament.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`bg-white rounded-lg shadow-sm border-2 overflow-hidden transition-all hover:shadow-md ${
-                  isActive ? 'border-primary-600' : 'border-gray-200'
+                className={`bg-grass-dark border-4 shadow-hard-panel overflow-hidden transition-colors ${
+                  isActive ? 'border-gold' : 'border-line hover:border-led'
                 }`}
               >
                 {/* Card Header */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
+                <div className="px-4 py-3 border-b-4 border-grass">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Trophy className="w-5 h-5 text-primary-600" />
-                      <span className="font-bold text-gray-900 text-lg">
+                      <Trophy className="w-5 h-5 text-gold" />
+                      <span className="font-terminal text-lg text-white tabular-nums">
                         {tournament.year}
                       </span>
                     </div>
                     <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium bg-${statusInfo.color}-100 text-${statusInfo.color}-700`}
+                      className={`font-arcade text-[10px] uppercase px-2 py-1 bg-black/40 border ${statusInfo.className}`}
                     >
                       {statusInfo.label}
                     </span>
@@ -178,19 +182,19 @@ export function TournamentHistory() {
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-500" />
+                      <Calendar className="w-4 h-4 text-grass-soft" />
                       <div>
-                        <div className="text-xs text-gray-500">Partidos</div>
-                        <div className="font-semibold text-gray-900">
+                        <div className="text-xs text-grass-soft">Partidos</div>
+                        <div className="font-terminal text-led tabular-nums">
                           {stats.playedMatches}/{stats.totalMatches}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gray-500" />
+                      <Users className="w-4 h-4 text-grass-soft" />
                       <div>
-                        <div className="text-xs text-gray-500">Progreso</div>
-                        <div className="font-semibold text-gray-900">
+                        <div className="text-xs text-grass-soft">Progreso</div>
+                        <div className="font-terminal text-led tabular-nums">
                           {progress}%
                         </div>
                       </div>
@@ -199,9 +203,9 @@ export function TournamentHistory() {
 
                   {/* Champion */}
                   {tournament.worldCup?.champion && (
-                    <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-                      <Award className="w-4 h-4 text-yellow-600" />
-                      <span className="text-sm font-medium text-yellow-900">
+                    <div className="flex items-center gap-2 bg-black/40 border border-gold px-3 py-2">
+                      <Award className="w-4 h-4 text-gold" />
+                      <span className="text-sm text-gold">
                         Campeón: {tournament.worldCup.champion}
                       </span>
                     </div>
@@ -209,30 +213,30 @@ export function TournamentHistory() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <button
+                    <Button
+                      variant={isActive ? 'primary' : 'outline'}
+                      size="sm"
                       onClick={() => handleView(tournament.id)}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
-                        isActive
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
-                      }`}
+                      className="flex-1 gap-2"
                     >
                       <Eye className="w-4 h-4" />
                       {isActive ? 'Activo' : 'Ver'}
-                    </button>
+                    </Button>
                     {tournament.worldCup?.champion && (
-                      <button
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleRecalculate(tournament.id)}
-                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                         title="Recalcular rendimientos de equipos"
                       >
                         <RefreshCw className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variant="danger"
+                      size="sm"
                       onClick={() => handleDelete(tournament.id)}
                       disabled={tournaments.length === 1}
-                      className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title={
                         tournaments.length === 1
                           ? 'No puedes eliminar el único torneo'
@@ -240,13 +244,13 @@ export function TournamentHistory() {
                       }
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {isActive && (
-                  <div className="bg-primary-50 border-t border-primary-200 px-4 py-2">
-                    <span className="text-xs font-medium text-primary-700">
+                  <div className="bg-grass/30 border-t-4 border-gold px-4 py-2">
+                    <span className="font-arcade text-[10px] text-gold uppercase">
                       Torneo Activo
                     </span>
                   </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
-import { TeamFlag } from '../ui/TeamFlag';
+import { ScoreBug } from '../ui/ScoreBug';
 import { History, Filter, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { matchHistoryService, type MatchHistoryEntry } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -87,28 +87,34 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
   };
 
   const getSkillChangeIcon = (change: number) => {
-    if (change > 0) return <TrendingUp className="w-4 h-4 text-green-600" />;
-    if (change < 0) return <TrendingDown className="w-4 h-4 text-red-600" />;
-    return <Minus className="w-4 h-4 text-gray-400" />;
+    if (change > 0) return <TrendingUp className="w-4 h-4 text-led" />;
+    if (change < 0) return <TrendingDown className="w-4 h-4 text-loss" />;
+    return <Minus className="w-4 h-4 text-gold" />;
+  };
+
+  const getSkillChangeTextClass = (change: number) => {
+    if (change > 0) return 'text-led';
+    if (change < 0) return 'text-loss';
+    return 'text-gold';
   };
 
   if (!isSupabaseConfigured()) {
     return (
       <Card>
-        <CardHeader className="bg-yellow-600 text-white rounded-t-lg">
-          <CardTitle className="text-white">⚠️ Supabase No Configurado</CardTitle>
+        <CardHeader className="bg-gold text-night">
+          <CardTitle className="text-night">⚠️ Supabase No Configurado</CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="text-center py-8">
-            <p className="text-gray-600 mb-4">
+            <p className="text-grass-soft mb-4">
               El historial de partidos requiere Supabase para funcionar.
             </p>
-            <div className="bg-gray-50 rounded-lg p-4 text-left">
-              <p className="font-semibold text-gray-900 mb-2">Para configurar:</p>
-              <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1">
+            <div className="bg-night border-2 border-grass p-4 text-left">
+              <p className="font-arcade text-[10px] text-white text-shadow-retro uppercase mb-2">Para configurar:</p>
+              <ol className="list-decimal list-inside text-sm text-grass-soft space-y-1">
                 <li>Crea un proyecto en Supabase.com</li>
-                <li>Ejecuta el script SQL en <code className="bg-gray-200 px-1 rounded">supabase/schema.sql</code></li>
-                <li>Copia <code className="bg-gray-200 px-1 rounded">.env.example</code> a <code className="bg-gray-200 px-1 rounded">.env.local</code></li>
+                <li>Ejecuta el script SQL en <code className="bg-black/60 text-white px-1">supabase/schema.sql</code></li>
+                <li>Copia <code className="bg-black/60 text-white px-1">.env.example</code> a <code className="bg-black/60 text-white px-1">.env.local</code></li>
                 <li>Agrega tus credenciales de Supabase</li>
                 <li>Reinicia el servidor de desarrollo</li>
               </ol>
@@ -125,24 +131,24 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm text-gray-600">Total de Partidos</p>
-              <p className="text-3xl font-bold text-gray-900">{statistics.totalMatches}</p>
+              <p className="text-sm text-grass-soft">Total de Partidos</p>
+              <p className="text-3xl font-terminal text-led tabular-nums">{statistics.totalMatches}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm text-gray-600">Total de Goles</p>
-              <p className="text-3xl font-bold text-primary-600">{statistics.totalGoals}</p>
+              <p className="text-sm text-grass-soft">Total de Goles</p>
+              <p className="text-3xl font-terminal text-led tabular-nums">{statistics.totalGoals}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm text-gray-600">Promedio de Goles</p>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-sm text-grass-soft">Promedio de Goles</p>
+              <p className="text-3xl font-terminal text-led tabular-nums">
                 {statistics.averageGoalsPerMatch.toFixed(2)}
               </p>
             </div>
@@ -151,18 +157,18 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
       </div>
 
       <Card>
-        <CardHeader className="bg-primary-600 text-white rounded-t-lg">
-          <div className="flex items-center justify-between">
+        <CardHeader className="bg-grass">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <CardTitle className="text-white flex items-center gap-2">
               <History className="w-6 h-6" />
               Historial de Partidos
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
+              <Filter className="w-4 h-4 text-white" />
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value as typeof filter)}
-                className="px-3 py-1 rounded bg-white text-gray-900 text-sm"
+                className="px-3 py-1 bg-black border-2 border-line text-white text-sm font-terminal"
               >
                 <option value="all">Todos</option>
                 <option value="qualifier">Eliminatorias</option>
@@ -174,14 +180,14 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         <CardContent>
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="text-gray-600 mt-4">Cargando partidos...</p>
+              <div className="animate-spin h-12 w-12 border-b-2 border-gold mx-auto"></div>
+              <p className="text-grass-soft mt-4">Cargando partidos...</p>
             </div>
           ) : matches.length === 0 ? (
             <div className="text-center py-12">
-              <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">No hay partidos registrados aún</p>
-              <p className="text-sm text-gray-500 mt-2">
+              <History className="w-16 h-16 text-grass-soft mx-auto mb-4" />
+              <p className="text-grass-soft">No hay partidos registrados aún</p>
+              <p className="text-sm text-grass-soft mt-2">
                 Los partidos se guardarán automáticamente cuando simules en el torneo
               </p>
             </div>
@@ -195,96 +201,55 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
 
                 const isHomeWin = match.homeScore > match.awayScore;
                 const isAwayWin = match.awayScore > match.homeScore;
+                const isDraw = !isHomeWin && !isAwayWin;
+                const homeResultClass = isHomeWin ? 'text-led' : isDraw ? 'text-gold' : 'text-loss';
+                const awayResultClass = isAwayWin ? 'text-led' : isDraw ? 'text-gold' : 'text-loss';
 
                 return (
                   <div
                     key={match.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-primary-400 transition-colors"
+                    className="bg-grass-dark border-2 border-line p-4 space-y-3 hover:border-gold transition-colors"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-xs text-gray-500">
+                    <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                      <div className="text-xs text-grass-soft">
                         {formatDate(match.playedAt)}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded">
+                        <span className="font-arcade text-[10px] uppercase bg-black/40 text-gold border border-gold px-2 py-1">
                           {getStageLabel(match.stage)}
                         </span>
                         {match.groupName && (
-                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                          <span className="font-arcade text-[10px] uppercase bg-black/40 text-grass-soft border border-grass px-2 py-1">
                             {match.groupName}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
-                      {/* Home Team */}
-                      <div className={`text-right ${isHomeWin ? 'font-bold' : ''}`}>
-                        <div className="flex items-center justify-end gap-2">
-                          <div>
-                            <div className="text-sm">{homeTeam.name}</div>
-                            <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
-                              Skill: {match.homeSkillBefore} → {match.homeSkillAfter}
-                              {getSkillChangeIcon(match.homeSkillChange)}
-                              <span
-                                className={
-                                  match.homeSkillChange > 0
-                                    ? 'text-green-600'
-                                    : match.homeSkillChange < 0
-                                    ? 'text-red-600'
-                                    : ''
-                                }
-                              >
-                                {match.homeSkillChange > 0 ? '+' : ''}
-                                {match.homeSkillChange}
-                              </span>
-                            </div>
-                          </div>
-                          <TeamFlag
-                            teamId={homeTeam.id}
-                            teamName={homeTeam.name}
-                            flagUrl={homeTeam.flag}
-                            size={32}
-                          />
-                        </div>
-                      </div>
+                    <ScoreBug
+                      size="md"
+                      homeTeam={homeTeam}
+                      awayTeam={awayTeam}
+                      homeScore={match.homeScore}
+                      awayScore={match.awayScore}
+                    />
 
-                      {/* Score */}
-                      <div className="text-center px-4">
-                        <div className="text-2xl font-bold">
-                          {match.homeScore} - {match.awayScore}
-                        </div>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div className={`flex items-center justify-end gap-1 ${homeResultClass}`}>
+                        <span>Skill: {match.homeSkillBefore} → {match.homeSkillAfter}</span>
+                        {getSkillChangeIcon(match.homeSkillChange)}
+                        <span className={getSkillChangeTextClass(match.homeSkillChange)}>
+                          {match.homeSkillChange > 0 ? '+' : ''}
+                          {match.homeSkillChange}
+                        </span>
                       </div>
-
-                      {/* Away Team */}
-                      <div className={`text-left ${isAwayWin ? 'font-bold' : ''}`}>
-                        <div className="flex items-center gap-2">
-                          <TeamFlag
-                            teamId={awayTeam.id}
-                            teamName={awayTeam.name}
-                            flagUrl={awayTeam.flag}
-                            size={32}
-                          />
-                          <div>
-                            <div className="text-sm">{awayTeam.name}</div>
-                            <div className="text-xs text-gray-500 flex items-center gap-1">
-                              Skill: {match.awaySkillBefore} → {match.awaySkillAfter}
-                              {getSkillChangeIcon(match.awaySkillChange)}
-                              <span
-                                className={
-                                  match.awaySkillChange > 0
-                                    ? 'text-green-600'
-                                    : match.awaySkillChange < 0
-                                    ? 'text-red-600'
-                                    : ''
-                                }
-                              >
-                                {match.awaySkillChange > 0 ? '+' : ''}
-                                {match.awaySkillChange}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                      <div className={`flex items-center gap-1 ${awayResultClass}`}>
+                        <span>Skill: {match.awaySkillBefore} → {match.awaySkillAfter}</span>
+                        {getSkillChangeIcon(match.awaySkillChange)}
+                        <span className={getSkillChangeTextClass(match.awaySkillChange)}>
+                          {match.awaySkillChange > 0 ? '+' : ''}
+                          {match.awaySkillChange}
+                        </span>
                       </div>
                     </div>
                   </div>

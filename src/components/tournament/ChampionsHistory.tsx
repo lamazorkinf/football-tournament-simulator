@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
-import { ClickableTeamName } from '../ui/ClickableTeamName';
+import { TeamNameTooltip } from '../ui/TeamNameTooltip';
 import { useTeamProfile } from '../../hooks/useTeamProfile';
 import { Trophy, Medal, Award, Loader } from 'lucide-react';
 import { db } from '../../lib/supabaseNormalized';
@@ -98,7 +98,7 @@ export function ChampionsHistory() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader className="w-8 h-8 animate-spin text-primary-600" />
+        <Loader className="w-8 h-8 animate-spin text-gold" />
       </div>
     );
   }
@@ -107,16 +107,20 @@ export function ChampionsHistory() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-500" />
-            Historial de Campeones
+          <CardTitle className="flex items-center gap-2 text-shadow-retro">
+            <Trophy className="w-5 h-5 text-gold" />
+            HIGH SCORES
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-gray-500">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium">No hay torneos completados</p>
-            <p className="text-sm mt-2">Los campeones aparecerán aquí cuando completes un torneo</p>
+          <div className="text-center py-12">
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
+            <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">
+              No hay torneos completados
+            </p>
+            <p className="text-sm text-grass-soft mt-2">
+              Los campeones aparecerán aquí cuando completes un torneo
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -128,13 +132,13 @@ export function ChampionsHistory() {
       {/* Header */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-500" />
-            Historial de Campeones
+          <CardTitle className="flex items-center gap-2 text-shadow-retro">
+            <Trophy className="w-5 h-5 text-gold" />
+            HIGH SCORES
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-grass-soft">
             Todos los campeones de los mundiales completados ({champions.length} {champions.length === 1 ? 'torneo' : 'torneos'})
           </p>
         </CardContent>
@@ -145,122 +149,102 @@ export function ChampionsHistory() {
         <CardContent className="pt-6">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-gray-300">
-                  <th className="text-left py-3 px-4 font-bold text-gray-700">Año</th>
-                  <th className="text-left py-3 px-4 font-bold text-gray-700">
+              <thead className="bg-grass-dark">
+                <tr className="border-b-2 border-grass">
+                  <th className="text-left py-3 px-2 sm:px-4 font-arcade text-[10px] text-gold uppercase">
+                    Pos
+                  </th>
+                  <th className="text-left py-3 px-2 sm:px-4 font-arcade text-[10px] text-gold uppercase">
+                    Año
+                  </th>
+                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
                     <div className="flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-yellow-500" />
+                      <Trophy className="w-4 h-4 text-gold" />
                       <span>Campeón</span>
                     </div>
                   </th>
-                  <th className="text-left py-3 px-4 font-bold text-gray-700">
+                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
                     <div className="flex items-center gap-2">
-                      <Medal className="w-4 h-4 text-gray-400" />
+                      <Medal className="w-4 h-4 text-grass-soft" />
                       <span>Subcampeón</span>
                     </div>
                   </th>
-                  <th className="text-left py-3 px-4 font-bold text-gray-700">
+                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
                     <div className="flex items-center gap-2">
-                      <Award className="w-4 h-4 text-amber-600" />
+                      <Award className="w-4 h-4 text-grass-soft" />
                       <span>3° Lugar</span>
                     </div>
                   </th>
-                  <th className="text-left py-3 px-4 font-bold text-gray-700">4° Lugar</th>
+                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
+                    4° Lugar
+                  </th>
                 </tr>
               </thead>
-              <tbody>
-                {champions.map((champion) => (
-                  <tr
-                    key={champion.tournamentId}
-                    className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="py-4 px-4">
-                      <span className="font-bold text-lg text-gray-900">{champion.year}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      {champion.champion ? (
-                        <div className="flex items-center gap-3">
-                          <TeamFlag
-                            teamId={champion.champion.id}
-                            teamName={champion.champion.name}
-                            flagUrl={champion.champion.flag}
-                            size={32}
-                            onClick={() => openTeamProfile(champion.champion!)}
-                            clickable
-                          />
-                          <ClickableTeamName team={champion.champion}>
-                            <span className="font-semibold text-gray-900">{champion.champion.name}</span>
-                          </ClickableTeamName>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 italic">-</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      {champion.runnerUp ? (
-                        <div className="flex items-center gap-3">
-                          <TeamFlag
-                            teamId={champion.runnerUp.id}
-                            teamName={champion.runnerUp.name}
-                            flagUrl={champion.runnerUp.flag}
-                            size={24}
-                            onClick={() => openTeamProfile(champion.runnerUp!)}
-                            clickable
-                          />
-                          <ClickableTeamName team={champion.runnerUp}>
-                            <span className="text-gray-800">{champion.runnerUp.name}</span>
-                          </ClickableTeamName>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 italic">-</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      {champion.thirdPlace ? (
-                        <div className="flex items-center gap-3">
-                          <TeamFlag
-                            teamId={champion.thirdPlace.id}
-                            teamName={champion.thirdPlace.name}
-                            flagUrl={champion.thirdPlace.flag}
-                            size={24}
-                            onClick={() => openTeamProfile(champion.thirdPlace!)}
-                            clickable
-                          />
-                          <ClickableTeamName team={champion.thirdPlace}>
-                            <span className="text-gray-700">{champion.thirdPlace.name}</span>
-                          </ClickableTeamName>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 italic">-</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      {champion.fourthPlace ? (
-                        <div className="flex items-center gap-3">
-                          <TeamFlag
-                            teamId={champion.fourthPlace.id}
-                            teamName={champion.fourthPlace.name}
-                            flagUrl={champion.fourthPlace.flag}
-                            size={24}
-                            onClick={() => openTeamProfile(champion.fourthPlace!)}
-                            clickable
-                          />
-                          <ClickableTeamName team={champion.fourthPlace}>
-                            <span className="text-gray-600">{champion.fourthPlace.name}</span>
-                          </ClickableTeamName>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 italic">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y-2 divide-grass">
+                {champions.map((champion, index) => {
+                  const isMostRecent = index === 0;
+                  return (
+                    <tr key={champion.tournamentId} className="hover:bg-grass/40 transition-colors">
+                      <td className="py-4 px-2 sm:px-4">
+                        <span className="font-terminal text-white tabular-nums">{index + 1}</span>
+                      </td>
+                      <td className="py-4 px-2 sm:px-4">
+                        <span className="font-terminal text-led tabular-nums text-lg">{champion.year}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <ChampionCell
+                          team={champion.champion}
+                          size={32}
+                          onOpen={openTeamProfile}
+                          blink={isMostRecent}
+                        />
+                      </td>
+                      <td className="py-4 px-4">
+                        <ChampionCell team={champion.runnerUp} size={24} onOpen={openTeamProfile} />
+                      </td>
+                      <td className="py-4 px-4">
+                        <ChampionCell team={champion.thirdPlace} size={24} onOpen={openTeamProfile} />
+                      </td>
+                      <td className="py-4 px-4">
+                        <ChampionCell team={champion.fourthPlace} size={24} onOpen={openTeamProfile} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+interface ChampionCellProps {
+  team: Team | null;
+  size: 24 | 32;
+  onOpen: (team: Team) => void;
+  blink?: boolean;
+}
+
+function ChampionCell({ team, size, onOpen, blink = false }: ChampionCellProps) {
+  if (!team) {
+    return <span className="text-grass-soft italic">-</span>;
+  }
+
+  return (
+    <div className={`flex items-center gap-2 ${blink ? 'blink' : ''}`}>
+      <TeamFlag
+        teamId={team.id}
+        teamName={team.name}
+        flagUrl={team.flag}
+        size={size}
+        onClick={() => onOpen(team)}
+        clickable
+      />
+      <TeamNameTooltip teamName={team.name}>
+        <span className="font-arcade text-[10px] uppercase">{team.id.toUpperCase()}</span>
+      </TeamNameTooltip>
     </div>
   );
 }
