@@ -1,3 +1,4 @@
+import { Fragment, useState } from 'react';
 import type { TeamStanding, Team } from '../../types';
 import { cn } from '../../lib/utils';
 import { calculateTier, getTierColor, getTierIcon } from '../../core/tiers';
@@ -23,6 +24,7 @@ export function StandingsTable({
 }: StandingsTableProps) {
   // Always sort standings to ensure correct order
   const sortedStandings = sortStandings(standings, teams);
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
   const getTeam = (teamId: string) => {
     return teams.find((t) => t.id === teamId);
@@ -41,7 +43,7 @@ export function StandingsTable({
             <th className={thBase} title="Played">
               P
             </th>
-            <th className={thBase} title="Won">
+            <th className={cn(thBase, 'hidden sm:table-cell')} title="Won">
               W
             </th>
             <th className={cn(thBase, 'hidden sm:table-cell')} title="Drawn">
@@ -68,70 +70,91 @@ export function StandingsTable({
           {sortedStandings.map((standing, index) => {
             const isQualified = highlightQualified > 0 && index < highlightQualified;
             return (
-              <tr
-                key={standing.teamId}
-                className={cn('hover:bg-grass/40 transition-colors', isQualified && 'bg-grass/30')}
-              >
-                <td
+              <Fragment key={standing.teamId}>
+                <tr
+                  onClick={() =>
+                    setExpandedTeamId(expandedTeamId === standing.teamId ? null : standing.teamId)
+                  }
                   className={cn(
-                    'px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap tabular-nums',
-                    isQualified && 'text-led'
+                    'transition-colors cursor-pointer sm:cursor-default',
+                    isQualified ? 'bg-grass/30 hover:bg-led/20' : 'hover:bg-grass/40'
                   )}
                 >
-                  {index + 1}
-                </td>
-                <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const team = getTeam(standing.teamId);
-                      if (team) {
-                        return (
-                          <>
-                            <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
-                            <TeamNameTooltip teamName={team.name}>
-                              <span className="font-arcade text-[10px] uppercase">
-                                {team.id.toUpperCase()}
-                              </span>
-                            </TeamNameTooltip>
-                            {(() => {
-                              const tier = team.tier || calculateTier(team.skill);
-                              return (
-                                <span
-                                  className={cn(
-                                    'px-2 py-0.5 text-xs border flex-shrink-0',
-                                    getTierColor(tier)
-                                  )}
-                                  title={`${tier} - Skill: ${team.skill}`}
-                                >
-                                  {getTierIcon(tier)} <span className="hidden sm:inline ml-1">{tier}</span>
+                  <td
+                    className={cn(
+                      'px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap tabular-nums',
+                      isQualified && 'text-led'
+                    )}
+                  >
+                    {index + 1}
+                  </td>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const team = getTeam(standing.teamId);
+                        if (team) {
+                          return (
+                            <>
+                              <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
+                              <TeamNameTooltip teamName={team.name}>
+                                <span className="font-arcade text-[10px] uppercase">
+                                  {team.id.toUpperCase()}
                                 </span>
-                              );
-                            })()}
-                          </>
-                        );
-                      }
-                      return <span className="font-arcade text-[10px] uppercase">{standing.teamId}</span>;
-                    })()}
-                  </div>
-                </td>
-                <td className={tdBase}>{standing.played}</td>
-                <td className={tdBase}>{standing.won}</td>
-                <td className={cn(tdBase, 'hidden sm:table-cell')}>{standing.drawn}</td>
-                <td className={cn(tdBase, 'hidden sm:table-cell')}>{standing.lost}</td>
-                <td className={cn(tdBase, 'hidden md:table-cell')}>{standing.goalsFor}</td>
-                <td className={cn(tdBase, 'hidden md:table-cell')}>{standing.goalsAgainst}</td>
-                <td
-                  className={cn(
-                    tdBase,
-                    standing.goalDifference > 0 && 'text-led',
-                    standing.goalDifference < 0 && 'text-loss'
-                  )}
-                >
-                  {standing.goalDifference > 0 ? '+' : ''}
-                  {standing.goalDifference}
-                </td>
-                <td className={cn(tdBase, 'text-led')}>{String(standing.points).padStart(2, '0')}</td>
-              </tr>
+                              </TeamNameTooltip>
+                              {(() => {
+                                const tier = team.tier || calculateTier(team.skill);
+                                return (
+                                  <span
+                                    className={cn(
+                                      'px-2 py-0.5 text-xs border flex-shrink-0',
+                                      getTierColor(tier)
+                                    )}
+                                    title={`${tier} - Skill: ${team.skill}`}
+                                  >
+                                    {getTierIcon(tier)} <span className="hidden sm:inline ml-1">{tier}</span>
+                                  </span>
+                                );
+                              })()}
+                            </>
+                          );
+                        }
+                        return <span className="font-arcade text-[10px] uppercase">{standing.teamId}</span>;
+                      })()}
+                    </div>
+                  </td>
+                  <td className={tdBase}>{standing.played}</td>
+                  <td className={cn(tdBase, 'hidden sm:table-cell')}>{standing.won}</td>
+                  <td className={cn(tdBase, 'hidden sm:table-cell')}>{standing.drawn}</td>
+                  <td className={cn(tdBase, 'hidden sm:table-cell')}>{standing.lost}</td>
+                  <td className={cn(tdBase, 'hidden md:table-cell')}>{standing.goalsFor}</td>
+                  <td className={cn(tdBase, 'hidden md:table-cell')}>{standing.goalsAgainst}</td>
+                  <td
+                    className={cn(
+                      tdBase,
+                      standing.goalDifference > 0 && 'text-led',
+                      standing.goalDifference < 0 && 'text-loss'
+                    )}
+                  >
+                    {standing.goalDifference > 0 ? '+' : ''}
+                    {standing.goalDifference}
+                  </td>
+                  <td className={cn(tdBase, 'text-led')}>{String(standing.points).padStart(2, '0')}</td>
+                </tr>
+                {expandedTeamId === standing.teamId && (
+                  <tr className="sm:hidden bg-black/40">
+                    <td colSpan={10} className="px-4 py-2 font-terminal text-base text-grass-soft">
+                      G-E-P:{' '}
+                      <span className="text-white tabular-nums">
+                        {standing.won}-{standing.drawn}-{standing.lost}
+                      </span>
+                      {' · '}GF:GA:{' '}
+                      <span className="text-white tabular-nums">
+                        {standing.goalsFor}:{standing.goalsAgainst}
+                      </span>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
