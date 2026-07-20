@@ -355,9 +355,9 @@ function TeamRow({
     return (
       <div className="bg-grass-dark border-2 border-gold p-4">
         <div className="space-y-3">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <span className="font-semibold text-white">{team.name}</span>
               <span className="text-xs text-grass-soft ml-2">({team.id})</span>
             </div>
@@ -421,11 +421,14 @@ function TeamRow({
 
   return (
     <div className="bg-grass-dark border-2 border-grass hover:border-gold p-4 transition-colors">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <span className="font-semibold text-white">{team.name}</span>
+          <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-3">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="font-semibold text-white truncate">{team.name}</span>
+              <span className="text-sm text-grass-soft md:hidden">{team.region}</span>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-grass-soft">Skill:</span>
               <div className="flex items-center gap-2">
@@ -438,11 +441,11 @@ function TeamRow({
                 <span className="font-semibold text-sm w-8 text-gold font-terminal tabular-nums">{team.skill}</span>
               </div>
             </div>
-            <span className="text-sm text-grass-soft">{team.region}</span>
+            <span className="text-sm text-grass-soft hidden md:block">{team.region}</span>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit} className="gap-2">
+        <div className="flex gap-2 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={onEdit} className="gap-2 flex-1 sm:flex-none">
             <Edit2 className="w-4 h-4" />
             Edit
           </Button>
