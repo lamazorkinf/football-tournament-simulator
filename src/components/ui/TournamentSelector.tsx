@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { ChevronDown, Trophy, Plus, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from './Button';
 
 export function TournamentSelector() {
   const {
@@ -39,20 +40,20 @@ export function TournamentSelector() {
   const getStatusBadge = (tournament: typeof tournaments[0]) => {
     if (tournament.worldCup?.champion) {
       return (
-        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700">
+        <span className="text-xs px-2 py-0.5 bg-black/40 text-led border border-line">
           Completado
         </span>
       );
     }
     if (tournament.worldCup) {
       return (
-        <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700">
+        <span className="text-xs px-2 py-0.5 bg-black/40 text-gold border border-gold">
           Mundial
         </span>
       );
     }
     return (
-      <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700">
+      <span className="text-xs px-2 py-0.5 bg-black/40 text-grass-soft border border-grass">
         Clasificatorias
       </span>
     );
@@ -141,16 +142,18 @@ export function TournamentSelector() {
 
               {/* Create New Button */}
               <div className="px-4 py-3 border-t-2 border-grass bg-night">
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => {
                     setShowNewModal(true);
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 bg-grass text-white border-2 border-line hover:bg-grass/80 transition-colors font-medium text-sm"
+                  className="w-full flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   Nuevo Torneo
-                </button>
+                </Button>
               </div>
             </motion.div>
           </>
@@ -207,13 +210,15 @@ export function TournamentSelector() {
                 >
                   Cancelar
                 </button>
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleCreateNew}
                   disabled={!newYear}
-                  className="flex-1 px-4 py-2 bg-grass text-white border-2 border-line hover:bg-grass/80 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1"
                 >
                   Crear
-                </button>
+                </Button>
               </div>
             </motion.div>
           </>
