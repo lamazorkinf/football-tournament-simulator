@@ -12,14 +12,14 @@ import { QualifiersView } from './components/tournament/QualifiersView';
 import { WorldCupViewEnhanced } from './components/tournament/WorldCupViewEnhanced';
 import { TournamentHistory } from './components/tournament/TournamentHistory';
 import { ChampionsHistory } from './components/tournament/ChampionsHistory';
-import { MobileDrawer } from './components/ui/MobileDrawer';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
 import { ProgressModal } from './components/ui/ProgressModal';
 import { Scanlines } from './components/ui/Scanlines';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { MatchResultsModal } from './components/ui/MatchResultsModal';
-import { Menu } from 'lucide-react';
+import { GameTabBar } from './components/ui/GameTabBar';
+import { PauseMenu } from './components/ui/PauseMenu';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
 
@@ -33,7 +33,7 @@ function App() {
 
   const { isCollapsed } = useSidebarCollapse();
   const [currentView, setCurrentView] = useState<View>('wizard');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPauseOpen, setIsPauseOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
 
   // Navigation handler with optional parameters
@@ -44,6 +44,12 @@ function App() {
     } else {
       setViewOptions({});
     }
+  };
+
+  const handleTabChange = (view: View) => {
+    setCurrentView(view);
+    setViewOptions({});
+    setIsPauseOpen(false);
   };
 
   // Load teams from database on mount
@@ -84,14 +90,6 @@ function App() {
         {/* Match Results Modal */}
         <MatchResultsModal />
 
-        {/* Mobile Drawer */}
-        <MobileDrawer
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-        currentView={currentView}
-        onViewChange={(view) => setCurrentView(view)}
-      />
-
       {/* Desktop Sidebar */}
       <Sidebar
         currentView={currentView}
@@ -100,30 +98,17 @@ function App() {
       />
 
       {/* Main content area with dynamic left margin based on sidebar state */}
-      <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+      <div className={`transition-all duration-300 pb-36 lg:pb-0 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* Mobile Header */}
-        <header className="lg:hidden bg-grass-dark border-b-4 border-grass sticky top-0 z-30">
-          <div className="px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <button
-                  onClick={() => setIsMobileMenuOpen(true)}
-                  className="p-2 hover:bg-grass/40 transition-colors flex-shrink-0"
-                >
-                  <Menu className="w-6 h-6 text-grass-soft" />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <h1 className="font-arcade text-xs text-white text-shadow-retro truncate">
-                    {currentTournament.name}
-                  </h1>
-                  <p className="text-xs text-grass-soft truncate">
-                    World Cup Simulator
-                  </p>
-                </div>
-              </div>
-              <div className="ml-4 flex-shrink-0">
-                <TournamentSelector />
-              </div>
+        <header className="lg:hidden bg-grass-dark border-b-4 border-grass sticky top-0 z-30 pt-[env(safe-area-inset-top)]">
+          <div className="px-4 py-2 flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-arcade text-xs text-white text-shadow-retro truncate">
+                {currentTournament.name}
+              </h1>
+            </div>
+            <div className="flex-shrink-0">
+              <TournamentSelector />
             </div>
           </div>
         </header>
@@ -162,6 +147,20 @@ function App() {
         </footer>
       </div>
       </div>
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-40">
+        <GameTabBar
+          currentView={currentView}
+          onViewChange={handleTabChange}
+          onStartPress={() => setIsPauseOpen((v) => !v)}
+          isPauseOpen={isPauseOpen}
+        />
+      </div>
+      <PauseMenu
+        isOpen={isPauseOpen}
+        onClose={() => setIsPauseOpen(false)}
+        currentView={currentView}
+        onViewChange={(view) => setCurrentView(view)}
+      />
     </TeamProfileProvider>
   );
 }
