@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { nanoid } from 'nanoid';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -23,7 +24,10 @@ export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
   addToast: (message: string, type: ToastType, duration = 5000) => {
-    const id = Math.random().toString(36).substring(7);
+    // Math.random().toString(36).substring(7) puede devolver cadena vacía
+    // cuando el float se serializa corto: dos toasts con id '' se eliminaban
+    // juntos al cerrar cualquiera de los dos.
+    const id = nanoid();
     const toast: Toast = { id, message, type, duration };
 
     set((state) => ({

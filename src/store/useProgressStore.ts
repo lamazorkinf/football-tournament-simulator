@@ -15,15 +15,34 @@ export interface ProgressState {
   resetProgress: () => void;
 }
 
-export const useProgressStore = create<ProgressState>((set) => ({
+const EMPTY_PROGRESS = {
   isOpen: false,
   title: '',
   currentStep: '',
   progress: 0,
   totalSteps: 0,
   completedSteps: 0,
+} as const;
+
+/**
+ * Cierre diferido de completeProgress. Si empieza una operación nueva antes de
+ * que venza, hay que cancelarlo: si no, cerraría el modal de esa operación
+ * nueva y la dejaría corriendo sin feedback.
+ */
+let autoCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+const cancelAutoClose = () => {
+  if (autoCloseTimer !== null) {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = null;
+  }
+};
+
+export const useProgressStore = create<ProgressState>((set) => ({
+  ...EMPTY_PROGRESS,
 
   startProgress: (title: string, totalSteps: number) => {
+    cancelAutoClose();
     set({
       isOpen: true,
       title,
@@ -49,32 +68,22 @@ export const useProgressStore = create<ProgressState>((set) => ({
   },
 
   completeProgress: () => {
+    cancelAutoClose();
+
     set({
       progress: 100,
       currentStep: '¡Completado!',
     });
 
     // Auto-close after 800ms
-    setTimeout(() => {
-      set({
-        isOpen: false,
-        title: '',
-        currentStep: '',
-        progress: 0,
-        totalSteps: 0,
-        completedSteps: 0,
-      });
+    autoCloseTimer = setTimeout(() => {
+      autoCloseTimer = null;
+      set({ ...EMPTY_PROGRESS });
     }, 800);
   },
 
   resetProgress: () => {
-    set({
-      isOpen: false,
-      title: '',
-      currentStep: '',
-      progress: 0,
-      totalSteps: 0,
-      completedSteps: 0,
-    });
+    cancelAutoClose();
+    set({ ...EMPTY_PROGRESS });
   },
 }));

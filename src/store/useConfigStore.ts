@@ -52,14 +52,24 @@ export const useConfigStore = create<ConfigStore>()(
           config: { ...state.config, homeAdvantage: Math.max(0, Math.min(10, value)) },
         })),
 
+      // Los límites se clampeaban por separado y sin validar que min < max.
+      // Borrar el campo "Máximo" en la UI producía Number('') === 0 y dejaba
+      // skillMin 30 / skillMax 1: a partir de ahí updateTeamSkill devolvía
+      // siempre 30 y los 210 equipos quedaban con el mismo skill. Además
+      // persiste, así que el motor quedaba inutilizado tras recargar.
       updateSkillLimits: (min: number, max: number) =>
-        set((state) => ({
-          config: {
-            ...state.config,
-            skillMin: Math.max(0, Math.min(min, 99)),
-            skillMax: Math.min(100, Math.max(max, 1)),
-          },
-        })),
+        set((state) => {
+          const safeMin = Number.isFinite(min) ? min : state.config.skillMin;
+          const safeMax = Number.isFinite(max) ? max : state.config.skillMax;
+
+          const skillMin = Math.max(0, Math.min(safeMin, 99));
+          const skillMax = Math.min(100, Math.max(safeMax, 1));
+
+          // Un rango invertido rompe el motor: se descarta el cambio.
+          if (skillMin >= skillMax) return state;
+
+          return { config: { ...state.config, skillMin, skillMax } };
+        }),
 
       resetToDefaults: () => set({ config: DEFAULT_CONFIG }),
 
