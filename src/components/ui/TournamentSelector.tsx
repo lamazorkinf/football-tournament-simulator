@@ -39,20 +39,20 @@ export function TournamentSelector() {
   const getStatusBadge = (tournament: typeof tournaments[0]) => {
     if (tournament.worldCup?.champion) {
       return (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700">
           Completado
         </span>
       );
     }
     if (tournament.worldCup) {
       return (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+        <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700">
           Mundial
         </span>
       );
     }
     return (
-      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+      <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700">
         Clasificatorias
       </span>
     );
@@ -63,13 +63,13 @@ export function TournamentSelector() {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+        className="flex items-center gap-2 px-4 py-2 bg-grass-dark border-2 border-line hover:bg-grass/40 transition-colors"
       >
-        <Trophy className="w-4 h-4 text-primary-600" />
-        <span className="font-semibold text-gray-900">
+        <Trophy className="w-4 h-4 text-gold" />
+        <span className="font-semibold">
           {currentTournament?.year ?? '2026'}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-grass-soft transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown */}
@@ -88,17 +88,17 @@ export function TournamentSelector() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
-              className="absolute left-0 mt-2 w-full min-w-[280px] bg-white border border-gray-200 rounded-lg shadow-lg z-40 overflow-hidden"
+              className="absolute left-0 mt-2 w-full min-w-[280px] bg-grass-dark border-2 border-line shadow-hard-panel z-40 overflow-hidden"
             >
               {/* Header */}
-              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <h3 className="font-semibold text-gray-900 text-sm">Torneos</h3>
+              <div className="px-4 py-3 border-b-2 border-grass bg-night">
+                <h3 className="font-arcade text-[10px] text-white text-shadow-retro uppercase">Torneos</h3>
               </div>
 
               {/* Tournament List */}
               <div className="max-h-64 overflow-y-auto">
                 {tournaments.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                  <div className="px-4 py-6 text-center text-grass-soft text-sm">
                     No hay torneos disponibles
                   </div>
                 ) : (
@@ -111,17 +111,17 @@ export function TournamentSelector() {
                           selectTournament(tournament.id);
                           setIsOpen(false);
                         }}
-                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
-                          isSelected ? 'bg-primary-50' : ''
+                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-grass/40 transition-colors border-b-2 border-grass last:border-b-0 ${
+                          isSelected ? 'bg-grass/30' : ''
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Trophy className={`w-5 h-5 ${isSelected ? 'text-primary-600' : 'text-gray-400'}`} />
+                          <Trophy className={`w-5 h-5 ${isSelected ? 'text-gold' : 'text-grass-soft'}`} />
                           <div className="text-left">
-                            <div className="font-semibold text-gray-900">
+                            <div className="font-semibold">
                               {tournament.year}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-grass-soft">
                               {tournament.name}
                             </div>
                           </div>
@@ -130,7 +130,7 @@ export function TournamentSelector() {
                         <div className="flex items-center gap-2">
                           {getStatusBadge(tournament)}
                           {isSelected && (
-                            <Check className="w-4 h-4 text-primary-600" />
+                            <Check className="w-4 h-4 text-gold" />
                           )}
                         </div>
                       </button>
@@ -140,13 +140,13 @@ export function TournamentSelector() {
               </div>
 
               {/* Create New Button */}
-              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+              <div className="px-4 py-3 border-t-2 border-grass bg-night">
                 <button
                   onClick={() => {
                     setShowNewModal(true);
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+                  className="w-full flex items-center gap-2 px-3 py-2 bg-grass text-white border-2 border-line hover:bg-grass/80 transition-colors font-medium text-sm"
                 >
                   <Plus className="w-4 h-4" />
                   Nuevo Torneo
@@ -172,16 +172,16 @@ export function TournamentSelector() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-lg shadow-xl z-50 p-6"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-grass-dark border-2 border-line shadow-hard-panel z-50 p-6"
             >
               <div className="flex items-center gap-3 mb-4">
-                <Trophy className="w-6 h-6 text-primary-600" />
-                <h3 className="text-xl font-bold text-gray-900">
+                <Trophy className="w-6 h-6 text-gold" />
+                <h3 className="font-arcade text-sm text-white text-shadow-retro">
                   Nuevo Torneo
                 </h3>
               </div>
 
-              <p className="text-gray-600 mb-4 text-sm">
+              <p className="text-grass-soft mb-4 text-sm">
                 Ingresa el año del nuevo torneo mundial:
               </p>
 
@@ -192,7 +192,7 @@ export function TournamentSelector() {
                 placeholder="Ej: 2030"
                 min="2000"
                 max="2100"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none mb-4"
+                className="w-full px-4 py-2 bg-night border-2 border-grass text-white placeholder:text-grass-soft focus:ring-2 focus:ring-gold focus:border-transparent outline-none mb-4"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateNew();
@@ -203,14 +203,14 @@ export function TournamentSelector() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowNewModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
+                  className="flex-1 px-4 py-2 border-2 border-line text-led hover:bg-grass/40 transition-colors font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleCreateNew}
                   disabled={!newYear}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-grass text-white border-2 border-line hover:bg-grass/80 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Crear
                 </button>

@@ -54,25 +54,25 @@ export function MobileDrawer({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 bottom-0 w-72 bg-white shadow-xl z-50 lg:hidden"
+            className="fixed left-0 top-0 bottom-0 w-72 bg-grass-dark border-r-4 border-grass z-50 lg:hidden"
           >
             <div className="flex flex-col h-full">
               {/* Header */}
-              <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-primary-100">
+              <div className="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-grass">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <Trophy className="w-6 h-6 text-primary-600 flex-shrink-0" />
-                  <h2 className="font-bold text-base text-gray-900 truncate">Menu</h2>
+                  <Trophy className="w-6 h-6 text-gold flex-shrink-0" />
+                  <h2 className="font-arcade text-sm text-gold text-shadow-retro truncate">Menu</h2>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+                  className="p-2 text-grass-soft hover:bg-grass/40 hover:text-white transition-colors flex-shrink-0"
                 >
-                  <X className="w-5 h-5 text-gray-700" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Tournament Selector */}
-              <div className="px-4 py-4 border-b border-gray-200">
+              <div className="px-4 py-4 border-b-2 border-grass">
                 <TournamentSelector />
               </div>
 
@@ -86,25 +86,28 @@ export function MobileDrawer({
                     <button
                       key={item.id}
                       onClick={() => handleViewChange(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 ${
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 transition-all duration-150 ${
                         isActive
-                          ? 'bg-primary-50 text-primary-700 font-semibold shadow-sm'
-                          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-grass text-white'
+                          : 'text-grass-soft hover:bg-grass/40 hover:text-white'
                       }`}
                     >
-                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-primary-600' : 'text-gray-500'}`} />
-                      <span className="truncate">{item.label}</span>
+                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-gold' : 'text-grass-soft'}`} />
+                      <span className="truncate font-arcade text-[10px] uppercase leading-relaxed">
+                        {isActive && <span className="text-gold">▶ </span>}
+                        {item.label}
+                      </span>
                     </button>
                   );
                 })}
               </nav>
 
               {/* Footer */}
-              <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
-                <p className="text-xs text-gray-600 text-center">
+              <div className="px-4 py-4 border-t-2 border-grass bg-night">
+                <p className="text-xs text-grass-soft text-center">
                   Football Tournament Simulator
                 </p>
-                <p className="text-xs text-gray-500 text-center mt-1">
+                <p className="text-xs text-grass-soft text-center mt-1">
                   v1.0
                 </p>
               </div>
