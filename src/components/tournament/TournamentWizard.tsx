@@ -9,6 +9,7 @@ import {
 } from '../../utils/tournamentProgress';
 import { sortStandings, getBestRunnersUp } from '../../core/scheduler';
 import { Button } from '../ui/Button';
+import { Card, CardHeader } from '../ui/Card';
 import {
   CheckCircle2,
   Circle,
@@ -185,17 +186,18 @@ export function TournamentWizard() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <Card className="overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-8 text-white">
+        <CardHeader>
+          <p className="font-arcade text-[10px] text-gold mb-2">SELECT MODE</p>
           <div className="flex items-center gap-3 mb-2">
-            <Trophy className="w-8 h-8" />
-            <h2 className="text-3xl font-bold">Progreso del Torneo</h2>
+            <Trophy className="w-8 h-8 text-gold" />
+            <h2 className="font-arcade text-xl text-white text-shadow-retro">Progreso del Torneo</h2>
           </div>
-          <p className="text-primary-100">
+          <p className="text-grass-soft">
             Guía paso a paso para completar el torneo
           </p>
-        </div>
+        </CardHeader>
 
         {/* Steps */}
         <div className="p-6 space-y-6">
@@ -225,14 +227,8 @@ export function TournamentWizard() {
             ]}
             actions={
               canGenerateDraw ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleGenerateDraw}
-                  className="gap-2"
-                >
-                  <Zap className="w-4 h-4" />
-                  Generar Sorteo & Fixtures
+                <Button size="lg" onClick={handleGenerateDraw}>
+                  ▶ PRESS START
                 </Button>
               ) : null
             }
@@ -353,20 +349,20 @@ export function TournamentWizard() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mt-8 bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-400 rounded-lg p-6 text-center"
+              className="mt-8 bg-grass/20 border-4 border-gold shadow-hard-panel p-6 text-center"
             >
-              <Trophy className="w-16 h-16 text-yellow-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              <Trophy className="w-16 h-16 text-gold mx-auto mb-4" />
+              <h3 className="font-arcade text-lg text-white text-shadow-retro mb-2">
                 🏆 ¡Torneo Completado! 🏆
               </h3>
-              <p className="text-gray-600">
+              <p className="text-grass-soft">
                 El campeón ha sido coronado. ¡Puedes iniciar un nuevo torneo
                 cuando estés listo!
               </p>
             </motion.div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Draw Simulator Modal */}
       <AnimatePresence>
@@ -381,7 +377,7 @@ export function TournamentWizard() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-lg shadow-2xl max-w-[95vw] w-full max-h-[95vh] overflow-y-auto"
+              className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-[95vw] w-full max-h-[95vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
@@ -424,26 +420,26 @@ function StepCard({
   const getStatusIcon = () => {
     switch (status) {
       case 'complete':
-        return <CheckCircle2 className="w-6 h-6 text-green-600" />;
+        return <CheckCircle2 className="w-6 h-6 text-led" />;
       case 'in-progress':
-        return <Clock className="w-6 h-6 text-primary-600 animate-pulse" />;
+        return <Clock className="w-6 h-6 text-gold animate-pulse" />;
       case 'locked':
-        return <Circle className="w-6 h-6 text-gray-300" />;
+        return <Circle className="w-6 h-6 text-grass" />;
       default:
-        return <Circle className="w-6 h-6 text-gray-400" />;
+        return <Circle className="w-6 h-6 text-grass-soft" />;
     }
   };
 
   const getStatusColor = () => {
     switch (status) {
       case 'complete':
-        return 'border-green-200 bg-green-50';
+        return 'border-line bg-grass/20';
       case 'in-progress':
-        return 'border-primary-200 bg-primary-50';
+        return 'border-gold bg-grass/10';
       case 'locked':
-        return 'border-gray-200 bg-gray-50 opacity-60';
+        return 'border-grass/40 bg-night opacity-60';
       default:
-        return 'border-gray-200 bg-white';
+        return 'border-grass bg-night';
     }
   };
 
@@ -452,12 +448,12 @@ function StepCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: number * 0.1 }}
-      className={`border-2 rounded-lg p-6 transition-all ${getStatusColor()}`}
+      className={`border-2 p-6 transition-all ${getStatusColor()}`}
     >
       <div className="flex items-start gap-4">
         {/* Step number & status */}
         <div className="flex-shrink-0">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white border-2 border-gray-300 font-bold text-gray-700">
+          <div className="flex items-center justify-center w-12 h-12 bg-night border-2 border-grass font-terminal text-led text-2xl tabular-nums">
             {number}
           </div>
           <div className="flex justify-center mt-2">{getStatusIcon()}</div>
@@ -467,29 +463,29 @@ function StepCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div className="flex items-center gap-2">
-              <div className="text-gray-600">{icon}</div>
-              <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+              <div className="text-grass-soft">{icon}</div>
+              <h3 className="font-arcade text-sm text-white text-shadow-retro">{title}</h3>
             </div>
           </div>
 
-          <p className="text-gray-600 mb-4">{description}</p>
+          <p className="text-grass-soft mb-4">{description}</p>
 
           {/* Progress bar */}
           {status !== 'locked' && (
             <div className="mb-4">
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
+              <div className="flex justify-between text-sm text-grass-soft mb-1">
                 <span>Progreso</span>
-                <span className="font-semibold">{progress}%</span>
+                <span className="text-led font-terminal tabular-nums">{progress}%</span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-3 bg-night border-2 border-grass overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.5, delay: number * 0.1 + 0.2 }}
                   className={`h-full ${
                     status === 'complete'
-                      ? 'bg-green-600'
-                      : 'bg-primary-600'
+                      ? 'bg-led'
+                      : 'bg-grass'
                   }`}
                 />
               </div>
@@ -501,8 +497,8 @@ function StepCard({
             <div className="grid grid-cols-2 gap-4 mb-4">
               {stats.map((stat, index) => (
                 <div key={index} className="text-sm">
-                  <div className="text-gray-500">{stat.label}</div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="text-grass-soft">{stat.label}</div>
+                  <div className="text-led font-terminal text-lg tabular-nums">
                     {stat.value}
                   </div>
                 </div>

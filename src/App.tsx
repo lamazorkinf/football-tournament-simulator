@@ -60,10 +60,9 @@ function App() {
 
   if (!currentTournament) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading tournament...</p>
+          <p className="font-arcade text-gold blink text-sm">LOADING…</p>
         </div>
       </div>
     );
@@ -72,7 +71,7 @@ function App() {
   return (
     <TeamProfileProvider>
       <Scanlines />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-night">
         {/* Progress Modal */}
         <ProgressModal />
 
@@ -100,21 +99,21 @@ function App() {
       {/* Main content area with dynamic left margin based on sidebar state */}
       <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* Mobile Header */}
-        <header className="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+        <header className="lg:hidden bg-grass-dark border-b-4 border-grass sticky top-0 z-30">
           <div className="px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <button
                   onClick={() => setIsMobileMenuOpen(true)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                  className="p-2 hover:bg-grass/40 transition-colors flex-shrink-0"
                 >
-                  <Menu className="w-6 h-6 text-gray-700" />
+                  <Menu className="w-6 h-6 text-grass-soft" />
                 </button>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-lg font-bold text-gray-900 truncate">
+                  <h1 className="font-arcade text-xs text-white text-shadow-retro truncate">
                     {currentTournament.name}
                   </h1>
-                  <p className="text-xs text-gray-600 truncate">
+                  <p className="text-xs text-grass-soft truncate">
                     World Cup Simulator
                   </p>
                 </div>
@@ -153,8 +152,8 @@ function App() {
         ) : null}
         </main>
 
-        <footer className="bg-white border-t border-gray-200 mt-12">
-          <div className="px-4 sm:px-6 lg:px-8 py-6 text-center text-gray-600 text-sm">
+        <footer className="bg-grass-dark border-t-4 border-grass mt-12">
+          <div className="px-4 sm:px-6 lg:px-8 py-6 text-center text-grass-soft text-sm">
             <p>Football Tournament Simulator - World Cup Edition</p>
           </div>
         </footer>
