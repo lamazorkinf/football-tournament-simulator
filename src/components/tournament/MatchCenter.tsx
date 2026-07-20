@@ -726,13 +726,26 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
         {/* Teams */}
         <div className={`flex items-center ${compact ? 'justify-center' : 'justify-between'} gap-2 min-w-0`}>
           {homeTeam && awayTeam ? (
-            <ScoreBug
-              size="md"
-              homeTeam={homeTeam}
-              awayTeam={awayTeam}
-              homeScore={match.isPlayed ? match.homeScore : null}
-              awayScore={match.isPlayed ? match.awayScore : null}
-            />
+            <>
+              <div className="w-full sm:hidden">
+                <ScoreBug
+                  size="narrow"
+                  homeTeam={homeTeam}
+                  awayTeam={awayTeam}
+                  homeScore={match.isPlayed ? match.homeScore : null}
+                  awayScore={match.isPlayed ? match.awayScore : null}
+                />
+              </div>
+              <div className="hidden sm:block">
+                <ScoreBug
+                  size="md"
+                  homeTeam={homeTeam}
+                  awayTeam={awayTeam}
+                  homeScore={match.isPlayed ? match.homeScore : null}
+                  awayScore={match.isPlayed ? match.awayScore : null}
+                />
+              </div>
+            </>
           ) : (
             <span className="text-grass-soft text-xs">{match.homeTeamId} vs {match.awayTeamId}</span>
           )}

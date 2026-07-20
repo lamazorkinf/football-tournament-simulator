@@ -4,6 +4,7 @@ import type { Group, Team } from '../../types';
 import { StandingsTable } from '../ui/StandingsTable';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
+import { ScoreBug } from '../ui/ScoreBug';
 
 interface GroupDetailModalProps {
   group: Group;
@@ -99,61 +100,82 @@ export function GroupDetailModal({
                         return (
                           <div
                             key={match.id}
-                            className="flex items-center justify-between bg-grass-dark border-2 border-grass p-3 hover:bg-grass/20 transition-colors"
+                            className="bg-grass-dark border-2 border-grass p-3 hover:bg-grass/20 transition-colors"
                           >
-                            {/* Home Team */}
-                            <div className={`flex items-center gap-2 flex-1 ${homeWon ? 'text-led' : ''}`}>
-                              <TeamFlag
-                                teamId={homeTeam.id}
-                                teamName={homeTeam.name}
-                                flagUrl={homeTeam.flag}
-                                size={24}
+                            <div className="sm:hidden space-y-2">
+                              <ScoreBug
+                                size="narrow"
+                                homeTeam={homeTeam}
+                                awayTeam={awayTeam}
+                                homeScore={match.isPlayed ? match.homeScore : null}
+                                awayScore={match.isPlayed ? match.awayScore : null}
                               />
-                              <span className="text-sm truncate">{homeTeam.name}</span>
-                            </div>
-
-                            {/* Score */}
-                            <div className="flex items-center gap-3 px-4">
-                              {match.isPlayed ? (
-                                <>
-                                  <span className={`font-terminal text-lg tabular-nums ${homeWon ? 'text-led' : 'text-white'}`}>
-                                    {match.homeScore}
-                                  </span>
-                                  <span className="text-grass-soft">-</span>
-                                  <span className={`font-terminal text-lg tabular-nums ${awayWon ? 'text-led' : 'text-white'}`}>
-                                    {match.awayScore}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-sm text-grass-soft">vs</span>
+                              {!match.isPlayed && onSimulate && (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => onSimulate(match.id)}
+                                  className="w-full min-h-11"
+                                >
+                                  Simular
+                                </Button>
                               )}
                             </div>
+                            <div className="hidden sm:flex items-center justify-between">
+                              {/* Home Team */}
+                              <div className={`flex items-center gap-2 flex-1 ${homeWon ? 'text-led' : ''}`}>
+                                <TeamFlag
+                                  teamId={homeTeam.id}
+                                  teamName={homeTeam.name}
+                                  flagUrl={homeTeam.flag}
+                                  size={24}
+                                />
+                                <span className="text-sm truncate">{homeTeam.name}</span>
+                              </div>
 
-                            {/* Away Team */}
-                            <div className={`flex items-center gap-2 flex-1 justify-end ${awayWon ? 'text-led' : ''}`}>
-                              <span className="text-sm truncate text-right">{awayTeam.name}</span>
-                              <TeamFlag
-                                teamId={awayTeam.id}
-                                teamName={awayTeam.name}
-                                flagUrl={awayTeam.flag}
-                                size={24}
-                              />
+                              {/* Score */}
+                              <div className="flex items-center gap-3 px-4">
+                                {match.isPlayed ? (
+                                  <>
+                                    <span className={`font-terminal text-lg tabular-nums ${homeWon ? 'text-led' : 'text-white'}`}>
+                                      {match.homeScore}
+                                    </span>
+                                    <span className="text-grass-soft">-</span>
+                                    <span className={`font-terminal text-lg tabular-nums ${awayWon ? 'text-led' : 'text-white'}`}>
+                                      {match.awayScore}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-sm text-grass-soft">vs</span>
+                                )}
+                              </div>
+
+                              {/* Away Team */}
+                              <div className={`flex items-center gap-2 flex-1 justify-end ${awayWon ? 'text-led' : ''}`}>
+                                <span className="text-sm truncate text-right">{awayTeam.name}</span>
+                                <TeamFlag
+                                  teamId={awayTeam.id}
+                                  teamName={awayTeam.name}
+                                  flagUrl={awayTeam.flag}
+                                  size={24}
+                                />
+                              </div>
+
+                              {/* Simulate Button */}
+                              {!match.isPlayed && onSimulate && (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSimulate(match.id);
+                                  }}
+                                  className="ml-3 shrink-0"
+                                >
+                                  Simular
+                                </Button>
+                              )}
                             </div>
-
-                            {/* Simulate Button */}
-                            {!match.isPlayed && onSimulate && (
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onSimulate(match.id);
-                                }}
-                                className="ml-3 shrink-0"
-                              >
-                                Simular
-                              </Button>
-                            )}
                           </div>
                         );
                       })}
