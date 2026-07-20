@@ -582,6 +582,8 @@ grep -rn "bg-white\|bg-gray-50\|bg-gray-100\|text-gray-\|border-gray-\|primary-"
 
 Expected: sin resultados. Si aparecen, aplicar la tabla de mapeo global en cada uno.
 
+- [ ] **Step 1b: Adaptar colores de tiers al tema oscuro** — `getTierColor` en `src/core/tiers.ts` devuelve clases pastel de tema claro (p.ej. `bg-yellow-50 text-yellow-600`) que chocan sobre `bg-grass-dark`. Cambiar SOLO las clases devueltas a equivalentes oscuros (`bg-black/40` + `text-gold`/`text-led`/`text-grass-soft`/`text-loss` según tier), sin tocar `calculateTier` ni la lógica.
+
 - [ ] **Step 2: Eliminar la escala `primary-*`** de `@theme` en `src/index.css` (las 11 líneas `--color-primary-*`) y borrar el bloque `colors.primary` duplicado de `tailwind.config.js` (en Tailwind 4 el theme vive en CSS; dejar el archivo solo con `content` o eliminarlo si Vite no lo requiere — verificar con build).
 - [ ] **Step 3: Verificación final completa**
 
