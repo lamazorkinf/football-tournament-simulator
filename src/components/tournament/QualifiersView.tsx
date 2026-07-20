@@ -133,7 +133,7 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedRegion('all')}
-              className={`px-4 py-2 min-h-11 font-arcade text-[10px] uppercase border-2 transition-colors ${
+              className={`px-4 py-2 min-h-11 lg:min-h-0 font-arcade text-[10px] uppercase border-2 transition-colors ${
                 selectedRegion === 'all'
                   ? 'bg-grass text-white border-line'
                   : 'text-grass-soft border-transparent hover:bg-grass/40'
@@ -147,7 +147,7 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
                 <button
                   key={region}
                   onClick={() => setSelectedRegion(region)}
-                  className={`px-4 py-2 min-h-11 font-arcade text-[10px] uppercase border-2 transition-colors ${
+                  className={`px-4 py-2 min-h-11 lg:min-h-0 font-arcade text-[10px] uppercase border-2 transition-colors ${
                     selectedRegion === region
                       ? 'bg-grass text-white border-line'
                       : 'text-grass-soft border-transparent hover:bg-grass/40'
