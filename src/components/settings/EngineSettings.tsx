@@ -178,7 +178,7 @@ export function EngineSettings() {
                   max={config.skillMax - 1}
                   value={config.skillMin}
                   onChange={(e) => updateSkillLimits(Number(e.target.value), config.skillMax)}
-                  className="w-full px-3 py-2 bg-grass-dark border-2 border-line text-led font-terminal tabular-nums focus:outline-none"
+                  className="w-full px-3 py-2 bg-grass-dark border-2 border-line text-led font-terminal tabular-nums focus:outline-none focus:border-gold"
                 />
               </div>
               <div>
@@ -191,7 +191,7 @@ export function EngineSettings() {
                   max="100"
                   value={config.skillMax}
                   onChange={(e) => updateSkillLimits(config.skillMin, Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-grass-dark border-2 border-line text-led font-terminal tabular-nums focus:outline-none"
+                  className="w-full px-3 py-2 bg-grass-dark border-2 border-line text-led font-terminal tabular-nums focus:outline-none focus:border-gold"
                 />
               </div>
             </div>
