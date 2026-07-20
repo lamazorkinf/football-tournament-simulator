@@ -75,6 +75,14 @@ export function StandingsTable({
                   onClick={() =>
                     setExpandedTeamId(expandedTeamId === standing.teamId ? null : standing.teamId)
                   }
+                  tabIndex={0}
+                  aria-expanded={expandedTeamId === standing.teamId}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setExpandedTeamId(expandedTeamId === standing.teamId ? null : standing.teamId);
+                    }
+                  }}
                   className={cn(
                     'transition-colors cursor-pointer sm:cursor-default',
                     isQualified ? 'bg-grass/30 hover:bg-led/20' : 'hover:bg-grass/40'
