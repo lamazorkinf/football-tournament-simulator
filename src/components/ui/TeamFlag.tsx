@@ -27,7 +27,7 @@ export function TeamFlag({
   if (!flagUrl) {
     // Fallback: show team ID as text if no flag found
     return (
-      <span className={`inline-flex items-center justify-center font-bold ${className}`}>
+      <span className={`inline-flex items-center justify-center font-bold font-arcade text-[10px] ${className}`}>
         {teamId.toUpperCase()}
       </span>
     );
@@ -38,8 +38,8 @@ export function TeamFlag({
       src={flagUrl}
       alt={`${teamName} flag`}
       title={teamName}
-      className={`inline-block ${className} ${clickable || onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-      style={{ width: size, height: size * 0.75 }} // Maintain 4:3 aspect ratio
+      className={`inline-block outline outline-2 outline-white ${className} ${clickable || onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+      style={{ width: size, height: size * 0.75, imageRendering: 'pixelated' }} // Maintain 4:3 aspect ratio
       loading="lazy"
       onClick={onClick}
       onError={(e) => {
@@ -47,7 +47,7 @@ export function TeamFlag({
         const target = e.target as HTMLImageElement;
         target.style.display = 'none';
         const fallback = document.createElement('span');
-        fallback.className = `inline-flex items-center justify-center font-bold ${className}`;
+        fallback.className = `inline-flex items-center justify-center font-bold font-arcade text-[10px] ${className}`;
         fallback.textContent = teamId.toUpperCase();
         target.parentNode?.insertBefore(fallback, target);
       }}
