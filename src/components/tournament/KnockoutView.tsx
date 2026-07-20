@@ -7,6 +7,7 @@ import { ChampionCelebration } from './ChampionCelebration';
 import { MatchDetailModal } from './MatchDetailModal';
 import { BracketLine } from './BracketLine';
 import { TeamFlag } from '../ui/TeamFlag';
+import { TeamNameTooltip } from '../ui/TeamNameTooltip';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -36,7 +37,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
     return (
       <motion.div
         variants={matchCardVariants}
-        className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 text-center text-gray-400 text-sm min-h-[100px] flex items-center justify-center"
+        className="bg-grass-dark border-2 border-dashed border-grass p-3 text-center text-grass-soft text-sm min-h-[100px] flex items-center justify-center"
       >
         TBD
       </motion.div>
@@ -50,7 +51,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
     return (
       <motion.div
         variants={matchCardVariants}
-        className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 text-center text-gray-400 text-sm min-h-[100px] flex items-center justify-center"
+        className="bg-grass-dark border-2 border-dashed border-grass p-3 text-center text-grass-soft text-sm min-h-[100px] flex items-center justify-center"
       >
         Awaiting teams...
       </motion.div>
@@ -68,41 +69,55 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
       className={match.isPlayed && onViewDetails ? 'cursor-pointer' : ''}
       onClick={match.isPlayed && onViewDetails ? () => onViewDetails(match) : undefined}
     >
-      <Card className="overflow-hidden">
+      {/*
+        Bracket columns run 5-up on desktop, too narrow for <ScoreBug>'s
+        side-by-side layout. Same visual language applied manually instead
+        (dark panel, border-2 border-line, 3-letter codes, text-led scores)
+        per Task 11b brief.
+      */}
+      <div className="bg-grass-dark border-2 border-line overflow-hidden">
       <div className="p-3 space-y-2">
         {/* Home Team */}
         <div
-          className={`flex items-center justify-between p-2 rounded ${
-            isPlayed ? (homeWon ? 'bg-green-50 font-semibold' : 'bg-gray-50') : 'bg-white'
+          className={`flex items-center justify-between p-2 ${
+            isPlayed ? (homeWon ? 'bg-grass/30' : 'bg-black/20') : 'bg-black/20'
           }`}
         >
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={24} />
-            <span className="text-sm truncate">{homeTeam.name}</span>
+            <TeamNameTooltip teamName={homeTeam.name}>
+              <span className={`font-arcade text-[10px] uppercase truncate ${homeWon && isPlayed ? 'text-led' : ''}`}>
+                {homeTeam.id}
+              </span>
+            </TeamNameTooltip>
           </div>
-          <div className="text-lg font-bold min-w-[30px] text-center">
+          <div className="font-arcade text-led text-sm tabular-nums min-w-[30px] text-center">
             {match.homeScore !== null ? match.homeScore : '-'}
           </div>
         </div>
 
         {/* Away Team */}
         <div
-          className={`flex items-center justify-between p-2 rounded ${
-            isPlayed ? (awayWon ? 'bg-green-50 font-semibold' : 'bg-gray-50') : 'bg-white'
+          className={`flex items-center justify-between p-2 ${
+            isPlayed ? (awayWon ? 'bg-grass/30' : 'bg-black/20') : 'bg-black/20'
           }`}
         >
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={24} />
-            <span className="text-sm truncate">{awayTeam.name}</span>
+            <TeamNameTooltip teamName={awayTeam.name}>
+              <span className={`font-arcade text-[10px] uppercase truncate ${awayWon && isPlayed ? 'text-led' : ''}`}>
+                {awayTeam.id}
+              </span>
+            </TeamNameTooltip>
           </div>
-          <div className="text-lg font-bold min-w-[30px] text-center">
+          <div className="font-arcade text-led text-sm tabular-nums min-w-[30px] text-center">
             {match.awayScore !== null ? match.awayScore : '-'}
           </div>
         </div>
 
         {/* Penalties */}
         {match.penalties && (
-          <div className="text-xs text-center text-gray-600 bg-yellow-50 py-1 rounded">
+          <div className="text-xs text-center text-gold bg-black/40 border border-gold py-1">
             Penalties: {match.penalties.homeScore} - {match.penalties.awayScore}
           </div>
         )}
@@ -139,7 +154,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
           )}
         </div>
       </div>
-      </Card>
+      </div>
     </motion.div>
   );
 };
@@ -235,15 +250,15 @@ export const KnockoutView = ({
             Back
           </Button>
           <div className="flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-primary-600" />
-            <h2 className="text-2xl font-bold text-gray-900">Knockout Stage</h2>
+            <Trophy className="w-6 h-6 text-gold" />
+            <h2 className="font-arcade text-lg text-white text-shadow-retro">Knockout Stage</h2>
           </div>
         </div>
         {tournamentComplete && (
           <Button
             variant="primary"
             onClick={() => setShowCelebration(true)}
-            className="gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700"
+            className="gap-2"
           >
             <Trophy className="w-5 h-5" />
             View Champion
@@ -252,14 +267,14 @@ export const KnockoutView = ({
       </div>
 
       {/* Progress Info */}
-      <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+      <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-yellow-600" />
+              <Trophy className="w-8 h-8 text-gold" />
               <div>
-                <h3 className="font-bold text-gray-900">Knockout Stage Progress</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Knockout Stage Progress</h3>
+                <p className="text-sm text-grass-soft">
                   {(() => {
                     const allMatches = [
                       ...knockout.roundOf32,
@@ -276,7 +291,7 @@ export const KnockoutView = ({
               </div>
             </div>
             {tournamentComplete && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-full font-semibold">
+              <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-gold font-arcade text-[10px] text-gold uppercase blink">
                 <Trophy className="w-5 h-5" />
                 Champion Crowned!
               </div>
@@ -289,11 +304,11 @@ export const KnockoutView = ({
       <div className="hidden lg:block">
         <div className="relative" ref={bracketRef}>
           {/* SVG Connectors (Desktop only) */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} shapeRendering="crispEdges">
             <defs>
               <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" style={{ stopColor: '#10b981', stopOpacity: 0.3 }} />
-                <stop offset="100%" style={{ stopColor: '#3b82f6', stopOpacity: 0.5 }} />
+                <stop offset="0%" style={{ stopColor: '#2fbf5f', stopOpacity: 0.3 }} />
+                <stop offset="100%" style={{ stopColor: '#ffd23f', stopOpacity: 0.5 }} />
               </linearGradient>
             </defs>
 
@@ -393,7 +408,7 @@ export const KnockoutView = ({
           <motion.h3
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-sm font-semibold text-gray-700 text-center sticky top-0 bg-gray-50 py-2 rounded"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
             Round of 32
           </motion.h3>
@@ -410,7 +425,7 @@ export const KnockoutView = ({
                 />
               ))
             ) : (
-              <div className="text-center text-gray-400 text-sm py-8">
+              <div className="text-center text-grass-soft text-sm py-8">
                 Complete group stage first
               </div>
             )}
@@ -423,7 +438,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-sm font-semibold text-gray-700 text-center sticky top-0 bg-gray-50 py-2 rounded"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
             Round of 16
           </motion.h3>
@@ -440,7 +455,7 @@ export const KnockoutView = ({
                 />
               ))
             ) : (
-              <div className="text-center text-gray-400 text-sm py-8">
+              <div className="text-center text-grass-soft text-sm py-8">
                 Complete Round of 32
               </div>
             )}
@@ -453,7 +468,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-sm font-semibold text-gray-700 text-center sticky top-0 bg-gray-50 py-2 rounded"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
             Quarter Finals
           </motion.h3>
@@ -470,7 +485,7 @@ export const KnockoutView = ({
                 />
               ))
             ) : (
-              <div className="text-center text-gray-400 text-sm py-8">
+              <div className="text-center text-grass-soft text-sm py-8">
                 Complete Round of 16
               </div>
             )}
@@ -483,7 +498,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="text-sm font-semibold text-gray-700 text-center sticky top-0 bg-gray-50 py-2 rounded"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
             Semi Finals
           </motion.h3>
@@ -500,7 +515,7 @@ export const KnockoutView = ({
                 />
               ))
             ) : (
-              <div className="text-center text-gray-400 text-sm py-8">
+              <div className="text-center text-grass-soft text-sm py-8">
                 Complete Quarter Finals
               </div>
             )}
@@ -513,7 +528,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="text-sm font-semibold text-gray-700 text-center sticky top-0 bg-gray-50 py-2 rounded"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
             Finals
           </motion.h3>
@@ -521,7 +536,7 @@ export const KnockoutView = ({
             {/* Third Place */}
             {knockout.thirdPlace && (
               <div>
-                <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+                <div className="text-xs text-grass-soft mb-1 flex items-center justify-center gap-1">
                   <Medal className="w-3 h-3" />
                   Third Place
                 </div>
@@ -538,8 +553,8 @@ export const KnockoutView = ({
             {/* Final */}
             {knockout.final ? (
               <div>
-                <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-                  <Trophy className="w-3 h-3 text-yellow-600" />
+                <div className="text-xs text-grass-soft mb-1 flex items-center justify-center gap-1">
+                  <Trophy className="w-3 h-3 text-gold" />
                   Final
                 </div>
                 <MatchCard
@@ -551,7 +566,7 @@ export const KnockoutView = ({
                 />
               </div>
             ) : knockout.semiFinals.length === 0 ? (
-              <div className="text-center text-gray-400 text-sm py-8">
+              <div className="text-center text-grass-soft text-sm py-8">
                 Complete Semi Finals
               </div>
             ) : null}
@@ -565,8 +580,8 @@ export const KnockoutView = ({
       <div className="lg:hidden space-y-6">
         {/* Round of 32 */}
         <Card>
-          <CardHeader className="bg-primary-600 text-white">
-            <CardTitle className="text-white text-sm">Round of 32</CardTitle>
+          <CardHeader>
+            <CardTitle>Round of 32</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -581,7 +596,7 @@ export const KnockoutView = ({
                   />
                 ))
               ) : (
-                <div className="text-center text-gray-400 text-sm py-8">
+                <div className="text-center text-grass-soft text-sm py-8">
                   Complete group stage first
                 </div>
               )}
@@ -591,8 +606,8 @@ export const KnockoutView = ({
 
         {/* Round of 16 */}
         <Card>
-          <CardHeader className="bg-primary-600 text-white">
-            <CardTitle className="text-white text-sm">Round of 16</CardTitle>
+          <CardHeader>
+            <CardTitle>Round of 16</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -607,7 +622,7 @@ export const KnockoutView = ({
                   />
                 ))
               ) : (
-                <div className="text-center text-gray-400 text-sm py-8">
+                <div className="text-center text-grass-soft text-sm py-8">
                   Complete Round of 32
                 </div>
               )}
@@ -617,8 +632,8 @@ export const KnockoutView = ({
 
         {/* Quarter Finals */}
         <Card>
-          <CardHeader className="bg-primary-600 text-white">
-            <CardTitle className="text-white text-sm">Quarter Finals</CardTitle>
+          <CardHeader>
+            <CardTitle>Quarter Finals</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -633,7 +648,7 @@ export const KnockoutView = ({
                   />
                 ))
               ) : (
-                <div className="text-center text-gray-400 text-sm py-8">
+                <div className="text-center text-grass-soft text-sm py-8">
                   Complete Round of 16
                 </div>
               )}
@@ -643,8 +658,8 @@ export const KnockoutView = ({
 
         {/* Semi Finals */}
         <Card>
-          <CardHeader className="bg-primary-600 text-white">
-            <CardTitle className="text-white text-sm">Semi Finals</CardTitle>
+          <CardHeader>
+            <CardTitle>Semi Finals</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -659,7 +674,7 @@ export const KnockoutView = ({
                   />
                 ))
               ) : (
-                <div className="text-center text-gray-400 text-sm py-8">
+                <div className="text-center text-grass-soft text-sm py-8">
                   Complete Quarter Finals
                 </div>
               )}
@@ -669,15 +684,15 @@ export const KnockoutView = ({
 
         {/* Finals */}
         <Card>
-          <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
-            <CardTitle className="text-white text-sm">Finals</CardTitle>
+          <CardHeader className="border-gold">
+            <CardTitle>Finals</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-4">
               {/* Third Place */}
               {knockout.thirdPlace && (
                 <div>
-                  <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                  <div className="text-xs text-grass-soft mb-2 flex items-center gap-1">
                     <Medal className="w-3 h-3" />
                     Third Place Match
                   </div>
@@ -693,7 +708,7 @@ export const KnockoutView = ({
               {/* Final */}
               {knockout.final && (
                 <div>
-                  <div className="text-xs text-yellow-600 font-semibold mb-2 flex items-center gap-1">
+                  <div className="text-xs text-gold font-semibold mb-2 flex items-center gap-1">
                     <Trophy className="w-4 h-4" />
                     Championship Final
                   </div>

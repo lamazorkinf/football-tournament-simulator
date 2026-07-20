@@ -38,27 +38,27 @@ export function GroupDetailModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/50 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/60 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8"
+          className="bg-grass-dark border-4 border-line shadow-hard-panel w-full max-w-4xl my-8"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-6 rounded-t-lg relative">
+          <div className="p-6 border-b-4 border-grass relative">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
+              className="absolute top-4 right-4 p-1 text-grass-soft hover:bg-grass/40 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
-              <Users className="w-6 h-6" />
+              <Users className="w-6 h-6 text-gold" />
               <div>
-                <h2 className="text-2xl font-bold">{group.name}</h2>
-                <p className="text-primary-100 text-sm mt-1">{region}</p>
+                <h2 className="font-arcade text-lg text-white text-shadow-retro">{group.name}</h2>
+                <p className="text-grass-soft text-sm mt-1">{region}</p>
               </div>
             </div>
           </div>
@@ -67,7 +67,7 @@ export function GroupDetailModal({
           <div className="p-6 space-y-6">
             {/* Standings Table */}
             <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">Tabla de Posiciones</h3>
+              <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase mb-3">Tabla de Posiciones</h3>
               <div className="overflow-x-auto">
                 <StandingsTable
                   standings={group.standings}
@@ -79,11 +79,11 @@ export function GroupDetailModal({
 
             {/* Matches by Matchday */}
             <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">Partidos</h3>
+              <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase mb-3">Partidos</h3>
               <div className="space-y-4">
                 {matchdays.map((matchday) => (
                   <div key={matchday} className="space-y-2">
-                    <h4 className="text-sm font-medium text-gray-700 bg-gray-100 px-3 py-1 rounded">
+                    <h4 className="font-arcade text-[10px] text-gold uppercase bg-black/40 px-3 py-1">
                       Jornada {matchday}
                     </h4>
                     <div className="space-y-2">
@@ -99,10 +99,10 @@ export function GroupDetailModal({
                         return (
                           <div
                             key={match.id}
-                            className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
+                            className="flex items-center justify-between bg-grass-dark border-2 border-grass p-3 hover:bg-grass/20 transition-colors"
                           >
                             {/* Home Team */}
-                            <div className={`flex items-center gap-2 flex-1 ${homeWon ? 'font-semibold' : ''}`}>
+                            <div className={`flex items-center gap-2 flex-1 ${homeWon ? 'text-led' : ''}`}>
                               <TeamFlag
                                 teamId={homeTeam.id}
                                 teamName={homeTeam.name}
@@ -116,21 +116,21 @@ export function GroupDetailModal({
                             <div className="flex items-center gap-3 px-4">
                               {match.isPlayed ? (
                                 <>
-                                  <span className={`text-lg font-bold ${homeWon ? 'text-green-600' : 'text-gray-700'}`}>
+                                  <span className={`font-terminal text-lg tabular-nums ${homeWon ? 'text-led' : 'text-white'}`}>
                                     {match.homeScore}
                                   </span>
-                                  <span className="text-gray-400">-</span>
-                                  <span className={`text-lg font-bold ${awayWon ? 'text-green-600' : 'text-gray-700'}`}>
+                                  <span className="text-grass-soft">-</span>
+                                  <span className={`font-terminal text-lg tabular-nums ${awayWon ? 'text-led' : 'text-white'}`}>
                                     {match.awayScore}
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-sm text-gray-400">vs</span>
+                                <span className="text-sm text-grass-soft">vs</span>
                               )}
                             </div>
 
                             {/* Away Team */}
-                            <div className={`flex items-center gap-2 flex-1 justify-end ${awayWon ? 'font-semibold' : ''}`}>
+                            <div className={`flex items-center gap-2 flex-1 justify-end ${awayWon ? 'text-led' : ''}`}>
                               <span className="text-sm truncate text-right">{awayTeam.name}</span>
                               <TeamFlag
                                 teamId={awayTeam.id}
@@ -165,7 +165,7 @@ export function GroupDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+          <div className="p-6 border-t-4 border-grass">
             <Button variant="outline" onClick={onClose} className="w-full">
               Cerrar
             </Button>

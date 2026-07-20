@@ -35,12 +35,12 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
   return (
     <>
       {/* Region Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg p-6 shadow-lg mb-6">
+      <div className="bg-grass-dark border-4 border-line shadow-hard-panel p-6 mb-6">
         <div className="flex items-center gap-3">
           <span className="text-3xl">{getRegionIcon(region)}</span>
           <div>
-            <h2 className="text-2xl font-bold">{region}</h2>
-            <p className="text-primary-100">
+            <h2 className="font-arcade text-lg text-white text-shadow-retro">{region}</h2>
+            <p className="text-grass-soft">
               {groups.length} {groups.length === 1 ? 'grupo' : 'grupos'} • Top 2 clasifican
             </p>
           </div>
@@ -68,16 +68,16 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                 onClick={() => setSelectedGroup(group)}
               >
                 <Card
-                  className={`transition-all hover:shadow-xl hover:scale-105 ${
-                    isComplete ? 'border-2 border-green-500' : 'hover:border-primary-400'
+                  className={`transition-all hover:scale-105 ${
+                    isComplete ? 'border-led' : 'hover:border-gold'
                   }`}
                 >
                   <CardContent className="pt-6">
                     {/* Group Header */}
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-bold text-gray-900">{group.name}</h3>
+                      <h3 className="font-arcade text-sm text-white text-shadow-retro">{group.name}</h3>
                       {isComplete && (
-                        <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
+                        <div className="flex items-center gap-1 text-led text-sm font-semibold">
                           ✓ Complete
                         </div>
                       )}
@@ -94,16 +94,16 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                             return (
                               <div
                                 key={standing.teamId}
-                                className={`flex items-center justify-between p-2 rounded ${
+                                className={`flex items-center justify-between p-2 ${
                                   isQualified
-                                    ? 'bg-green-50 border border-green-200'
-                                    : 'bg-gray-50'
+                                    ? 'bg-grass/30'
+                                    : 'bg-black/20'
                                 }`}
                               >
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <span
-                                    className={`text-xs font-bold w-5 text-center ${
-                                      isQualified ? 'text-green-700' : 'text-gray-500'
+                                    className={`font-arcade text-[10px] w-5 text-center ${
+                                      isQualified ? 'text-led' : 'text-grass-soft'
                                     }`}
                                   >
                                     {idx + 1}
@@ -118,19 +118,19 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                                   )}
                                   <span
                                     className={`text-sm font-medium truncate ${
-                                      isQualified ? 'text-green-900' : 'text-gray-700'
+                                      isQualified ? 'text-led' : 'text-grass-soft'
                                     }`}
                                   >
                                     {team?.name}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-3 ml-2">
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-grass-soft">
                                     {standing.played}P
                                   </span>
                                   <span
-                                    className={`text-sm font-bold min-w-[28px] text-right ${
-                                      isQualified ? 'text-green-700' : 'text-gray-900'
+                                    className={`font-terminal text-sm tabular-nums min-w-[28px] text-right ${
+                                      isQualified ? 'text-led' : 'text-white'
                                     }`}
                                   >
                                     {standing.points}
@@ -143,27 +143,27 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
 
                         {/* Progress Bar */}
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs text-gray-600">
+                          <div className="flex items-center justify-between text-xs text-grass-soft">
                             <span>Progress</span>
                             <span>
                               {playedMatches}/{totalMatches}
                             </span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div className="w-full bg-black/40 h-2 overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${progress}%` }}
                               transition={{ delay: idx * 0.05 + 0.2, duration: 0.5 }}
-                              className={`h-2 rounded-full ${
-                                isComplete ? 'bg-green-600' : 'bg-primary-600'
+                              className={`h-2 ${
+                                isComplete ? 'bg-led' : 'bg-gold'
                               }`}
                             />
                           </div>
                         </div>
 
                         {/* View Details Button */}
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <button className="w-full flex items-center justify-between text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors">
+                        <div className="mt-4 pt-4 border-t-2 border-grass">
+                          <button className="w-full flex items-center justify-between text-led hover:text-white font-medium text-sm transition-colors">
                             <span>View Details</span>
                             <ChevronRight className="w-4 h-4" />
                           </button>
@@ -171,7 +171,7 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                       </>
                     ) : (
                       <div className="text-center py-8">
-                        <p className="text-sm text-amber-600 italic">
+                        <p className="text-sm text-gold italic">
                           Awaiting draw...
                         </p>
                       </div>
