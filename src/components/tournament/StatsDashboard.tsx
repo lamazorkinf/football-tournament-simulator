@@ -114,32 +114,28 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
   return (
     <div className="space-y-6">
       {/* View Selector */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex border-b-4 border-grass">
         <button
           onClick={() => setView('current')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
             view === 'current'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+              ? 'border-gold text-gold bg-grass/30'
+              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Torneo Actual
-          </div>
+          <TrendingUp className="w-4 h-4" />
+          Torneo Actual
         </button>
         <button
           onClick={() => setView('historical')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
             view === 'historical'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+              ? 'border-gold text-gold bg-grass/30'
+              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <History className="w-4 h-4" />
-            Estadísticas Históricas
-          </div>
+          <History className="w-4 h-4" />
+          Estadísticas Históricas
         </button>
       </div>
 
@@ -154,7 +150,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
           </CardHeader>
           <CardContent>
             {topScorers.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">
+              <p className="text-center text-grass-soft py-8">
                 No hay partidos jugados aún
               </p>
             ) : (
@@ -162,25 +158,25 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                 {topScorers.map((stat, idx) => (
                   <div
                     key={stat.team.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-black/40 hover:bg-grass/40 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xl font-bold text-gray-400 w-6">
+                      <span className="font-terminal text-xl text-grass-soft tabular-nums w-6">
                         {idx + 1}
                       </span>
                       <TeamFlag teamId={stat.team.id} teamName={stat.team.name} flagUrl={stat.team.flag} size={32} />
                       <div>
-                        <p className="font-medium text-gray-900">{stat.team.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-medium text-white">{stat.team.name}</p>
+                        <p className="text-xs text-grass-soft">
                           {stat.matchesPlayed} partidos
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-primary-600">
+                      <p className="text-2xl font-terminal text-led tabular-nums">
                         {stat.goalsScored}
                       </p>
-                      <p className="text-xs text-gray-500">goles</p>
+                      <p className="text-xs text-grass-soft">goles</p>
                     </div>
                   </div>
                 ))}
@@ -195,7 +191,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
           </CardHeader>
           <CardContent>
             {topAverage.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">
+              <p className="text-center text-grass-soft py-8">
                 No hay suficientes partidos jugados (mín. 3)
               </p>
             ) : (
@@ -203,25 +199,25 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                 {topAverage.map((stat, idx) => (
                   <div
                     key={stat.team.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-black/40 hover:bg-grass/40 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xl font-bold text-gray-400 w-6">
+                      <span className="font-terminal text-xl text-grass-soft tabular-nums w-6">
                         {idx + 1}
                       </span>
                       <TeamFlag teamId={stat.team.id} teamName={stat.team.name} flagUrl={stat.team.flag} size={32} />
                       <div>
-                        <p className="font-medium text-gray-900">{stat.team.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-medium text-white">{stat.team.name}</p>
+                        <p className="text-xs text-grass-soft">
                           {stat.goalsScored} en {stat.matchesPlayed} partidos
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-blue-600">
+                      <p className="text-2xl font-terminal text-led tabular-nums">
                         {stat.avgGoals.toFixed(2)}
                       </p>
-                      <p className="text-xs text-gray-500">prom</p>
+                      <p className="text-xs text-grass-soft">prom</p>
                     </div>
                   </div>
                 ))}
@@ -240,19 +236,19 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
             {regionalStats.map((stat) => (
               <div
                 key={stat.region}
-                className="border border-gray-200 rounded-lg p-4 hover:border-primary-400 transition-colors"
+                className="border-2 border-grass p-4 hover:border-gold transition-colors"
               >
-                <h4 className="font-semibold text-gray-900 mb-2">{stat.region}</h4>
+                <h4 className="font-arcade text-[10px] text-white text-shadow-retro uppercase mb-2">{stat.region}</h4>
                 <div className="space-y-1 text-sm">
-                  <p className="text-gray-600">
-                    Partidos: <span className="font-medium">{stat.matchesPlayed}</span>
+                  <p className="text-grass-soft">
+                    Partidos: <span className="font-terminal text-white tabular-nums">{stat.matchesPlayed}</span>
                   </p>
-                  <p className="text-gray-600">
-                    Goles Totales: <span className="font-medium">{stat.totalGoals}</span>
+                  <p className="text-grass-soft">
+                    Goles Totales: <span className="font-terminal text-white tabular-nums">{stat.totalGoals}</span>
                   </p>
-                  <p className="text-gray-600">
+                  <p className="text-grass-soft">
                     Prom. Goles:{' '}
-                    <span className="font-medium text-primary-600">
+                    <span className="font-terminal text-led tabular-nums">
                       {stat.avgGoals.toFixed(2)}
                     </span>
                   </p>

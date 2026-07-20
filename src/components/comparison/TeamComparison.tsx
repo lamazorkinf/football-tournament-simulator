@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { PixelBar } from '../ui/PixelBar';
 import { ArrowLeft, Trophy, Target, TrendingUp, Calendar } from 'lucide-react';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamSelector } from './TeamSelector';
@@ -46,16 +47,16 @@ export function TeamComparison() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardHeader className="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-            <CardTitle className="text-white flex items-center gap-2">
+          <CardHeader className="bg-grass">
+            <CardTitle className="text-white text-shadow-retro flex items-center gap-2">
               <Target className="w-6 h-6" />
               Comparación de Equipos
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
+              <div className="bg-grass/30 border-2 border-grass p-4">
+                <p className="text-sm text-white">
                   Selecciona dos equipos para comparar sus estadísticas, historial de enfrentamientos
                   y rendimiento en el torneo.
                 </p>
@@ -63,7 +64,7 @@ export function TeamComparison() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Equipo 1</h3>
+                  <h3 className="font-arcade text-[10px] text-gold uppercase mb-3">Equipo 1</h3>
                   <TeamSelector
                     teams={teams}
                     selectedTeam={team1}
@@ -73,7 +74,7 @@ export function TeamComparison() {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Equipo 2</h3>
+                  <h3 className="font-arcade text-[10px] text-gold uppercase mb-3">Equipo 2</h3>
                   <TeamSelector
                     teams={teams}
                     selectedTeam={team2}
@@ -112,8 +113,8 @@ export function TeamComparison() {
         <Card>
           <CardContent className="pt-12 pb-12">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Cargando estadísticas...</p>
+              <div className="animate-spin h-12 w-12 border-b-2 border-led mx-auto mb-4"></div>
+              <p className="text-grass-soft">Cargando estadísticas...</p>
             </div>
           </CardContent>
         </Card>
@@ -131,8 +132,8 @@ export function TeamComparison() {
             Cambiar Equipos
           </Button>
           <div className="flex items-center gap-2">
-            <Target className="w-6 h-6 text-primary-600" />
-            <h2 className="text-2xl font-bold text-gray-900">Comparación</h2>
+            <Target className="w-6 h-6 text-gold" />
+            <h2 className="font-arcade text-lg text-white text-shadow-retro">Comparación</h2>
           </div>
         </div>
       </div>
@@ -151,21 +152,24 @@ export function TeamComparison() {
                   size={64}
                 />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">{team1.name}</h3>
-              <p className="text-sm text-gray-600">{team1.region}</p>
-              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
+              <h3 className="text-xl font-bold text-white">{team1.name}</h3>
+              <p className="text-sm text-grass-soft">{team1.region}</p>
+              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-black/40 border border-gold text-gold text-sm font-semibold">
                 <TrendingUp className="w-4 h-4" />
                 Skill: {team1.skill}
+              </div>
+              <div className="mt-2 max-w-[160px] mx-auto">
+                <PixelBar value={team1.skill} max={100} color="led" />
               </div>
             </div>
 
             {/* VS Badge */}
             <div className="flex flex-col items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              <div className="w-16 h-16 bg-gold border-4 border-white flex items-center justify-center font-arcade text-night text-xl shadow-hard-btn">
                 VS
               </div>
               {h2hStats.totalMatches > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-grass-soft mt-2">
                   {h2hStats.totalMatches} {h2hStats.totalMatches === 1 ? 'partido' : 'partidos'}
                 </p>
               )}
@@ -181,11 +185,14 @@ export function TeamComparison() {
                   size={64}
                 />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">{team2.name}</h3>
-              <p className="text-sm text-gray-600">{team2.region}</p>
-              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
+              <h3 className="text-xl font-bold text-white">{team2.name}</h3>
+              <p className="text-sm text-grass-soft">{team2.region}</p>
+              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-black/40 border border-gold text-gold text-sm font-semibold">
                 <TrendingUp className="w-4 h-4" />
                 Skill: {team2.skill}
+              </div>
+              <div className="mt-2 max-w-[160px] mx-auto">
+                <PixelBar value={team2.skill} max={100} color="led" />
               </div>
             </div>
           </div>
@@ -197,7 +204,7 @@ export function TeamComparison() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary-600" />
+              <Calendar className="w-5 h-5 text-gold" />
               Historial de Enfrentamientos
             </CardTitle>
           </CardHeader>
@@ -213,11 +220,11 @@ export function TeamComparison() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <Calendar className="w-16 h-16 text-grass-soft/40 mx-auto mb-4" />
+              <h3 className="font-arcade text-sm text-white text-shadow-retro uppercase mb-2">
                 Sin Enfrentamientos Previos
               </h3>
-              <p className="text-gray-600">
+              <p className="text-grass-soft">
                 Estos equipos aún no se han enfrentado en este torneo.
               </p>
             </div>
