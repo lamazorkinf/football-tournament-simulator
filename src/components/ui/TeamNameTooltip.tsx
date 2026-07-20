@@ -80,11 +80,11 @@ export function TeamNameTooltip({ children, teamName, position = 'top' }: TeamNa
             transition={{ duration: 0.15 }}
             className={`absolute z-50 ${getPositionClasses()}`}
           >
-            <div className="bg-gray-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+            <div className="bg-black border-2 border-line font-terminal text-base px-2 py-1 whitespace-nowrap">
               {teamName}
               {/* Arrow */}
               <div
-                className={`absolute w-2 h-2 bg-gray-900 rotate-45 ${
+                className={`absolute w-2 h-2 bg-black rotate-45 ${
                   position === 'top'
                     ? 'bottom-[-4px] left-1/2 -translate-x-1/2'
                     : position === 'bottom'

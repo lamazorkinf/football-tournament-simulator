@@ -13,7 +13,7 @@ export function ClickableTeamName({ team, children, className = '' }: ClickableT
   return (
     <span
       onClick={() => openTeamProfile(team)}
-      className={`cursor-pointer hover:text-primary-600 hover:underline transition-colors ${className}`}
+      className={`cursor-pointer hover:text-gold hover:underline transition-colors ${className}`}
       title={`Ver perfil de ${team.name}`}
     >
       {children}

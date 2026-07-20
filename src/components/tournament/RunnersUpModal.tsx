@@ -72,27 +72,29 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/50 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/80 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="bg-white rounded-lg shadow-xl w-full max-w-6xl my-8"
+          className="bg-grass-dark border-4 border-line shadow-hard-panel w-full max-w-6xl my-8"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-6 rounded-t-lg relative">
+          <div className="border-b-4 border-grass p-6 relative">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
+              className="absolute top-4 right-4 p-1 text-grass-soft hover:bg-grass/40 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
-              <Trophy className="w-6 h-6" />
+              <Trophy className="w-6 h-6 text-gold" />
               <div>
-                <h2 className="text-2xl font-bold">Clasificación de Segundos Lugares</h2>
-                <p className="text-orange-100 text-sm mt-1">
+                <h2 className="font-arcade text-xs text-gold uppercase">
+                  Clasificación de Segundos Lugares
+                </h2>
+                <p className="text-grass-soft text-sm mt-1">
                   Los mejores 22 segundos lugares clasifican al Mundial
                 </p>
               </div>
@@ -103,27 +105,27 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
           <div className="p-6">
             {/* Stats Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="text-sm text-green-700 font-medium">Clasificados</div>
-                <div className="text-3xl font-bold text-green-700 mt-1">
+              <div className="bg-black/40 border-2 border-line p-4">
+                <div className="text-sm text-led font-medium">Clasificados</div>
+                <div className="text-3xl font-terminal text-led tabular-nums mt-1">
                   {Math.min(sortedRunnersUp.length, qualifiedCount)}
                 </div>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="text-sm text-red-700 font-medium">Eliminados</div>
-                <div className="text-3xl font-bold text-red-700 mt-1">
+              <div className="bg-black/40 border-2 border-loss p-4">
+                <div className="text-sm text-loss font-medium">Eliminados</div>
+                <div className="text-3xl font-terminal text-loss tabular-nums mt-1">
                   {Math.max(0, sortedRunnersUp.length - qualifiedCount)}
                 </div>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="text-sm text-blue-700 font-medium">Total Segundos</div>
-                <div className="text-3xl font-bold text-blue-700 mt-1">
+              <div className="bg-black/40 border-2 border-grass p-4">
+                <div className="text-sm text-grass-soft font-medium">Total Segundos</div>
+                <div className="text-3xl font-terminal text-white tabular-nums mt-1">
                   {sortedRunnersUp.length}
                 </div>
               </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <div className="text-sm text-purple-700 font-medium">Cupos</div>
-                <div className="text-3xl font-bold text-purple-700 mt-1">
+              <div className="bg-black/40 border-2 border-gold p-4">
+                <div className="text-sm text-gold font-medium">Cupos</div>
+                <div className="text-3xl font-terminal text-gold tabular-nums mt-1">
                   {qualifiedCount}
                 </div>
               </div>
@@ -133,49 +135,49 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b-2 border-gray-300">
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700">
+                  <tr className="border-b-2 border-grass">
+                    <th className="text-left py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       Pos
                     </th>
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       Estado
                     </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
                       Equipo
                     </th>
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       Región
                     </th>
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       Grupo
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       PJ
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       PG
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       PE
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       PP
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       GF
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       GC
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       DG
                     </th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-3 px-2 font-arcade text-[10px] text-gold uppercase">
                       Pts
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y-2 divide-grass">
                   {sortedRunnersUp.map((entry, index) => {
                     const isQualified = index < qualifiedCount;
                     const isCutoffLine = index === qualifiedCount - 1;
@@ -186,18 +188,16 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.02 }}
-                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
-                          isCutoffLine ? 'border-b-2 border-orange-500' : ''
+                        className={`hover:bg-grass/40 transition-colors ${
+                          isCutoffLine ? 'border-b-2 border-gold' : ''
                         } ${
-                          isQualified
-                            ? 'bg-green-50/50'
-                            : 'bg-red-50/30'
+                          isQualified ? 'bg-led/10' : 'bg-loss/10'
                         }`}
                       >
                         <td className="py-3 px-2">
                           <span
                             className={`text-sm font-bold ${
-                              isQualified ? 'text-green-700' : 'text-red-600'
+                              isQualified ? 'text-led' : 'text-loss'
                             }`}
                           >
                             {index + 1}
@@ -205,9 +205,9 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
                         </td>
                         <td className="py-3 px-2">
                           {isQualified ? (
-                            <CheckCircle className="w-5 h-5 text-green-600" />
+                            <CheckCircle className="w-5 h-5 text-led" />
                           ) : (
-                            <XCircle className="w-5 h-5 text-red-600" />
+                            <XCircle className="w-5 h-5 text-loss" />
                           )}
                         </td>
                         <td className="py-3 px-4">
@@ -218,43 +218,43 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
                               flagUrl={entry.team.flag}
                               size={24}
                             />
-                            <span className="font-medium text-gray-900 truncate">
+                            <span className="text-white truncate">
                               {entry.team.name}
                             </span>
                           </div>
                         </td>
                         <td className="py-3 px-2">
-                          <span className="text-sm text-gray-600">{entry.region}</span>
+                          <span className="text-sm text-grass-soft">{entry.region}</span>
                         </td>
                         <td className="py-3 px-2">
-                          <span className="text-sm text-gray-600">{entry.groupName}</span>
+                          <span className="text-sm text-grass-soft">{entry.groupName}</span>
                         </td>
-                        <td className="text-center py-3 px-2 text-sm text-gray-700">
+                        <td className="text-center py-3 px-2 text-sm text-grass-soft tabular-nums">
                           {entry.played}
                         </td>
-                        <td className="text-center py-3 px-2 text-sm text-gray-700">
+                        <td className="text-center py-3 px-2 text-sm text-grass-soft tabular-nums">
                           {entry.won}
                         </td>
-                        <td className="text-center py-3 px-2 text-sm text-gray-700">
+                        <td className="text-center py-3 px-2 text-sm text-grass-soft tabular-nums">
                           {entry.drawn}
                         </td>
-                        <td className="text-center py-3 px-2 text-sm text-gray-700">
+                        <td className="text-center py-3 px-2 text-sm text-grass-soft tabular-nums">
                           {entry.lost}
                         </td>
-                        <td className="text-center py-3 px-2 text-sm text-gray-700">
+                        <td className="text-center py-3 px-2 text-sm text-grass-soft tabular-nums">
                           {entry.goalsFor}
                         </td>
-                        <td className="text-center py-3 px-2 text-sm text-gray-700">
+                        <td className="text-center py-3 px-2 text-sm text-grass-soft tabular-nums">
                           {entry.goalsAgainst}
                         </td>
                         <td className="text-center py-3 px-2">
                           <span
-                            className={`text-sm font-medium ${
+                            className={`text-sm font-medium tabular-nums ${
                               entry.goalDifference > 0
-                                ? 'text-green-600'
+                                ? 'text-led'
                                 : entry.goalDifference < 0
-                                ? 'text-red-600'
-                                : 'text-gray-700'
+                                ? 'text-loss'
+                                : 'text-grass-soft'
                             }`}
                           >
                             {entry.goalDifference > 0 ? '+' : ''}
@@ -263,8 +263,8 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
                         </td>
                         <td className="text-center py-3 px-2">
                           <span
-                            className={`text-sm font-bold ${
-                              isQualified ? 'text-green-700' : 'text-red-700'
+                            className={`text-sm font-bold tabular-nums ${
+                              isQualified ? 'text-led' : 'text-loss'
                             }`}
                           >
                             {entry.points}
@@ -278,23 +278,23 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
             </div>
 
             {/* Legend */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Leyenda</h4>
+            <div className="mt-6 p-4 bg-night border-2 border-grass">
+              <h4 className="font-arcade text-[10px] text-gold uppercase mb-3">Leyenda</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-700">Clasificado al Mundial</span>
+                  <CheckCircle className="w-4 h-4 text-led" />
+                  <span className="text-grass-soft">Clasificado al Mundial</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <XCircle className="w-4 h-4 text-red-600" />
-                  <span className="text-gray-700">Eliminado</span>
+                  <XCircle className="w-4 h-4 text-loss" />
+                  <span className="text-grass-soft">Eliminado</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-1 bg-orange-500"></div>
-                  <span className="text-gray-700">Línea de corte (Top 22)</span>
+                  <div className="w-4 h-1 bg-gold"></div>
+                  <span className="text-grass-soft">Línea de corte (Top 22)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-gray-600">
+                  <span className="text-xs font-terminal text-grass-soft">
                     PJ=Jugados, PG=Ganados, PE=Empatados, PP=Perdidos
                   </span>
                 </div>
@@ -303,7 +303,7 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+          <div className="p-6 border-t-4 border-grass">
             <Button variant="outline" onClick={onClose} className="w-full">
               Cerrar
             </Button>

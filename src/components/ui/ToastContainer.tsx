@@ -21,14 +21,14 @@ export function ToastContainer() {
   const getStyles = (type: string) => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200 text-green-800';
+        return 'border-line text-led';
       case 'error':
-        return 'bg-red-50 border-red-200 text-red-800';
+        return 'border-loss text-loss';
       case 'warning':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+        return 'border-gold text-gold';
       case 'info':
       default:
-        return 'bg-blue-50 border-blue-200 text-blue-800';
+        return 'border-grass text-grass-soft';
     }
   };
 
@@ -39,15 +39,15 @@ export function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-center gap-3 p-4 rounded-lg border shadow-lg animate-slide-in ${getStyles(
+          className={`flex items-center gap-3 p-4 bg-grass-dark border-4 font-terminal shadow-hard-panel animate-slide-in ${getStyles(
             toast.type
           )}`}
         >
           <div className="flex-shrink-0">{getIcon(toast.type)}</div>
-          <p className="flex-1 text-sm font-medium">{toast.message}</p>
+          <p className="flex-1 text-base text-white">{toast.message}</p>
           <button
             onClick={() => removeToast(toast.id)}
-            className="flex-shrink-0 hover:opacity-70 transition-opacity"
+            className="flex-shrink-0 text-grass-soft hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
