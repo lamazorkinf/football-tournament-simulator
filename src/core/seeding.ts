@@ -67,12 +67,16 @@ export function createSmartWorldCupDraw(qualifiedTeams: Team[]): WorldCupGroup[]
     });
   }
 
+  // Índice de equipos por id: necesario para conocer la región de los equipos
+  // ya asignados a un grupo (vienen de bombos anteriores).
+  const teamsById = new Map(qualifiedTeams.map((team) => [team.id, team]));
+
   // Assign teams from each pot to groups and track their positions (A, B, C, D)
   // Use snake draft to balance group strength
-  assignPotToGroupsWithLetters(groups, pot1, 0, 'A'); // Pot 1 → Position A
-  assignPotToGroupsWithLetters(groups, pot2, 1, 'B'); // Pot 2 → Position B
-  assignPotToGroupsWithLetters(groups, pot3, 2, 'C'); // Pot 3 → Position C
-  assignPotToGroupsWithLetters(groups, pot4, 3, 'D'); // Pot 4 → Position D
+  assignPotToGroupsWithLetters(groups, pot1, 0, 'A', teamsById); // Pot 1 → Position A
+  assignPotToGroupsWithLetters(groups, pot2, 1, 'B', teamsById); // Pot 2 → Position B
+  assignPotToGroupsWithLetters(groups, pot3, 2, 'C', teamsById); // Pot 3 → Position C
+  assignPotToGroupsWithLetters(groups, pot4, 3, 'D', teamsById); // Pot 4 → Position D
 
   // Generate matches using template and standings for each group
   groups.forEach((group) => {
@@ -84,17 +88,37 @@ export function createSmartWorldCupDraw(qualifiedTeams: Team[]): WorldCupGroup[]
 }
 
 /**
- * Assign teams from a pot to groups with regional diversity and letter positions
+ * ¿El grupo ya contiene algún equipo de la misma región?
+ */
+function hasRegionConflict(
+  group: WorldCupGroup,
+  team: Team,
+  teamsById: Map<string, Team>
+): boolean {
+  return group.teamIds.some((teamId) => teamsById.get(teamId)?.region === team.region);
+}
+
+/**
+ * Assign teams from a pot to groups with regional diversity and letter positions.
+ *
+ * Cada grupo recibe EXACTAMENTE un equipo por bombo: es una invariante dura,
+ * porque la plantilla de fixtures mapea una letra (A-D) por equipo y dos equipos
+ * con la misma letra harían que uno se quedara sin partidos.
+ *
+ * Por eso la diversidad regional se resuelve eligiendo, para cada grupo, cuál de
+ * los equipos que quedan en el bombo encaja mejor — y no moviendo equipos a
+ * grupos vecinos, que rompería esa invariante.
  */
 function assignPotToGroupsWithLetters(
   groups: WorldCupGroup[],
   pot: Team[],
   potIndex: number,
-  letter: WorldCupFixtureLetter
+  letter: WorldCupFixtureLetter,
+  teamsById: Map<string, Team>
 ): void {
   const shuffledPot = [...pot];
 
-  // Shuffle the pot for randomness
+  // Shuffle the pot for randomness (Fisher-Yates)
   for (let i = shuffledPot.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffledPot[i], shuffledPot[j]] = [shuffledPot[j], shuffledPot[i]];
@@ -106,77 +130,84 @@ function assignPotToGroupsWithLetters(
     ? [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
     : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
-  shuffledPot.forEach((team, index) => {
-    const groupIndex = groupOrder[index];
+  const remaining = [...shuffledPot];
+
+  groupOrder.forEach((groupIndex) => {
     const targetGroup = groups[groupIndex];
+    if (remaining.length === 0) return;
 
-    // Try to avoid same region if possible
-    const regionConflict = targetGroup.teamIds.some((teamId) => {
-      const existingTeam = shuffledPot.find((t) => t.id === teamId);
-      return existingTeam?.region === team.region;
-    });
+    // Preferir un equipo sin conflicto regional; si no hay ninguno (p.ej. todos
+    // los que quedan son de la misma confederación), se asigna el primero.
+    let pickIndex = remaining.findIndex(
+      (candidate) => !hasRegionConflict(targetGroup, candidate, teamsById)
+    );
+    if (pickIndex === -1) pickIndex = 0;
 
-    if (regionConflict && potIndex > 0) {
-      // Try to find alternative group without region conflict
-      const alternativeGroup = findAlternativeGroupWithLetters(
-        groups,
-        team,
-        groupOrder,
-        index,
-        letter
-      );
-      if (alternativeGroup) {
-        alternativeGroup.teamIds.push(team.id);
-        if (!alternativeGroup.letterAssignments) {
-          alternativeGroup.letterAssignments = {};
-        }
-        alternativeGroup.letterAssignments[team.id] = letter;
-        return;
-      }
-    }
+    const [team] = remaining.splice(pickIndex, 1);
 
-    // Add to original target group
     targetGroup.teamIds.push(team.id);
     if (!targetGroup.letterAssignments) {
       targetGroup.letterAssignments = {};
     }
     targetGroup.letterAssignments[team.id] = letter;
   });
+
+  repairRegionConflicts(groups, letter, teamsById);
 }
 
 /**
- * Find alternative group without regional conflict (with letter assignments)
+ * El reparto greedy puede quedarse sin opciones en los últimos grupos, porque
+ * los equipos que restan en el bombo ya chocan con todos ellos. Esta pasada
+ * corrige esos casos intercambiando equipos del MISMO bombo entre dos grupos:
+ * al intercambiar, cada grupo sigue teniendo un equipo por bombo.
  */
-function findAlternativeGroupWithLetters(
+function repairRegionConflicts(
   groups: WorldCupGroup[],
-  _team: Team,
-  groupOrder: number[],
-  currentIndex: number,
-  _letter: WorldCupFixtureLetter
-): WorldCupGroup | null {
-  // Check adjacent groups
-  const candidates = [
-    groupOrder[currentIndex - 1],
-    groupOrder[currentIndex + 1],
-  ].filter((idx) => idx !== undefined && idx >= 0 && idx < 16);
+  letter: WorldCupFixtureLetter,
+  teamsById: Map<string, Team>
+): void {
+  const teamWithLetter = (group: WorldCupGroup): string | undefined =>
+    group.teamIds.find((id) => group.letterAssignments?.[id] === letter);
 
-  for (const groupIndex of candidates) {
-    const group = groups[groupIndex];
-    if (group.teamIds.length < 4) {
-      // Check if there's no region conflict
-      const hasConflict = group.teamIds.some((_teamId) => {
-        // We need to check the actual team region, but we don't have access to all teams here
-        // This is a simplified check
-        return false; // Will be handled by the calling function
-      });
+  const clashes = (group: WorldCupGroup, teamId: string): boolean => {
+    const region = teamsById.get(teamId)?.region;
+    return group.teamIds.some((id) => id !== teamId && teamsById.get(id)?.region === region);
+  };
 
-      if (!hasConflict) {
-        return group;
+  const swap = (a: WorldCupGroup, aTeam: string, b: WorldCupGroup, bTeam: string): void => {
+    a.teamIds[a.teamIds.indexOf(aTeam)] = bTeam;
+    b.teamIds[b.teamIds.indexOf(bTeam)] = aTeam;
+    delete a.letterAssignments![aTeam];
+    delete b.letterAssignments![bTeam];
+    a.letterAssignments![bTeam] = letter;
+    b.letterAssignments![aTeam] = letter;
+  };
+
+  for (const groupA of groups) {
+    const teamA = teamWithLetter(groupA);
+    if (!teamA || !clashes(groupA, teamA)) continue;
+
+    for (const groupB of groups) {
+      if (groupB === groupA) continue;
+      const teamB = teamWithLetter(groupB);
+      if (!teamB) continue;
+
+      // El intercambio solo sirve si deja a AMBOS grupos sin conflicto.
+      const regionA = teamsById.get(teamA)?.region;
+      const regionB = teamsById.get(teamB)?.region;
+      const aAccepts = !groupA.teamIds.some(
+        (id) => id !== teamA && teamsById.get(id)?.region === regionB
+      );
+      const bAccepts = !groupB.teamIds.some(
+        (id) => id !== teamB && teamsById.get(id)?.region === regionA
+      );
+
+      if (aAccepts && bAccepts) {
+        swap(groupA, teamA, groupB, teamB);
+        break;
       }
     }
   }
-
-  return null;
 }
 
 /**
