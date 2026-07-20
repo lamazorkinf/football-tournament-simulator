@@ -160,7 +160,9 @@ export function getKnockoutProgress(knockout: KnockoutBracket): KnockoutProgress
 
   percentage = Math.round(percentage);
 
-  const isComplete = finalComplete && thirdPlaceComplete;
+  // Si el partido por el tercer puesto no existe (bracket restaurado sin él),
+  // exigirlo dejaría el torneo eternamente incompleto y el progreso topado.
+  const isComplete = finalComplete && (!knockout.thirdPlace || thirdPlaceComplete);
 
   return {
     currentRound,

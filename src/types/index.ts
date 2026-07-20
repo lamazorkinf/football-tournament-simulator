@@ -138,12 +138,12 @@ export interface TournamentState {
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
 }
 
-export interface EngineConfig {
-  kFactor: number;
-  homeAdvantage: number;
-  skillMin: number;
-  skillMax: number;
-}
+/**
+ * La definición real de EngineConfig vive en el store de configuración, que es
+ * la única fuente de verdad (incluye eloDivisor). Se reexporta desde aquí para
+ * que no vuelva a aparecer una copia desincronizada.
+ */
+export type { EngineConfig } from '../store/useConfigStore';
 
 export interface MatchResult {
   homeScore: number;

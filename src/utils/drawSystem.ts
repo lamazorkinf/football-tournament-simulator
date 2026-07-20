@@ -61,23 +61,29 @@ export function performDraw(
   const shuffledD = shuffleArray(potD);
   const shuffledE = shuffleArray(potE);
 
-  // Assign teams to groups
+  // Assign teams to groups.
+  //
+  // Una región cuyo número de equipos no es múltiplo de 5 deja el último bombo
+  // corto (p.ej. 54 equipos -> 11 grupos, bombo E con 10 equipos). En ese caso
+  // el último grupo queda con menos equipos en vez de romper el sorteo entero.
+  const potsByLetter: Array<[FixtureLetter, Team[]]> = [
+    ['A', shuffledA],
+    ['B', shuffledB],
+    ['C', shuffledC],
+    ['D', shuffledD],
+    ['E', shuffledE],
+  ];
+
   return groups.map((group, index) => {
-    const teamA = shuffledA[index];
-    const teamB = shuffledB[index];
-    const teamC = shuffledC[index];
-    const teamD = shuffledD[index];
-    const teamE = shuffledE[index];
+    const letterAssignments: Record<string, FixtureLetter> = {};
+    const teamIds: string[] = [];
 
-    const letterAssignments: Record<string, FixtureLetter> = {
-      [teamA.id]: 'A',
-      [teamB.id]: 'B',
-      [teamC.id]: 'C',
-      [teamD.id]: 'D',
-      [teamE.id]: 'E',
-    };
-
-    const teamIds = [teamA.id, teamB.id, teamC.id, teamD.id, teamE.id];
+    for (const [letter, pot] of potsByLetter) {
+      const team = pot[index];
+      if (!team) continue;
+      letterAssignments[team.id] = letter;
+      teamIds.push(team.id);
+    }
 
     return {
       ...group,
@@ -101,8 +107,15 @@ export function generateGroupMatches(
     letterToTeam[letter] = teamId;
   });
 
-  // Generate matches from template
-  return FIXTURE_TEMPLATE.map((fixture) => ({
+  // Generate matches from template.
+  //
+  // Si el grupo tiene menos de 5 equipos (región que no es múltiplo de 5), las
+  // letras sobrantes no tienen equipo: esos enfrentamientos se descartan. Como
+  // la plantilla es el round-robin completo ida y vuelta, quitar una letra deja
+  // un round-robin válido entre los equipos restantes.
+  return FIXTURE_TEMPLATE.filter(
+    (fixture) => letterToTeam[fixture.home] && letterToTeam[fixture.away]
+  ).map((fixture) => ({
     id: nanoid(),
     homeTeamId: letterToTeam[fixture.home],
     awayTeamId: letterToTeam[fixture.away],
