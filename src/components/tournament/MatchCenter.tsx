@@ -441,7 +441,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
               <select
                 value={selectedRegion}
                 onChange={(e) => setSelectedRegion(e.target.value as Region | 'all')}
-                className="px-3 py-2 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
+                className="px-3 py-2 min-h-11 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
               >
                 <option value="all">All Regions</option>
                 {regions.map((region) => (
@@ -455,7 +455,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
               <select
                 value={selectedStage}
                 onChange={(e) => setSelectedStage(e.target.value as MatchStage | 'all')}
-                className="px-3 py-2 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
+                className="px-3 py-2 min-h-11 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
               >
                 <option value="all">All Stages</option>
                 <option value="qualifier">Qualifiers</option>
@@ -469,7 +469,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                   <button
                     onClick={handlePrevMatchday}
                     disabled={selectedMatchday === 'all' || selectedMatchday === availableMatchdays[0]}
-                    className="p-1 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-2.5 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title="Previous Matchday"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -480,7 +480,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                   <button
                     onClick={handleNextMatchday}
                     disabled={selectedMatchday === availableMatchdays[availableMatchdays.length - 1]}
-                    className="p-1 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-2.5 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title="Next Matchday"
                   >
                     <ChevronRight className="w-4 h-4" />

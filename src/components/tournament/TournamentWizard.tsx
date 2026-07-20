@@ -199,7 +199,7 @@ export function TournamentWizard() {
           <p className="font-arcade text-[10px] text-gold mb-2">SELECT MODE</p>
           <div className="flex items-center gap-3 mb-2">
             <Trophy className="w-8 h-8 text-gold" />
-            <h2 className="font-arcade text-xl text-white text-shadow-retro">Progreso del Torneo</h2>
+            <h2 className="font-arcade text-base sm:text-xl text-white text-shadow-retro">Progreso del Torneo</h2>
           </div>
           <p className="text-grass-soft">
             Guía paso a paso para completar el torneo
@@ -207,7 +207,7 @@ export function TournamentWizard() {
         </CardHeader>
 
         {/* Steps */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Step 1: Qualifiers */}
           <StepCard
             number={1}

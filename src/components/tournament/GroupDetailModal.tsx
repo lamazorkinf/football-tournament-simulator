@@ -51,7 +51,7 @@ export function GroupDetailModal({
           <div className="p-6 border-b-4 border-grass relative">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-1 text-grass-soft hover:bg-grass/40 transition-colors"
+              className="absolute top-4 right-4 p-2.5 text-grass-soft hover:bg-grass/40 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
