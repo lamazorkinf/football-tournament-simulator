@@ -463,6 +463,18 @@ Nota: antes de commitear, verificar la firma real de `TeamNameTooltip` y de `Tea
 
 ---
 
+### Task 11b: Vistas de eliminatoria restantes (enmienda)
+
+**Files:**
+- Modify: `src/components/tournament/KnockoutView.tsx`, `src/components/tournament/ChampionCelebration.tsx`, `src/components/tournament/GroupDetailModal.tsx`, `src/components/tournament/RegionView.tsx`
+
+**Interfaces:**
+- Consumes: `ScoreBug` (Task 9), `Card`/`Button` (Tasks 3-4), `.blink`.
+
+Motivo: la Tarea 11 detectó que los enfrentamientos de eliminatoria y el campeón se renderizan en estos archivos, no en `WorldCupViewEnhanced`. Se les aplican los requisitos originales de la Tarea 11: enfrentamientos con `ScoreBug`, campeón en `font-arcade text-gold blink`, mapeo canónico para el resto. `RegionView` (hueco detectado en Tarea 10) recibe el mapeo canónico. Verificación y commit idénticos al resto.
+
+- [ ] Implementar, verificar (build + lint delta), commitear `feat(ui): retro knockout, champion and region views`.
+
 ### Task 12: PixelBar + Stats y Comparador
 
 **Files:**
