@@ -40,7 +40,7 @@ export function TournamentWizard() {
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
 
-  const handleGenerateDraw = () => {
+  const handleGenerateDraw = async () => {
     if (!currentTournament) return;
     const hasOriginalSkills = currentTournament.originalSkills &&
       Object.keys(currentTournament.originalSkills).length > 0;
@@ -50,7 +50,9 @@ export function TournamentWizard() {
       : '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.';
 
     if (confirm(message)) {
-      generateDrawAndFixtures();
+      // await: sin esto el toast de éxito se mostraba de inmediato, aunque el
+      // sorteo aún no hubiera terminado (o hubiera fallado).
+      await generateDrawAndFixtures();
       const successMsg = hasOriginalSkills
         ? '✅ Sorteo generado y habilidades restauradas!'
         : '✅ Sorteo y fixtures generados correctamente';

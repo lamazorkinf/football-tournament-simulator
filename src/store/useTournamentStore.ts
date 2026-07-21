@@ -1522,65 +1522,68 @@ export const useTournamentStore = create<TournamentState>()(
         console.log('✅ Updated tournament created');
         console.log('  Total groups:', Object.values(updatedQualifiers).flat().length);
 
+        // Actualizar el estado local (con el sorteo) ANTES de persistir. El
+        // sorteo ya está calculado en memoria y no debe perderse si la base
+        // falla: antes updateTournamentInState corría al final, después del
+        // guardado de grupos que hacía throw, así que un fallo de persistencia
+        // descartaba todo el sorteo y la UI se quedaba en 0/42. skipDbSave=true
+        // porque la persistencia se maneja explícitamente abajo.
         set({ teams: restoredTeams });
-        console.log('✅ Teams set in state');
+        updateTournamentInState(set, get, updatedTournament, true);
+        console.log('✅ Estado local actualizado con el sorteo');
 
-          // Save restored teams to database
-          if (state.currentTournament.originalSkills && isSupabaseConfigured()) {
-            console.log('💾 Saving restored team skills to database...');
-            await Promise.all(
-              restoredTeams.map(async (team) => {
-                try {
-                  await teamsService.updateTeam(team.id, { skill: team.skill });
-                } catch (error) {
-                  console.error(`Error restoring skill for team ${team.id}:`, error);
-                }
-              })
-            );
-          }
-
-          // Save groups and matches to normalized schema
-          console.log('💾 Checking if Supabase is configured...');
-          console.log('  isSupabaseConfigured():', isSupabaseConfigured());
-
+          // Persistencia best-effort: un fallo aquí ya no descarta el sorteo.
           if (isSupabaseConfigured()) {
-            console.log('✅ Supabase is configured, saving to normalized schema...');
-            console.log(`  Regions to save: ${regions.length}`);
+            try {
+              // Save restored teams to database
+              if (state.currentTournament.originalSkills) {
+                await Promise.all(
+                  restoredTeams.map((team) =>
+                    teamsService
+                      .updateTeam(team.id, { skill: team.skill })
+                      .catch((e) => console.error(`Error restoring skill ${team.id}:`, e))
+                  )
+                );
+              }
 
-            await Promise.all(
-              regions.map(async (region) => {
-                console.log(`  💾 Saving ${region}...`);
-                console.log(`    Tournament ID: ${state.currentTournament!.id}`);
-                console.log(`    Groups count: ${updatedQualifiers[region].length}`);
+              // Asegurar que el torneo existe en la base ANTES de los grupos:
+              // si el torneo viene del localStorage (p.ej. tras cambiar de
+              // proyecto Supabase) su id no está en tournaments_new y el insert
+              // de grupos violaba la FK (23503). saveTournament hace upsert.
+              await adaptiveTournamentService.saveTournament(updatedTournament);
 
-                try {
+              await Promise.all(
+                regions.map(async (region) => {
                   await normalizedQualifiersService.createQualifierGroups(
-                    state.currentTournament!.id,
+                    updatedTournament.id,
                     region,
                     updatedQualifiers[region]
                   );
                   console.log(`  ✅ Saved ${region} qualifier groups to database`);
-                } catch (error) {
-                  console.error(`  ❌ Error saving ${region} qualifier groups:`, error);
-                  throw error;
-                }
-              })
-            );
-            console.log('✅ All regions saved successfully');
+                })
+              );
+              console.log('✅ All regions saved successfully');
+            } catch (error) {
+              // No relanzar: el sorteo ya está en el estado local. Solo se avisa
+              // de que la persistencia falló.
+              console.error('⚠️ Error persistiendo el sorteo (queda en memoria):', error);
+              useToastStore
+                .getState()
+                .warning('El sorteo se generó pero no se pudo guardar en la base de datos.');
+            }
           } else {
             console.warn('⚠️ Supabase not configured - data will not be persisted');
           }
 
           progress.updateProgress('Finalizando...', ++currentStep);
-          console.log('💾 Calling updateTournamentInState...');
-          updateTournamentInState(set, get, updatedTournament);
           console.log('✅ generateDrawAndFixtures completed');
-
           progress.completeProgress();
         } catch (error) {
           progress.resetProgress();
           console.error('❌ Error in generateDrawAndFixtures:', error);
-          throw error;
+          // No relanzar: handleGenerateDraw no captura, y propagar aquí
+          // generaba un "Uncaught (in promise)".
+          useToastStore.getState().error('No se pudo generar el sorteo.');
         }
       },
 
