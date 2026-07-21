@@ -161,3 +161,25 @@ export function generateConfederationsSemiFinals(
     newConfedKnockoutMatch(b1, a2, 'semi', 4, 1),
   ];
 }
+
+/** Final: ganadores de las 2 semis. `null` si aún no están definidos. */
+export function generateConfederationsFinal(
+  semiFinals: KnockoutMatch[],
+): KnockoutMatch | null {
+  const winners = semiFinals
+    .filter((m) => m.winnerId)
+    .map((m) => m.winnerId!);
+  if (winners.length !== 2) return null;
+  return newConfedKnockoutMatch(winners[0], winners[1], 'final', 5, 0);
+}
+
+/** Tercer puesto: perdedores de las 2 semis. `null` si aún no están definidos. */
+export function generateConfederationsThirdPlace(
+  semiFinals: KnockoutMatch[],
+): KnockoutMatch | null {
+  const losers = semiFinals
+    .filter((m) => m.loserId)
+    .map((m) => m.loserId!);
+  if (losers.length !== 2) return null;
+  return newConfedKnockoutMatch(losers[0], losers[1], 'third-place', 5, 0);
+}

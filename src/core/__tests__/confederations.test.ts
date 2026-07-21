@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { generateConfederationsGroups, generateConfederationsSemiFinals } from '../confederations';
+import {
+  generateConfederationsGroups,
+  generateConfederationsSemiFinals,
+  generateConfederationsFinal,
+  generateConfederationsThirdPlace,
+} from '../confederations';
 import type { ConfederationFinalists } from '../confederations';
-import type { Team, Region, WorldCupGroup, TeamStanding } from '../../types';
+import type { Team, Region, WorldCupGroup, TeamStanding, KnockoutMatch } from '../../types';
 
 /** 4 confederaciones (Europe, America, Africa, Asia), campeón + subcampeón c/u. */
 const FINALISTS: ConfederationFinalists[] = [
@@ -187,5 +192,49 @@ describe('generateConfederationsSemiFinals', () => {
   it('guard: distinto de 2 grupos devuelve []', () => {
     const groups = [playedGroup('Group A', ['A1', 'A2', 'A3', 'A4'])];
     expect(generateConfederationsSemiFinals(groups, teams)).toEqual([]);
+  });
+});
+
+function playedSemis(): KnockoutMatch[] {
+  return [
+    {
+      id: 'sf0', homeTeamId: 'A1', awayTeamId: 'B2',
+      homeScore: 2, awayScore: 1, isPlayed: true,
+      stage: 'confed-knockout', round: 'semi', matchday: 4, position: 0,
+      winnerId: 'A1', loserId: 'B2',
+    },
+    {
+      id: 'sf1', homeTeamId: 'B1', awayTeamId: 'A2',
+      homeScore: 0, awayScore: 3, isPlayed: true,
+      stage: 'confed-knockout', round: 'semi', matchday: 4, position: 1,
+      winnerId: 'A2', loserId: 'B1',
+    },
+  ];
+}
+
+describe('final y tercer puesto confed', () => {
+  it('final = ganadores de las semis; matchday 5, round final', () => {
+    const final = generateConfederationsFinal(playedSemis());
+    expect(final).not.toBeNull();
+    expect(final!.homeTeamId).toBe('A1');
+    expect(final!.awayTeamId).toBe('A2');
+    expect(final!.round).toBe('final');
+    expect(final!.stage).toBe('confed-knockout');
+    expect(final!.matchday).toBe(5);
+  });
+
+  it('tercer puesto = perdedores de las semis; matchday 5, round third-place', () => {
+    const third = generateConfederationsThirdPlace(playedSemis());
+    expect(third).not.toBeNull();
+    expect(third!.homeTeamId).toBe('B2');
+    expect(third!.awayTeamId).toBe('B1');
+    expect(third!.round).toBe('third-place');
+    expect(third!.stage).toBe('confed-knockout');
+    expect(third!.matchday).toBe(5);
+  });
+
+  it('guards: semis incompletas → null', () => {
+    expect(generateConfederationsFinal([])).toBeNull();
+    expect(generateConfederationsThirdPlace([])).toBeNull();
   });
 });
