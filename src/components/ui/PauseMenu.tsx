@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { BarChart3, GitCompare, Medal, History, Archive, Settings } from 'lucide-react';
+import { Globe2, Award, BarChart3, GitCompare, Medal, History, Archive, Settings } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
 
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations';
 
 const MENU_ITEMS = [
+  { id: 'continental' as View, icon: Globe2, label: 'Continental' },
+  { id: 'confederations' as View, icon: Award, label: 'Confederaciones' },
   { id: 'stats' as View, icon: BarChart3, label: 'Statistics' },
   { id: 'comparison' as View, icon: GitCompare, label: 'Comparar' },
   { id: 'champions' as View, icon: Medal, label: 'Campeones' },

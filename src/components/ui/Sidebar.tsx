@@ -2,7 +2,7 @@ import { Trophy, Globe2, Award, BarChart3, Settings, History, CalendarDays, GitC
 import { TournamentSelector } from './TournamentSelector';
 import { useSidebarCollapse } from '../../hooks/useSidebarCollapse';
 
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations';
 
 interface SidebarProps {
   currentView: View;
@@ -17,6 +17,8 @@ export function Sidebar({ currentView, onViewChange, tournamentYear }: SidebarPr
     { id: 'matches' as View, icon: CalendarDays, label: 'Centro de Partidos' },
     { id: 'qualifiers' as View, icon: Globe2, label: 'Clasificatorias' },
     { id: 'worldcup' as View, icon: Award, label: 'Mundial' },
+    { id: 'continental' as View, icon: Globe2, label: 'Continental' },
+    { id: 'confederations' as View, icon: Award, label: 'Confederaciones' },
     { id: 'stats' as View, icon: BarChart3, label: 'Estadísticas' },
     { id: 'comparison' as View, icon: GitCompare, label: 'Comparar' },
     { id: 'champions' as View, icon: Medal, label: 'Campeones' },

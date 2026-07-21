@@ -1,6 +1,6 @@
 import { Workflow, CalendarDays, Globe2, Award, Menu } from 'lucide-react';
 
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations';
 
 const TABS = [
   { id: 'wizard' as View, icon: Workflow, label: 'HOME' },

@@ -12,6 +12,8 @@ import { QualifiersView } from './components/tournament/QualifiersView';
 import { WorldCupViewEnhanced } from './components/tournament/WorldCupViewEnhanced';
 import { TournamentHistory } from './components/tournament/TournamentHistory';
 import { ChampionsHistory } from './components/tournament/ChampionsHistory';
+import { ContinentalView } from './components/tournament/ContinentalView';
+import { ConfederationsCupView } from './components/tournament/ConfederationsCupView';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
 import { ProgressModal } from './components/ui/ProgressModal';
@@ -23,7 +25,7 @@ import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { MobileActionProvider } from './hooks/useMobileAction';
 
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations';
 
 function App() {
   const {
@@ -118,7 +120,7 @@ function App() {
 
         <main className="px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'wizard' ? (
-          <TournamentWizard />
+          <TournamentWizard onNavigate={handleNavigate} />
         ) : currentView === 'matches' ? (
           <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />
         ) : currentView === 'stats' ? (
@@ -140,6 +142,10 @@ function App() {
           <TournamentHistory />
         ) : currentView === 'champions' ? (
           <ChampionsHistory />
+        ) : currentView === 'continental' ? (
+          <ContinentalView cycle={currentTournament} teams={teams} />
+        ) : currentView === 'confederations' ? (
+          <ConfederationsCupView cycle={currentTournament} teams={teams} />
         ) : null}
         </main>
       </div>
