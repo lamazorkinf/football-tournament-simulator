@@ -1,3 +1,6 @@
+import { nanoid } from 'nanoid';
+import type { ContinentalBracket, KnockoutMatch, Region, Team } from '../types';
+
 /**
  * Byes directos a R32 en un torneo continental de `teamCount` equipos.
  * Fórmula (spec §3): los que juegan R64 son `2·(teamCount − 32)`, así que
@@ -46,4 +49,70 @@ export function seedSlots(size: number): number[] {
     slots = next;
   }
   return slots;
+}
+
+/** Baraja una copia del array (Fisher-Yates). No muta el original. */
+function shuffle<T>(items: readonly T[]): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function newKnockoutMatch(
+  homeTeamId: string,
+  awayTeamId: string,
+  round: KnockoutMatch['round'],
+  matchday: number,
+  position: number,
+): KnockoutMatch {
+  return {
+    id: nanoid(),
+    homeTeamId,
+    awayTeamId,
+    homeScore: null,
+    awayScore: null,
+    isPlayed: false,
+    stage: 'continental',
+    round,
+    matchday,
+    position,
+  };
+}
+
+/**
+ * Sorteo de un torneo continental. Los mejores `byeCount` por skill reciben bye
+ * directo a R32; el resto se cruza en R64 con siembra por bombos: el bombo alto
+ * (mejores) hace de local contra un rival barajado del bombo bajo.
+ */
+export function generateContinentalBracket(
+  region: Region,
+  teams: Team[],
+): ContinentalBracket {
+  const sorted = [...teams].sort((a, b) => b.skill - a.skill);
+  const byeCount = getContinentalByeCount(sorted.length);
+
+  const byeTeamIds = sorted.slice(0, byeCount).map((t) => t.id);
+  const r64Teams = sorted.slice(byeCount);
+  const w = r64Teams.length / 2; // entero: r64Teams.length siempre es par
+
+  const topPot = r64Teams.slice(0, w);
+  const bottomPot = shuffle(r64Teams.slice(w));
+
+  const roundOf64: KnockoutMatch[] = topPot.map((home, i) =>
+    newKnockoutMatch(home.id, bottomPot[i].id, 'round-of-64', 1, i),
+  );
+
+  return {
+    region,
+    roundOf64,
+    roundOf32: [],
+    roundOf16: [],
+    quarterFinals: [],
+    semiFinals: [],
+    final: null,
+    byeTeamIds,
+  };
 }

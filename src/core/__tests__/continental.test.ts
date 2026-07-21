@@ -64,3 +64,75 @@ describe('seedSlots', () => {
     expect(() => seedSlots(6)).toThrow();
   });
 });
+
+import { generateContinentalBracket } from '../continental';
+import type { Team, Region } from '../../types';
+
+/** Equipos sintéticos con skills estrictamente descendentes (100, 99, …). */
+function makeTeams(region: Region, count: number): Team[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${region}-${i}`,
+    name: `${region} ${i}`,
+    flag: '🏳️',
+    region,
+    skill: 100 - i, // único y descendente
+  }));
+}
+
+describe('generateContinentalBracket', () => {
+  it('55 equipos: 9 byes fuera de R64 y 23 cruces de R64', () => {
+    const teams = makeTeams('Europe', 55);
+    const b = generateContinentalBracket('Europe', teams);
+
+    expect(b.region).toBe('Europe');
+    expect(b.byeTeamIds).toHaveLength(9);
+    expect(b.roundOf64).toHaveLength(23);
+    expect(b.roundOf32).toEqual([]);
+    expect(b.final).toBeNull();
+
+    // Los 9 byes son los de mayor skill (ids Europe-0..Europe-8).
+    expect(b.byeTeamIds).toEqual(teams.slice(0, 9).map((t) => t.id));
+
+    // Ningún bye juega R64.
+    const r64Ids = new Set(b.roundOf64.flatMap((m) => [m.homeTeamId, m.awayTeamId]));
+    for (const id of b.byeTeamIds) expect(r64Ids.has(id)).toBe(false);
+
+    // 9 byes + 46 en R64 = 55 equipos, sin duplicados.
+    expect(r64Ids.size).toBe(46);
+    expect(new Set([...b.byeTeamIds, ...r64Ids]).size).toBe(55);
+  });
+
+  it('45 equipos: 19 byes y 13 cruces de R64', () => {
+    const b = generateContinentalBracket('America', makeTeams('America', 45));
+    expect(b.byeTeamIds).toHaveLength(19);
+    expect(b.roundOf64).toHaveLength(13);
+  });
+
+  it('cada cruce de R64 empareja bombo alto (home) vs bombo bajo (away)', () => {
+    const teams = makeTeams('Asia', 55);
+    const skill = new Map(teams.map((t) => [t.id, t.skill]));
+    const b = generateContinentalBracket('Asia', teams);
+    // El bombo alto = 23 mejores de los 46 no-cabeza; el bajo = 23 peores.
+    // Con skills únicos descendentes, home.skill > away.skill en TODO cruce.
+    for (const m of b.roundOf64) {
+      expect(skill.get(m.homeTeamId)!).toBeGreaterThan(skill.get(m.awayTeamId)!);
+    }
+  });
+
+  it('cada partido R64: stage continental, ronda round-of-64, matchday 1, posición única', () => {
+    const b = generateContinentalBracket('Africa', makeTeams('Africa', 55));
+    const positions = b.roundOf64.map((m) => m.position);
+    expect(new Set(positions).size).toBe(b.roundOf64.length);
+    for (const m of b.roundOf64) {
+      expect(m.stage).toBe('continental');
+      expect(m.round).toBe('round-of-64');
+      expect(m.matchday).toBe(1);
+      expect(m.isPlayed).toBe(false);
+      expect(m.homeScore).toBeNull();
+    }
+    // posiciones 0..22 contiguas
+    expect([...positions].sort((a, b2) => (a ?? 0) - (b2 ?? 0))).toEqual(
+      Array.from({ length: 23 }, (_, i) => i),
+    );
+  });
+});
