@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getContinentalByeCount,
   getContinentalRoundOf64Count,
@@ -281,5 +281,64 @@ describe('avance de rondas continentales', () => {
     }));
     expect(generateContinentalRoundOf16(r32Sin)).toEqual([]);
     expect(generateContinentalFinal([])).toBeNull();
+  });
+});
+
+import { getStageImportance } from '../engine';
+import { useConfigStore } from '../../store/useConfigStore';
+
+describe('continental — integración end-to-end', () => {
+  it('55 equipos: corre R64 → Final y produce un único campeón', () => {
+    const teams = makeTeams('Europe', 55);
+    const base = generateContinentalBracket('Europe', teams);
+
+    const r64 = playAllHomeWins(base.roundOf64);
+    const r32 = playAllHomeWins(generateContinentalRoundOf32({ ...base, roundOf64: r64 }));
+    expect(r32).toHaveLength(16);
+    const r16 = playAllHomeWins(generateContinentalRoundOf16(r32));
+    expect(r16).toHaveLength(8);
+    const qf = playAllHomeWins(generateContinentalQuarterFinals(r16));
+    expect(qf).toHaveLength(4);
+    const sf = playAllHomeWins(generateContinentalSemiFinals(qf));
+    expect(sf).toHaveLength(2);
+    const final = generateContinentalFinal(sf);
+    expect(final).not.toBeNull();
+    // El campeón sale de un cruce válido de semifinalistas.
+    expect(final!.homeTeamId).not.toBe(final!.awayTeamId);
+  });
+});
+
+describe('FU-B: los pesos Elo continentales están vivos', () => {
+  beforeEach(() => {
+    useConfigStore.getState().resetToDefaults();
+  });
+
+  it('un partido continental generado da importance ≠ 1 (early y late)', () => {
+    const cfg = useConfigStore.getState().config;
+    const base = generateContinentalBracket('Asia', makeTeams('Asia', 55));
+
+    // R64 → temprana (0.9)
+    const r64Match = base.roundOf64[0];
+    expect(getStageImportance(r64Match.stage, r64Match.round, cfg)).toBe(0.9);
+    expect(getStageImportance(r64Match.stage, r64Match.round, cfg)).not.toBe(1);
+
+    // Final → tardía (1.2)
+    const sf = [
+      { round: 'semi', winnerId: 'w0', position: 0 },
+      { round: 'semi', winnerId: 'w1', position: 1 },
+    ].map((m, i) => ({
+      id: `sf-${i}`,
+      homeTeamId: `h${i}`,
+      awayTeamId: `a${i}`,
+      homeScore: 1,
+      awayScore: 0,
+      isPlayed: true,
+      stage: 'continental',
+      round: m.round as KnockoutMatch['round'],
+      position: m.position,
+      winnerId: m.winnerId,
+    }));
+    const final = generateContinentalFinal(sf)!;
+    expect(getStageImportance(final.stage, final.round, cfg)).toBe(1.2);
   });
 });
