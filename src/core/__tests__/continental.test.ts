@@ -65,8 +65,8 @@ describe('seedSlots', () => {
   });
 });
 
-import { generateContinentalBracket } from '../continental';
-import type { Team, Region } from '../../types';
+import { generateContinentalBracket, generateContinentalRoundOf32 } from '../continental';
+import type { Team, Region, ContinentalBracket, KnockoutMatch } from '../../types';
 
 /** Equipos sintéticos con skills estrictamente descendentes (100, 99, …). */
 function makeTeams(region: Region, count: number): Team[] {
@@ -76,6 +76,18 @@ function makeTeams(region: Region, count: number): Team[] {
     flag: '🏳️',
     region,
     skill: 100 - i, // único y descendente
+  }));
+}
+
+/** Marca cada partido de una ronda como jugado, con `home` ganador. */
+function playAllHomeWins(matches: KnockoutMatch[]): KnockoutMatch[] {
+  return matches.map((m) => ({
+    ...m,
+    isPlayed: true,
+    homeScore: 1,
+    awayScore: 0,
+    winnerId: m.homeTeamId,
+    loserId: m.awayTeamId,
   }));
 }
 
@@ -134,5 +146,58 @@ describe('generateContinentalBracket', () => {
     expect([...positions].sort((a, b2) => (a ?? 0) - (b2 ?? 0))).toEqual(
       Array.from({ length: 23 }, (_, i) => i),
     );
+  });
+});
+
+describe('generateContinentalRoundOf32', () => {
+  it('produce 16 partidos con byes ∪ ganadores R64 (32 equipos distintos)', () => {
+    const base = generateContinentalBracket('Europe', makeTeams('Europe', 55));
+    const bracket: ContinentalBracket = {
+      ...base,
+      roundOf64: playAllHomeWins(base.roundOf64),
+    };
+
+    const r32 = generateContinentalRoundOf32(bracket);
+    expect(r32).toHaveLength(16);
+
+    const winnerIds = base.roundOf64.map((m) => m.homeTeamId); // 23 ganadores
+    const expected = new Set([...bracket.byeTeamIds, ...winnerIds]); // 9 + 23 = 32
+    const actual = new Set(r32.flatMap((m) => [m.homeTeamId, m.awayTeamId]));
+    expect(actual.size).toBe(32);
+    expect(actual).toEqual(expected);
+  });
+
+  it('cada partido de R32: stage continental, round-of-32, matchday 2, posiciones 0..15', () => {
+    const base = generateContinentalBracket('Asia', makeTeams('Asia', 55));
+    const r32 = generateContinentalRoundOf32({
+      ...base,
+      roundOf64: playAllHomeWins(base.roundOf64),
+    });
+    for (const m of r32) {
+      expect(m.stage).toBe('continental');
+      expect(m.round).toBe('round-of-32');
+      expect(m.matchday).toBe(2);
+    }
+    expect(r32.map((m) => m.position)).toEqual(Array.from({ length: 16 }, (_, i) => i));
+  });
+
+  it('los dos mejores byes caen en mitades opuestas del cuadro', () => {
+    const base = generateContinentalBracket('Africa', makeTeams('Africa', 55));
+    const r32 = generateContinentalRoundOf32({
+      ...base,
+      roundOf64: playAllHomeWins(base.roundOf64),
+    });
+    const seed0 = base.byeTeamIds[0];
+    const seed1 = base.byeTeamIds[1];
+    const matchOf = (id: string) =>
+      r32.find((m) => m.homeTeamId === id || m.awayTeamId === id)!;
+    expect(matchOf(seed0).position! < 8).toBe(true); // mitad alta (0..7)
+    expect(matchOf(seed1).position! >= 8).toBe(true); // mitad baja (8..15)
+  });
+
+  it('guard: si faltan ganadores de R64, devuelve []', () => {
+    const base = generateContinentalBracket('America', makeTeams('America', 45));
+    // roundOf64 sin winnerId → ocupantes incompletos
+    expect(generateContinentalRoundOf32(base)).toEqual([]);
   });
 });

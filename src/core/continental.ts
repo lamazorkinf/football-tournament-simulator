@@ -116,3 +116,33 @@ export function generateContinentalBracket(
     byeTeamIds,
   };
 }
+
+/**
+ * Forma la R32 a partir de los byes (semillas altas) y los ganadores de R64.
+ * Ocupantes = byes ++ ganadores (32 en total); se colocan por `seedSlots(32)` y
+ * se emparejan slots consecutivos. Si no hay exactamente 32 ocupantes con id
+ * (p.ej. faltan `winnerId`), devuelve `[]` sin generar (igual que knockout.ts).
+ */
+export function generateContinentalRoundOf32(bracket: ContinentalBracket): KnockoutMatch[] {
+  const winners = [...bracket.roundOf64]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((m) => m.winnerId)
+    .filter((id): id is string => Boolean(id));
+
+  const occupants = [...bracket.byeTeamIds, ...winners];
+  if (occupants.length !== 32) {
+    console.warn(
+      `⚠️ generateContinentalRoundOf32: se esperaban 32 ocupantes, hay ${occupants.length}. No se genera R32.`,
+    );
+    return [];
+  }
+
+  const slots = seedSlots(32); // slots[k] = índice de semilla en el slot k
+  const placed = slots.map((seedIdx) => occupants[seedIdx]);
+
+  const matches: KnockoutMatch[] = [];
+  for (let m = 0; m < 16; m++) {
+    matches.push(newKnockoutMatch(placed[2 * m], placed[2 * m + 1], 'round-of-32', 2, m));
+  }
+  return matches;
+}
