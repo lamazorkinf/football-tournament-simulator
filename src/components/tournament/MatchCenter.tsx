@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Tournament, Team, Match, Region } from '../../types';
+import type { Cycle, Team, Match, Region } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
@@ -10,11 +10,12 @@ import { useTournamentStore } from '../../store/useTournamentStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { getCyclePhaseBanner } from '../../utils/cycleProgress';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface MatchCenterProps {
-  tournament: Tournament;
+  tournament: Cycle;
   teams: Team[];
   onNavigate?: (view: string, options?: { region?: Region; groupId?: string }) => void;
 }
@@ -28,7 +29,7 @@ type MatchWithContext = {
   region?: Region;
 };
 
-export function MatchCenter({ tournament, teams }: MatchCenterProps) {
+export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps) {
   const { simulateMatch, simulateMatchdayBatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch, isBatchProcessing } = useTournamentStore();
   const { showResults } = useMatchResultsStore();
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
@@ -392,8 +393,26 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
 
   const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
 
+  const phaseBanner = getCyclePhaseBanner(tournament);
+
   return (
     <div className="space-y-6">
+      {phaseBanner && (
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-grass/20 border-2 border-gold p-4">
+          <p className="font-arcade text-[10px] uppercase text-gold">
+            Fase activa: {phaseBanner.label}
+          </p>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => onNavigate?.(phaseBanner.targetView)}
+            className="gap-2"
+          >
+            Ir a la vista →
+          </Button>
+        </div>
+      )}
+
       {/* Match Detail Modal */}
       {selectedMatch && (() => {
         const homeTeam = getTeam(selectedMatch.match.homeTeamId);
