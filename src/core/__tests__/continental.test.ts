@@ -201,3 +201,85 @@ describe('generateContinentalRoundOf32', () => {
     expect(generateContinentalRoundOf32(base)).toEqual([]);
   });
 });
+
+import {
+  generateContinentalRoundOf16,
+  generateContinentalQuarterFinals,
+  generateContinentalSemiFinals,
+  generateContinentalFinal,
+} from '../continental';
+
+/** Construye una ronda "jugada" de `count` partidos con winner = `w{pos}`. */
+function playedRound(
+  round: KnockoutMatch['round'],
+  matchday: number,
+  count: number,
+): KnockoutMatch[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${round}-${i}`,
+    homeTeamId: `h${i}`,
+    awayTeamId: `a${i}`,
+    homeScore: 1,
+    awayScore: 0,
+    isPlayed: true,
+    stage: 'continental',
+    round,
+    matchday,
+    position: i,
+    winnerId: `w${i}`,
+    loserId: `l${i}`,
+  }));
+}
+
+describe('avance de rondas continentales', () => {
+  it('R16: 8 partidos, matchday 3, empareja ganadores adyacentes de R32', () => {
+    const r32 = playedRound('round-of-32', 2, 16);
+    const r16 = generateContinentalRoundOf16(r32);
+    expect(r16).toHaveLength(8);
+    expect(r16.every((m) => m.matchday === 3)).toBe(true);
+    expect(r16.every((m) => m.round === 'round-of-16')).toBe(true);
+    expect(r16.every((m) => m.stage === 'continental')).toBe(true);
+    // pos 0 = ganador(R32 pos0) vs ganador(R32 pos1)
+    expect(r16[0].homeTeamId).toBe('w0');
+    expect(r16[0].awayTeamId).toBe('w1');
+    expect(r16[0].position).toBe(0);
+  });
+
+  it('QF: 4 partidos, matchday 4', () => {
+    const qf = generateContinentalQuarterFinals(playedRound('round-of-16', 3, 8));
+    expect(qf).toHaveLength(4);
+    expect(qf.every((m) => m.matchday === 4 && m.round === 'quarter')).toBe(true);
+  });
+
+  it('SF: 2 partidos, matchday 5', () => {
+    const sf = generateContinentalSemiFinals(playedRound('quarter', 4, 4));
+    expect(sf).toHaveLength(2);
+    expect(sf.every((m) => m.matchday === 5 && m.round === 'semi')).toBe(true);
+  });
+
+  it('Final: 1 partido, matchday 6, ganadores de las 2 semis', () => {
+    const final = generateContinentalFinal(playedRound('semi', 5, 2));
+    expect(final).not.toBeNull();
+    expect(final!.matchday).toBe(6);
+    expect(final!.round).toBe('final');
+    expect(final!.stage).toBe('continental');
+    expect(final!.homeTeamId).toBe('w0');
+    expect(final!.awayTeamId).toBe('w1');
+  });
+
+  it('guards: ronda incompleta (sin winnerId) no genera la siguiente', () => {
+    const r32Sin = Array.from({ length: 16 }, (_, i) => ({
+      id: `r32-${i}`,
+      homeTeamId: `h${i}`,
+      awayTeamId: `a${i}`,
+      homeScore: null,
+      awayScore: null,
+      isPlayed: false,
+      stage: 'continental',
+      round: 'round-of-32' as const,
+      position: i,
+    }));
+    expect(generateContinentalRoundOf16(r32Sin)).toEqual([]);
+    expect(generateContinentalFinal([])).toBeNull();
+  });
+});

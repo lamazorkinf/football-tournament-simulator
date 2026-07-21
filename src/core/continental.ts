@@ -146,3 +146,41 @@ export function generateContinentalRoundOf32(bracket: ContinentalBracket): Knock
   }
   return matches;
 }
+
+/**
+ * Avanza una ronda emparejando ganadores adyacentes: `next[j]` = ganador de
+ * `prev` en posición `2j` vs ganador en `2j+1`. Solo genera un partido si AMBOS
+ * ganadores están definidos; si falta alguno, se omite (ronda incompleta ⇒ []).
+ */
+function advanceContinentalRound(
+  prev: KnockoutMatch[],
+  round: KnockoutMatch['round'],
+  matchday: number,
+): KnockoutMatch[] {
+  const sorted = [...prev].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const matches: KnockoutMatch[] = [];
+  for (let j = 0; 2 * j + 1 < sorted.length; j++) {
+    const a = sorted[2 * j];
+    const b = sorted[2 * j + 1];
+    if (a?.winnerId && b?.winnerId) {
+      matches.push(newKnockoutMatch(a.winnerId, b.winnerId, round, matchday, j));
+    }
+  }
+  return matches;
+}
+
+export function generateContinentalRoundOf16(roundOf32: KnockoutMatch[]): KnockoutMatch[] {
+  return advanceContinentalRound(roundOf32, 'round-of-16', 3);
+}
+
+export function generateContinentalQuarterFinals(roundOf16: KnockoutMatch[]): KnockoutMatch[] {
+  return advanceContinentalRound(roundOf16, 'quarter', 4);
+}
+
+export function generateContinentalSemiFinals(quarterFinals: KnockoutMatch[]): KnockoutMatch[] {
+  return advanceContinentalRound(quarterFinals, 'semi', 5);
+}
+
+export function generateContinentalFinal(semiFinals: KnockoutMatch[]): KnockoutMatch | null {
+  return advanceContinentalRound(semiFinals, 'final', 6)[0] ?? null;
+}
