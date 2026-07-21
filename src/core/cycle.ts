@@ -5,9 +5,11 @@ import type {
   ContinentalStage,
   Cycle,
   KnockoutMatch,
+  Match,
   Region,
   Team,
   Tournament,
+  WorldCupGroup,
 } from '../types';
 import {
   generateContinentalBracket,
@@ -17,6 +19,14 @@ import {
   generateContinentalSemiFinals,
   generateContinentalFinal,
 } from './continental';
+import {
+  generateConfederationsGroups,
+  generateConfederationsSemiFinals,
+  generateConfederationsFinal,
+  generateConfederationsThirdPlace,
+  type ConfederationFinalists,
+} from './confederations';
+import { updateStandings, sortStandings, initializeStandings } from './scheduler';
 import { isCurrentMatchdayComplete, getNextCalendarState } from './calendar';
 
 /** Las 4 confederaciones, en orden fijo. Export para uso interno de las tareas 2-3. */
@@ -185,4 +195,146 @@ export function recordContinentalMatch(cycle: Cycle, matchId: string, result: Kn
   const updated = replaceContinentalMatch(cycle, matchId, result);
   if (updated.calendar.phase !== 'continental') return updated;
   return isCurrentMatchdayComplete(updated) ? advanceContinental(updated) : updated;
+}
+
+/** Resultado de un partido de grupo (sin winner explícito: lo dan los goles). */
+export interface GroupResult {
+  homeScore: number;
+  awayScore: number;
+}
+
+/**
+ * Arma los 4 finalistas (campeón + subcampeón) desde los brackets continentales.
+ * Lanza si algún bracket no coronó finalistas (precondición: continental completo).
+ */
+export function assembleConfederationFinalists(cycle: Cycle): ConfederationFinalists[] {
+  return CYCLE_REGIONS.map((region) => {
+    const b = cycle.continental.brackets[region];
+    if (!b.championId || !b.runnerUpId) {
+      throw new Error(`assembleConfederationFinalists: la confederación ${region} no tiene finalistas`);
+    }
+    return { region, championId: b.championId, runnerUpId: b.runnerUpId };
+  });
+}
+
+/** Sortea los 2 grupos de la Copa Confederaciones y arranca el calendario en md1. */
+export function drawConfederationsStage(cycle: Cycle, teams: Team[]): Cycle {
+  const finalists = assembleConfederationFinalists(cycle);
+  const groups = generateConfederationsGroups(finalists, teams);
+  return {
+    ...cycle,
+    confederationsCup: {
+      ...cycle.confederationsCup,
+      groups,
+      knockout: { semiFinals: [], thirdPlace: null, final: null },
+      isComplete: false,
+    },
+    calendar: { phase: 'confed', matchday: 1 },
+  };
+}
+
+/** Recalcula standings de un grupo desde cero con sus partidos jugados. */
+function recomputeGroupStandings(group: WorldCupGroup, teams: Team[]): WorldCupGroup {
+  const fresh = initializeStandings(group.teamIds);
+  const played = group.matches.filter((m) => m.isPlayed);
+  const standings = played.reduce((acc, m) => updateStandings(acc, m), fresh);
+  return { ...group, standings: sortStandings(standings, teams, group.matches) };
+}
+
+/** Aplica un marcador a un partido de grupo (por id) dentro de una lista. */
+function applyGroupResult(matches: Match[], matchId: string, result: GroupResult): Match[] {
+  return matches.map((m) =>
+    m.id === matchId
+      ? { ...m, homeScore: result.homeScore, awayScore: result.awayScore, isPlayed: true }
+      : m,
+  );
+}
+
+function advanceConfedAfterGroups(cycle: Cycle, teams: Team[]): Cycle {
+  const md = cycle.calendar.matchday; // 1..3
+  if (md < 3) {
+    return { ...cycle, calendar: getNextCalendarState(cycle) };
+  }
+  // md3 completa → generar semifinales, avanzar a md4.
+  const semiFinals = generateConfederationsSemiFinals(cycle.confederationsCup.groups, teams);
+  const withSemis: Cycle = {
+    ...cycle,
+    confederationsCup: {
+      ...cycle.confederationsCup,
+      knockout: { ...cycle.confederationsCup.knockout, semiFinals },
+    },
+  };
+  return { ...withSemis, calendar: getNextCalendarState(withSemis) };
+}
+
+/** Registra un partido de grupo confed + recálculo de standings + auto-avance. */
+export function recordConfedGroupMatch(
+  cycle: Cycle,
+  matchId: string,
+  result: GroupResult,
+  teams: Team[],
+): Cycle {
+  const groups = cycle.confederationsCup.groups.map((g) => {
+    if (!g.matches.some((m) => m.id === matchId)) return g;
+    const withResult: WorldCupGroup = { ...g, matches: applyGroupResult(g.matches, matchId, result) };
+    return recomputeGroupStandings(withResult, teams);
+  });
+  const updated: Cycle = {
+    ...cycle,
+    confederationsCup: { ...cycle.confederationsCup, groups },
+  };
+  if (updated.calendar.phase !== 'confed') return updated;
+  return isCurrentMatchdayComplete(updated) ? advanceConfedAfterGroups(updated, teams) : updated;
+}
+
+/** Aplica un `KnockoutResult` a un `KnockoutMatch | null` (por id). */
+function applyKoResult(match: KnockoutMatch | null, matchId: string, result: KnockoutResult): KnockoutMatch | null {
+  if (!match || match.id !== matchId) return match;
+  return applyResultTo([match], matchId, result)[0];
+}
+
+function advanceConfedAfterKnockout(cycle: Cycle): Cycle {
+  const md = cycle.calendar.matchday; // 4 (semis) o 5 (final+3er)
+  const ko = cycle.confederationsCup.knockout;
+  if (md === 4) {
+    // Semis completas → generar final + 3er puesto, avanzar a md5.
+    const final = generateConfederationsFinal(ko.semiFinals);
+    const thirdPlace = generateConfederationsThirdPlace(ko.semiFinals);
+    const withFinals: Cycle = {
+      ...cycle,
+      confederationsCup: { ...cycle.confederationsCup, knockout: { ...ko, final, thirdPlace } },
+    };
+    return { ...withFinals, calendar: getNextCalendarState(withFinals) };
+  }
+  // md5 completa → coronar campeón. Boundary: NO auto-avanzar de fase.
+  return {
+    ...cycle,
+    confederationsCup: {
+      ...cycle.confederationsCup,
+      championId: ko.final?.winnerId,
+      isComplete: true,
+    },
+  };
+}
+
+/** Registra un partido de knockout confed (semi/final/3er) + auto-avance. */
+export function recordConfedKnockoutMatch(
+  cycle: Cycle,
+  matchId: string,
+  result: KnockoutResult,
+): Cycle {
+  const ko = cycle.confederationsCup.knockout;
+  const updated: Cycle = {
+    ...cycle,
+    confederationsCup: {
+      ...cycle.confederationsCup,
+      knockout: {
+        semiFinals: applyResultTo(ko.semiFinals, matchId, result),
+        final: applyKoResult(ko.final, matchId, result),
+        thirdPlace: applyKoResult(ko.thirdPlace, matchId, result),
+      },
+    },
+  };
+  if (updated.calendar.phase !== 'confed') return updated;
+  return isCurrentMatchdayComplete(updated) ? advanceConfedAfterKnockout(updated) : updated;
 }

@@ -7,6 +7,10 @@ import {
   ensureCycleFields,
   drawContinentalStage,
   recordContinentalMatch,
+  assembleConfederationFinalists,
+  drawConfederationsStage,
+  recordConfedGroupMatch,
+  recordConfedKnockoutMatch,
   type KnockoutResult,
 } from '../cycle';
 import type { Cycle, KnockoutMatch, Region, Team, Tournament } from '../../types';
@@ -169,5 +173,100 @@ describe('cycle: continental', () => {
     }
     // Boundary: el calendario NO saltó solo a confed (queda en continental md6).
     expect(cycle.calendar).toEqual({ phase: 'continental', matchday: 6 });
+  });
+});
+
+// Arma un cycle con continental YA completo (finalistas fijados a mano).
+function cycleWithContinentalDone(): { cycle: Cycle; teams: Team[] } {
+  const teams: Team[] = [];
+  const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
+  const base = toCycle({
+    id: 't', name: 'c', year: 2026,
+    qualifiers: { Europe: [], America: [], Africa: [], Asia: [] },
+    worldCup: null, isQualifiersComplete: false, hasAnyMatchPlayed: false,
+  });
+  const brackets = { ...base.continental.brackets };
+  regions.forEach((r, ri) => {
+    const champ: Team = { id: `${r}-champ`, name: `${r} C`, flag: '🏳️', region: r, skill: 90 - ri };
+    const runner: Team = { id: `${r}-runner`, name: `${r} R`, flag: '🏳️', region: r, skill: 80 - ri };
+    teams.push(champ, runner);
+    brackets[r] = { ...brackets[r], championId: champ.id, runnerUpId: runner.id };
+  });
+  const cycle: Cycle = {
+    ...base,
+    continental: { brackets, isComplete: true },
+    calendar: { phase: 'continental', matchday: 6 },
+  };
+  return { cycle, teams };
+}
+
+// Juega todos los partidos de grupo confed de la jornada actual (home gana).
+function playConfedGroupMatchday(cycle: Cycle, teams: Team[]): Cycle {
+  const md = cycle.calendar.matchday;
+  const matches = cycle.confederationsCup.groups
+    .flatMap((g) => g.matches)
+    .filter((m) => (m.matchday ?? 0) === md && !m.isPlayed);
+  let next = cycle;
+  for (const m of matches) {
+    next = recordConfedGroupMatch(next, m.id, { homeScore: 2, awayScore: 0 }, teams);
+  }
+  return next;
+}
+
+describe('cycle: confederaciones', () => {
+  it('assembleConfederationFinalists arma 4 finalistas desde los brackets', () => {
+    const { cycle } = cycleWithContinentalDone();
+    const finalists = assembleConfederationFinalists(cycle);
+    expect(finalists).toHaveLength(4);
+    expect(new Set(finalists.map((f) => f.region)).size).toBe(4);
+    expect(finalists.every((f) => f.championId && f.runnerUpId)).toBe(true);
+  });
+
+  it('drawConfederationsStage crea 2 grupos de 4 y pone calendario en confed md1', () => {
+    const { cycle, teams } = cycleWithContinentalDone();
+    const drawn = drawConfederationsStage(cycle, teams);
+    expect(drawn.calendar).toEqual({ phase: 'confed', matchday: 1 });
+    expect(drawn.confederationsCup.groups).toHaveLength(2);
+    for (const g of drawn.confederationsCup.groups) {
+      expect(g.teamIds).toHaveLength(4);
+      expect(g.matches).toHaveLength(6); // round-robin 4 equipos
+    }
+  });
+
+  it('completa grupos (md1-3), genera semis, luego final+3er puesto y corona campeón', () => {
+    const { cycle, teams } = cycleWithContinentalDone();
+    let c = drawConfederationsStage(cycle, teams);
+
+    c = playConfedGroupMatchday(c, teams); // md1
+    expect(c.calendar).toEqual({ phase: 'confed', matchday: 2 });
+    c = playConfedGroupMatchday(c, teams); // md2
+    c = playConfedGroupMatchday(c, teams); // md3 → genera semis, avanza a md4
+    expect(c.calendar).toEqual({ phase: 'confed', matchday: 4 });
+    expect(c.confederationsCup.knockout.semiFinals).toHaveLength(2);
+
+    // Jugar las 2 semis (home gana):
+    for (const m of c.confederationsCup.knockout.semiFinals.filter((s) => !s.isPlayed)) {
+      c = recordConfedKnockoutMatch(c, m.id, {
+        homeScore: 1, awayScore: 0, winnerId: m.homeTeamId, loserId: m.awayTeamId,
+      });
+    }
+    expect(c.calendar).toEqual({ phase: 'confed', matchday: 5 });
+    expect(c.confederationsCup.knockout.final).not.toBeNull();
+    expect(c.confederationsCup.knockout.thirdPlace).not.toBeNull();
+
+    // Jugar final + 3er puesto (md5):
+    const final = c.confederationsCup.knockout.final!;
+    const third = c.confederationsCup.knockout.thirdPlace!;
+    c = recordConfedKnockoutMatch(c, final.id, {
+      homeScore: 2, awayScore: 1, winnerId: final.homeTeamId, loserId: final.awayTeamId,
+    });
+    c = recordConfedKnockoutMatch(c, third.id, {
+      homeScore: 1, awayScore: 0, winnerId: third.homeTeamId, loserId: third.awayTeamId,
+    });
+
+    expect(c.confederationsCup.isComplete).toBe(true);
+    expect(c.confederationsCup.championId).toBe(final.homeTeamId);
+    // Boundary: no salta solo a wc-qualifiers.
+    expect(c.calendar).toEqual({ phase: 'confed', matchday: 5 });
   });
 });
