@@ -1,4 +1,5 @@
 import type {
+  CalendarState,
   Cycle,
   CyclePhase,
   ContinentalBracket,
@@ -100,4 +101,21 @@ export function isCurrentMatchdayComplete(cycle: Cycle): boolean {
   const { phase, matchday } = cycle.calendar;
   const matches = getMatchdayMatches(cycle, phase, matchday);
   return matches.length > 0 && matches.every((m) => m.isPlayed);
+}
+
+/**
+ * Próximo estado del calendario. Dentro de la fase avanza de jornada; al
+ * completar la última jornada salta a la fase siguiente en jornada 1;
+ * `'wc-knockout'` desemboca en `'completed'`. Función pura: no genera
+ * partidos ni persiste (eso lo hace el store al ejecutar la transición).
+ */
+export function getNextCalendarState(cycle: Cycle): CalendarState {
+  const { phase, matchday } = cycle.calendar;
+  if (phase === 'completed') return { phase, matchday };
+
+  const count = getPhaseMatchdayCount(cycle, phase);
+  if (matchday < count) return { phase, matchday: matchday + 1 };
+
+  const nextPhase = CYCLE_PHASE_ORDER[CYCLE_PHASE_ORDER.indexOf(phase) + 1] ?? 'completed';
+  return { phase: nextPhase, matchday: nextPhase === 'completed' ? 0 : 1 };
 }

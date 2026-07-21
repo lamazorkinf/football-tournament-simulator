@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Cycle } from '../../types';
-import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable, getPhaseMatchdayCount, isCurrentMatchdayComplete } from '../calendar';
+import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable, getPhaseMatchdayCount, isCurrentMatchdayComplete, getNextCalendarState } from '../calendar';
 import {
   makeCycle,
   makeContinentalStage,
@@ -190,5 +190,28 @@ describe('isCurrentMatchdayComplete', () => {
 
   it('es false si la jornada actual no tiene partidos', () => {
     expect(isCurrentMatchdayComplete(makeCycle())).toBe(false);
+  });
+});
+
+describe('getNextCalendarState', () => {
+  it('avanza de jornada dentro de la misma fase', () => {
+    const cycle = continentalCycle(); // continental, matchday 1, count 2
+    expect(getNextCalendarState(cycle)).toEqual({ phase: 'continental', matchday: 2 });
+  });
+
+  it('al terminar la última jornada pasa a la fase siguiente en jornada 1', () => {
+    const cycle = { ...continentalCycle(), calendar: { phase: 'continental' as const, matchday: 2 } };
+    expect(getNextCalendarState(cycle)).toEqual({ phase: 'confed', matchday: 1 });
+  });
+
+  it('desde wc-knockout (última jornada) pasa a completed', () => {
+    const cycle = makeCycle({ calendar: { phase: 'wc-knockout', matchday: 1 } });
+    // sin partidos en wc-knockout → count 0 → se considera terminada
+    expect(getNextCalendarState(cycle)).toEqual({ phase: 'completed', matchday: 0 });
+  });
+
+  it('completed es idempotente', () => {
+    const cycle = makeCycle({ calendar: { phase: 'completed', matchday: 0 } });
+    expect(getNextCalendarState(cycle)).toEqual({ phase: 'completed', matchday: 0 });
   });
 });
