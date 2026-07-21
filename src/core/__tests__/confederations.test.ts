@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateConfederationsGroups } from '../confederations';
+import { generateConfederationsGroups, generateConfederationsSemiFinals } from '../confederations';
 import type { ConfederationFinalists } from '../confederations';
-import type { Team, Region } from '../../types';
+import type { Team, Region, WorldCupGroup, TeamStanding } from '../../types';
 
 /** 4 confederaciones (Europe, America, Africa, Asia), campeón + subcampeón c/u. */
 const FINALISTS: ConfederationFinalists[] = [
@@ -103,5 +103,89 @@ describe('generateConfederationsGroups', () => {
 
   it('rechaza un número de confederaciones distinto de 4', () => {
     expect(() => generateConfederationsGroups(FINALISTS.slice(0, 3), teams)).toThrow();
+  });
+});
+
+/** Standing con puntos/GD dados (para forzar orden 1º/2º sin simular). */
+function standing(teamId: string, points: number, gd = 0): TeamStanding {
+  return {
+    teamId,
+    played: 3,
+    won: points,
+    drawn: 0,
+    lost: 3 - points,
+    goalsFor: gd + 3,
+    goalsAgainst: 3,
+    goalDifference: gd,
+    points: points * 3,
+  };
+}
+
+/** Grupo "jugado": 6 partidos isPlayed + standings con orden explícito. */
+function playedGroup(name: string, order: string[]): WorldCupGroup {
+  // order[0] = 1º, order[3] = 4º (puntos decrecientes 3,2,1,0)
+  const standings = order.map((id, i) => standing(id, 3 - i));
+  const matches = Array.from({ length: 6 }, (_, i) => ({
+    id: `${name}-m${i}`,
+    homeTeamId: order[0],
+    awayTeamId: order[1],
+    homeScore: 1,
+    awayScore: 0,
+    isPlayed: true,
+    stage: 'confed-group',
+    matchday: (i % 3) + 1,
+  }));
+  return { id: name, name, teamIds: order, matches, standings };
+}
+
+describe('generateConfederationsSemiFinals', () => {
+  const teams: Team[] = [];
+
+  it('SF1 = 1ºA vs 2ºB, SF2 = 1ºB vs 2ºA (position 0 y 1)', () => {
+    const groups = [
+      playedGroup('Group A', ['A1', 'A2', 'A3', 'A4']),
+      playedGroup('Group B', ['B1', 'B2', 'B3', 'B4']),
+    ];
+    const semis = generateConfederationsSemiFinals(groups, teams);
+    expect(semis).toHaveLength(2);
+
+    const sf1 = semis.find((m) => m.position === 0)!;
+    const sf2 = semis.find((m) => m.position === 1)!;
+    expect(sf1.homeTeamId).toBe('A1');
+    expect(sf1.awayTeamId).toBe('B2');
+    expect(sf2.homeTeamId).toBe('B1');
+    expect(sf2.awayTeamId).toBe('A2');
+
+    for (const m of semis) {
+      expect(m.round).toBe('semi');
+      expect(m.stage).toBe('confed-knockout');
+      expect(m.matchday).toBe(4);
+      expect(m.isPlayed).toBe(false);
+    }
+  });
+
+  it('ordena por nombre: da igual el orden del array de grupos', () => {
+    const groups = [
+      playedGroup('Group B', ['B1', 'B2', 'B3', 'B4']),
+      playedGroup('Group A', ['A1', 'A2', 'A3', 'A4']),
+    ];
+    const semis = generateConfederationsSemiFinals(groups, teams);
+    const sf1 = semis.find((m) => m.position === 0)!;
+    expect(sf1.homeTeamId).toBe('A1');
+    expect(sf1.awayTeamId).toBe('B2');
+  });
+
+  it('guard: si algún partido de grupo no se jugó, devuelve []', () => {
+    const groups = [
+      playedGroup('Group A', ['A1', 'A2', 'A3', 'A4']),
+      playedGroup('Group B', ['B1', 'B2', 'B3', 'B4']),
+    ];
+    groups[1].matches[0].isPlayed = false;
+    expect(generateConfederationsSemiFinals(groups, teams)).toEqual([]);
+  });
+
+  it('guard: distinto de 2 grupos devuelve []', () => {
+    const groups = [playedGroup('Group A', ['A1', 'A2', 'A3', 'A4'])];
+    expect(generateConfederationsSemiFinals(groups, teams)).toEqual([]);
   });
 });

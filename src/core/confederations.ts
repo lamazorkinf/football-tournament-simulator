@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
-import { initializeStandings } from './scheduler';
+import { initializeStandings, sortStandings } from './scheduler';
 import { WORLD_CUP_FIXTURE_TEMPLATE } from '../constants/fixtureTemplate';
-import type { Match, Region, Team, WorldCupGroup } from '../types';
+import type { Match, Region, Team, WorldCupGroup, KnockoutMatch } from '../types';
 
 /** Finalistas de una confederación (entran a la Copa Confederaciones). */
 export interface ConfederationFinalists {
@@ -108,5 +108,56 @@ export function generateConfederationsGroups(
   return [
     buildGroup('Group A', groupA, skillOf),
     buildGroup('Group B', groupB, skillOf),
+  ];
+}
+
+/** Factory de partido de llave confed (siempre `stage:'confed-knockout'`). */
+function newConfedKnockoutMatch(
+  homeTeamId: string,
+  awayTeamId: string,
+  round: KnockoutMatch['round'],
+  matchday: number,
+  position: number,
+): KnockoutMatch {
+  return {
+    id: nanoid(),
+    homeTeamId,
+    awayTeamId,
+    homeScore: null,
+    awayScore: null,
+    isPlayed: false,
+    stage: 'confed-knockout',
+    round,
+    matchday,
+    position,
+  };
+}
+
+/**
+ * Semifinales: 1ºA-2ºB y 1ºB-2ºA. Requiere 2 grupos con TODOS los partidos
+ * jugados (si no, `[]`). Los grupos se ordenan por `name` para que "A"/"B" sean
+ * estables sin importar el orden del array.
+ */
+export function generateConfederationsSemiFinals(
+  groups: WorldCupGroup[],
+  teams: Team[],
+): KnockoutMatch[] {
+  if (groups.length !== 2) return [];
+  const allPlayed = groups.every((g) => g.matches.every((m) => m.isPlayed));
+  if (!allPlayed) return [];
+
+  const [groupA, groupB] = [...groups].sort((a, b) => a.name.localeCompare(b.name));
+  const rankedA = sortStandings(groupA.standings, teams, groupA.matches);
+  const rankedB = sortStandings(groupB.standings, teams, groupB.matches);
+
+  const a1 = rankedA[0]?.teamId;
+  const a2 = rankedA[1]?.teamId;
+  const b1 = rankedB[0]?.teamId;
+  const b2 = rankedB[1]?.teamId;
+  if (!a1 || !a2 || !b1 || !b2) return [];
+
+  return [
+    newConfedKnockoutMatch(a1, b2, 'semi', 4, 0),
+    newConfedKnockoutMatch(b1, a2, 'semi', 4, 1),
   ];
 }
