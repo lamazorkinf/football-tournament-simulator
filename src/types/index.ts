@@ -136,6 +136,11 @@ export interface TournamentState {
   simulateKnockoutMatch: (matchId: string) => Promise<void>;
   generateDrawAndFixtures: () => void;
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
+  drawContinental: () => void;
+  simulateContinentalMatch: (matchId: string) => Promise<void>;
+  drawConfederations: () => void;
+  simulateConfederationsMatch: (matchId: string) => Promise<void>;
+  advanceToQualifiers: () => void;
 }
 
 /** Fase activa del ciclo (puntero de calendario). */

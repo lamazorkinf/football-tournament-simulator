@@ -12,7 +12,18 @@ import {
 import { createSmartWorldCupDraw } from '../core/seeding';
 import { updateTeamsTiers } from '../core/tiers';
 import { simulateMatch as simulateGroupMatch, simulateMatchWithPenalties, updateTeamSkill, getStageImportance } from '../core/engine';
-import { toCycle, ensureCycleFields } from '../core/cycle';
+import {
+  toCycle,
+  ensureCycleFields,
+  drawContinentalStage,
+  recordContinentalMatch,
+  drawConfederationsStage,
+  recordConfedGroupMatch,
+  recordConfedKnockoutMatch,
+  type KnockoutResult,
+  type GroupResult,
+} from '../core/cycle';
+import { isMatchPlayable } from '../core/calendar';
 import {
   initializeKnockoutBracket,
   areGroupsComplete,
@@ -1209,6 +1220,7 @@ export const useTournamentStore = create<TournamentState>()(
               qualifiedTeamIds,
             },
             isQualifiersComplete: true,
+            calendar: { phase: 'wc-groups' as const, matchday: 1 },
           };
 
           progress.updateProgress('Guardando grupos en base de datos...', 4);
@@ -1286,6 +1298,7 @@ export const useTournamentStore = create<TournamentState>()(
                 roundOf32,
               },
             },
+            calendar: { phase: 'wc-knockout' as const, matchday: 1 },
           };
 
           updateTournamentInState(set, get, updatedTournament);
@@ -2047,6 +2060,157 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Reset saving state
         set({ isSavingMatch: false });
+      },
+
+      drawContinental: () => {
+        const state = get();
+        const cycle = state.currentTournament;
+        if (!cycle) return;
+        const byRegion: Record<Region, Team[]> = { Europe: [], America: [], Africa: [], Asia: [] };
+        for (const t of state.teams) byRegion[t.region].push(t);
+        const updated = drawContinentalStage(cycle, byRegion);
+        updateTournamentInState(set, get, updated);
+      },
+
+      simulateContinentalMatch: async (matchId: string) => {
+        const state = get();
+        const cycle = state.currentTournament;
+        if (!cycle) return;
+        if (state.isSavingMatch) return;
+        if (!isMatchPlayable(cycle, matchId)) {
+          console.warn(`⛔ Continental ${matchId} fuera de jornada.`);
+          return;
+        }
+        // Localizar el match en los brackets:
+        const all = Object.values(cycle.continental.brackets).flatMap((b): KnockoutMatch[] => [
+          ...b.roundOf64, ...b.roundOf32, ...b.roundOf16, ...b.quarterFinals, ...b.semiFinals,
+          ...(b.final ? [b.final] : []),
+        ]);
+        const match = all.find((m) => m.id === matchId);
+        if (!match || match.isPlayed) return;
+        const home = state.teams.find((t) => t.id === match.homeTeamId);
+        const away = state.teams.find((t) => t.id === match.awayTeamId);
+        if (!home || !away) return;
+
+        set({ isSavingMatch: true });
+        const importance = importanceFor('continental', match.round);
+        const result = simulateMatchWithPenalties(home.skill, away.skill, true, importance);
+
+        // Winner por goles; si empate, por penales.
+        let winnerId = home.id, loserId = away.id;
+        if (result.homeScore < result.awayScore) { winnerId = away.id; loserId = home.id; }
+        else if (result.homeScore === result.awayScore && result.penalties) {
+          if (result.penalties.awayScore > result.penalties.homeScore) { winnerId = away.id; loserId = home.id; }
+        }
+        const newHome = updateTeamSkill(home.skill, result.homeSkillChange);
+        const newAway = updateTeamSkill(away.skill, result.awaySkillChange);
+        const updatedTeams = state.teams.map((t) =>
+          t.id === home.id ? { ...t, skill: newHome } : t.id === away.id ? { ...t, skill: newAway } : t,
+        );
+
+        // Persistencia de skills best-effort: no bloquear el estado local con
+        // await de red. La persistencia normalizada de continental (bracket)
+        // queda para Plan 6; hoy solo se persiste vía el `persist` local.
+        if (isSupabaseConfigured()) {
+          teamsService
+            .batchUpdateTeams([
+              { id: home.id, skill: newHome },
+              { id: away.id, skill: newAway },
+            ])
+            .catch((error) => console.error('❌ Error actualizando skills (continental):', error));
+        }
+
+        const ko: KnockoutResult = {
+          homeScore: result.homeScore, awayScore: result.awayScore, winnerId, loserId,
+          penalties: result.penalties,
+        };
+        const updated = recordContinentalMatch(cycle, matchId, ko);
+        set({ teams: updatedTeams });
+        updateTournamentInState(set, get, updated);
+        set({ isSavingMatch: false });
+      },
+
+      drawConfederations: () => {
+        const state = get();
+        const cycle = state.currentTournament;
+        if (!cycle) return;
+        if (!cycle.continental.isComplete) {
+          console.warn('drawConfederations: la fase continental no está completa.');
+          return;
+        }
+        const updated = drawConfederationsStage(cycle, state.teams);
+        updateTournamentInState(set, get, updated);
+      },
+
+      simulateConfederationsMatch: async (matchId: string) => {
+        const state = get();
+        const cycle = state.currentTournament;
+        if (!cycle || state.isSavingMatch) return;
+        if (!isMatchPlayable(cycle, matchId)) {
+          console.warn(`⛔ Confed ${matchId} fuera de jornada.`);
+          return;
+        }
+        const conf = cycle.confederationsCup;
+        const groupMatch = conf.groups.flatMap((g) => g.matches).find((m) => m.id === matchId);
+        const koMatch = [
+          ...conf.knockout.semiFinals,
+          ...(conf.knockout.final ? [conf.knockout.final] : []),
+          ...(conf.knockout.thirdPlace ? [conf.knockout.thirdPlace] : []),
+        ].find((m) => m.id === matchId);
+        const match = groupMatch ?? koMatch;
+        if (!match || match.isPlayed) return;
+        const home = state.teams.find((t) => t.id === match.homeTeamId);
+        const away = state.teams.find((t) => t.id === match.awayTeamId);
+        if (!home || !away) return;
+
+        set({ isSavingMatch: true });
+        const isKo = Boolean(koMatch);
+        const importance = importanceFor(isKo ? 'confed-knockout' : 'confed-group', isKo ? (match as KnockoutMatch).round : undefined);
+        const result = simulateMatchWithPenalties(home.skill, away.skill, true, importance);
+        const newHome = updateTeamSkill(home.skill, result.homeSkillChange);
+        const newAway = updateTeamSkill(away.skill, result.awaySkillChange);
+        const updatedTeams = state.teams.map((t) =>
+          t.id === home.id ? { ...t, skill: newHome } : t.id === away.id ? { ...t, skill: newAway } : t,
+        );
+
+        // Persistencia de skills best-effort (ver nota en simulateContinentalMatch).
+        if (isSupabaseConfigured()) {
+          teamsService
+            .batchUpdateTeams([
+              { id: home.id, skill: newHome },
+              { id: away.id, skill: newAway },
+            ])
+            .catch((error) => console.error('❌ Error actualizando skills (confed):', error));
+        }
+
+        let updated: Cycle;
+        if (isKo) {
+          let winnerId = home.id, loserId = away.id;
+          if (result.homeScore < result.awayScore) { winnerId = away.id; loserId = home.id; }
+          else if (result.homeScore === result.awayScore && result.penalties
+                   && result.penalties.awayScore > result.penalties.homeScore) { winnerId = away.id; loserId = home.id; }
+          updated = recordConfedKnockoutMatch(cycle, matchId, {
+            homeScore: result.homeScore, awayScore: result.awayScore, winnerId, loserId, penalties: result.penalties,
+          }); // 3 args: recordConfedKnockoutMatch NO recibe teams
+        } else {
+          const groupResult: GroupResult = { homeScore: result.homeScore, awayScore: result.awayScore };
+          updated = recordConfedGroupMatch(cycle, matchId, groupResult, updatedTeams);
+        }
+        set({ teams: updatedTeams });
+        updateTournamentInState(set, get, updated);
+        set({ isSavingMatch: false });
+      },
+
+      advanceToQualifiers: () => {
+        const state = get();
+        const cycle = state.currentTournament;
+        if (!cycle) return;
+        if (!cycle.confederationsCup.isComplete) {
+          console.warn('advanceToQualifiers: la Copa Confederaciones no está completa.');
+          return;
+        }
+        const updated: Cycle = { ...cycle, calendar: { phase: 'wc-qualifiers', matchday: 1 } };
+        updateTournamentInState(set, get, updated);
       },
       };
     },
