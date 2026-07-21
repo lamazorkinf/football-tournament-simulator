@@ -10,7 +10,11 @@ import { Card, CardHeader } from '../ui/Card';
 
 type WorldCupTab = 'groups' | 'playoffs';
 
-export function WorldCupViewEnhanced() {
+interface WorldCupViewEnhancedProps {
+  onNavigate?: (view: string) => void;
+}
+
+export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps = {}) {
   const { currentTournament, teams, advanceToKnockout, regenerateKnockoutStage, simulateMatch } = useTournamentStore();
   const [activeTab, setActiveTab] = useState<WorldCupTab>('groups');
 
@@ -293,8 +297,8 @@ export function WorldCupViewEnhanced() {
             runnerUpId={worldCup.runnerUp}
             thirdPlaceId={worldCup.thirdPlace}
             fourthPlaceId={worldCup.fourthPlace}
-            onBack={() => {}}
-            onNewTournament={undefined}
+            onBack={() => setActiveTab('groups')}
+            onNewTournament={onNavigate ? () => onNavigate('wizard') : undefined}
           />
         )}
       </div>

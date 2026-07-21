@@ -130,7 +130,7 @@ function App() {
         ) : currentView === 'comparison' ? (
           <TeamComparison />
         ) : currentView === 'worldcup' ? (
-          <WorldCupViewEnhanced />
+          <WorldCupViewEnhanced onNavigate={handleNavigate} />
         ) : currentView === 'qualifiers' ? (
           <QualifiersView
             initialRegion={viewOptions.region}

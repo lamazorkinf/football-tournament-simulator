@@ -35,6 +35,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
   const [selectedStage, setSelectedStage] = useState<MatchStage | 'all'>('all');
   const [selectedMatch, setSelectedMatch] = useState<MatchWithContext | null>(null);
   const [selectedMatchday, setSelectedMatchday] = useState<number | 'all'>('all');
+  // Partido concreto que se muestra en el preview móvil. Antes el modal usaba
+  // siempre unplayedMatches[0], así que tocar cualquier fila abría el preview
+  // del primer partido, no el tocado.
+  const [mobilePreviewMatch, setMobilePreviewMatch] = useState<MatchWithContext | null>(null);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   // Collect all matches from all sources
@@ -69,8 +73,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
         });
       });
 
-      // Knockout matches
+      // Knockout matches (incluye roundOf32: se omitía y los dieciseisavos no
+      // aparecían en Match Center ni contaban en los totales).
       const knockoutMatches = [
+        ...tournament.worldCup.knockout.roundOf32,
         ...tournament.worldCup.knockout.roundOf16,
         ...tournament.worldCup.knockout.quarterFinals,
         ...tournament.worldCup.knockout.semiFinals,
@@ -195,11 +201,22 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
       return;
     }
 
+    // Avisar si hay filtros activos: "Simular Jornada" opera sobre la lista
+    // FILTRADA (región/etapa), no sobre todos los partidos de la jornada, y el
+    // toast posterior dice "Jornada completada" sin más.
+    const activeFilters: string[] = [];
+    if (selectedRegion !== 'all') activeFilters.push(`región ${selectedRegion}`);
+    if (selectedStage !== 'all') activeFilters.push(`etapa ${selectedStage}`);
+    const filterNote =
+      activeFilters.length > 0
+        ? `\n\n⚠️ Filtro activo (${activeFilters.join(', ')}): solo se simularán los partidos que coinciden con el filtro.`
+        : '';
+
     // Show confirmation dialog
     const confirmed = confirm(
       `⚽ Simular Jornada Completa\n\n` +
       `Jornada: ${currentMatchday}\n` +
-      `Partidos a simular: ${matchdayMatches.length}\n\n` +
+      `Partidos a simular: ${matchdayMatches.length}${filterNote}\n\n` +
       `¿Deseas simular todos los partidos de esta jornada?`
     );
 
@@ -271,9 +288,10 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
     disabled: unplayedMatches.length === 0 || isSavingMatch || isBatchProcessing,
   });
 
-  const handleMatchClick = () => {
+  const handleMatchClick = (matchCtx: MatchWithContext) => {
     // Open modal on mobile, do nothing on desktop
     if (window.innerWidth < 1024) {
+      setMobilePreviewMatch(matchCtx);
       setShowMobilePreview(true);
     }
   };
@@ -530,7 +548,7 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
                     matchCtx={matchCtx}
                     teams={teams}
                     onSimulate={() => handleSimulateMatch(matchCtx)}
-                    onMatchClick={handleMatchClick}
+                    onMatchClick={() => handleMatchClick(matchCtx)}
                     index={idx}
                     compact={true}
                     disabled={isSavingMatch}
@@ -602,8 +620,8 @@ export function MatchCenter({ tournament, teams }: MatchCenterProps) {
 
       {/* Mobile Preview Modal */}
       <AnimatePresence>
-        {showMobilePreview && unplayedMatches.length > 0 && (() => {
-          const nextMatch = unplayedMatches[0];
+        {showMobilePreview && mobilePreviewMatch && (() => {
+          const nextMatch = mobilePreviewMatch;
           const homeTeam = getTeam(nextMatch.match.homeTeamId);
           const awayTeam = getTeam(nextMatch.match.awayTeamId);
 

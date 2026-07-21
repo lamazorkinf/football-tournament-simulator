@@ -64,25 +64,28 @@ export function TournamentWizard() {
       : null
   );
 
-  if (!currentTournament) {
-    return null;
-  }
-
-  // Calculate progress for each phase
+  // Los useMemo deben ir ANTES de cualquier return condicional: si no, cuando
+  // currentTournament pasa de null a existente cambia la cantidad de hooks
+  // ejecutados y React lanza "Rendered more hooks than during the previous
+  // render". Por eso son tolerantes a currentTournament nulo.
   const qualifierProgress = useMemo(
-    () => getQualifierProgress(currentTournament),
+    () => (currentTournament ? getQualifierProgress(currentTournament) : null),
     [currentTournament]
   );
 
   const worldCupProgress = useMemo(() => {
-    if (!currentTournament.worldCup) return null;
+    if (!currentTournament?.worldCup) return null;
     return getWorldCupGroupProgress(currentTournament.worldCup.groups);
   }, [currentTournament]);
 
   const knockoutProgress = useMemo(() => {
-    if (!currentTournament.worldCup) return null;
+    if (!currentTournament?.worldCup) return null;
     return getKnockoutProgress(currentTournament.worldCup.knockout);
   }, [currentTournament]);
+
+  if (!currentTournament || !qualifierProgress) {
+    return null;
+  }
 
   // Check if actions are available
   const canGenerateDraw = !currentTournament.hasAnyMatchPlayed;

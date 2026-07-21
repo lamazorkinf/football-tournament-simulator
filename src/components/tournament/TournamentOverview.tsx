@@ -321,6 +321,7 @@ function calculateKnockoutStats(tournament: Tournament) {
 
   const knockout = tournament.worldCup.knockout;
   const allMatches = [
+    ...knockout.roundOf32,
     ...knockout.roundOf16,
     ...knockout.quarterFinals,
     ...knockout.semiFinals,
@@ -335,13 +336,20 @@ function calculateKnockoutStats(tournament: Tournament) {
     totalMatches,
     playedMatches,
     progress: totalMatches > 0 ? (playedMatches / totalMatches) * 100 : 0,
-    isComplete: playedMatches === totalMatches,
+    // Con 0 partidos, playedMatches === totalMatches daba 0 === 0 -> true y la
+    // fase se pintaba como completada antes de generar ningún cruce.
+    isComplete: totalMatches > 0 && playedMatches === totalMatches,
   };
 }
 
 function determineCurrentStage(tournament: Tournament): string {
   if (tournament.worldCup) {
-    if (tournament.worldCup.knockout.roundOf16.length > 0) {
+    // Incluir roundOf32: si solo se miraba roundOf16, generados los
+    // dieciseisavos el timeline seguía marcando "Qualifiers" como etapa activa.
+    const knockoutStarted =
+      tournament.worldCup.knockout.roundOf32.length > 0 ||
+      tournament.worldCup.knockout.roundOf16.length > 0;
+    if (knockoutStarted) {
       const knockoutComplete = tournament.worldCup.knockout.final?.isPlayed || false;
       if (!knockoutComplete) return 'knockout';
     }

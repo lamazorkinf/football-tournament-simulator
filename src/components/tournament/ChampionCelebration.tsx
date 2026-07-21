@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import type { Team } from '../../types';
 import { Trophy, Medal, Award } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { TeamFlag } from '../ui/TeamFlag';
 
 interface ChampionCelebrationProps {
   championId: string;
@@ -25,6 +27,18 @@ export const ChampionCelebration = ({
   const thirdPlace = thirdPlaceId ? teams.find((t) => t.id === thirdPlaceId) : null;
   const fourthPlace = fourthPlaceId ? teams.find((t) => t.id === fourthPlaceId) : null;
 
+  // Posiciones del confeti fijadas una vez: si se calculan con Math.random() en
+  // el render, saltan a otra posición en cada re-render del componente.
+  const confetti = useMemo(
+    () =>
+      Array.from({ length: 50 }, () => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        delay: `${Math.random() * 2}s`,
+      })),
+    []
+  );
+
   if (!champion || !runnerUp) return null;
 
   return (
@@ -34,15 +48,11 @@ export const ChampionCelebration = ({
         {/* Confetti effect background */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 left-0 w-full h-full">
-            {[...Array(50)].map((_, i) => (
+            {confetti.map((c, i) => (
               <div
                 key={i}
                 className="absolute w-2 h-2 bg-gold blink"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                }}
+                style={{ left: c.left, top: c.top, animationDelay: c.delay }}
               />
             ))}
           </div>
@@ -52,7 +62,7 @@ export const ChampionCelebration = ({
           <Trophy className="w-24 h-24 mx-auto animate-bounce text-gold" />
           <h1 className="font-arcade text-xl text-gold blink">WORLD CUP CHAMPION</h1>
           <div className="flex items-center justify-center gap-4">
-            <span className="text-8xl">{champion.flag}</span>
+            <TeamFlag teamId={champion.id} teamName={champion.name} flagUrl={champion.flag} size={64} />
             <div className="text-left">
               <h2 className="font-arcade text-lg text-white text-shadow-retro">{champion.name}</h2>
               <p className="text-grass-soft text-xl">Skill Rating: {Math.round(champion.skill)}</p>
@@ -74,7 +84,7 @@ export const ChampionCelebration = ({
                 <Medal className="w-8 h-8 text-grass-soft" />
                 <span className="font-arcade text-xl text-grass-soft">2nd</span>
               </div>
-              <div className="text-6xl">{runnerUp.flag}</div>
+              <div className="flex justify-center"><TeamFlag teamId={runnerUp.id} teamName={runnerUp.name} flagUrl={runnerUp.flag} size={48} /></div>
               <h3 className="font-arcade text-sm text-white text-shadow-retro">{runnerUp.name}</h3>
               <p className="text-sm text-grass-soft">Runner-up</p>
               <p className="text-sm text-grass-soft">Skill: {Math.round(runnerUp.skill)}</p>
@@ -90,7 +100,7 @@ export const ChampionCelebration = ({
                 <Trophy className="w-10 h-10 text-gold" />
                 <span className="font-arcade text-2xl text-gold">1st</span>
               </div>
-              <div className="text-7xl">{champion.flag}</div>
+              <div className="flex justify-center"><TeamFlag teamId={champion.id} teamName={champion.name} flagUrl={champion.flag} size={64} /></div>
               <h3 className="font-arcade text-base text-white text-shadow-retro">{champion.name}</h3>
               <p className="text-sm text-gold font-semibold">Champion</p>
               <p className="text-sm text-gold">Skill: {Math.round(champion.skill)}</p>
@@ -107,7 +117,7 @@ export const ChampionCelebration = ({
                   <Award className="w-8 h-8 text-led" />
                   <span className="font-arcade text-xl text-led">3rd</span>
                 </div>
-                <div className="text-6xl">{thirdPlace.flag}</div>
+                <div className="flex justify-center"><TeamFlag teamId={thirdPlace.id} teamName={thirdPlace.name} flagUrl={thirdPlace.flag} size={48} /></div>
                 <h3 className="font-arcade text-sm text-white text-shadow-retro">{thirdPlace.name}</h3>
                 <p className="text-sm text-led">Third Place</p>
                 <p className="text-sm text-grass-soft">Skill: {Math.round(thirdPlace.skill)}</p>
@@ -128,7 +138,7 @@ export const ChampionCelebration = ({
                 <span className="font-arcade text-sm text-grass-soft">4th Place</span>
               </div>
               <div className="flex items-center justify-center gap-3">
-                <span className="text-4xl">{fourthPlace.flag}</span>
+                <TeamFlag teamId={fourthPlace.id} teamName={fourthPlace.name} flagUrl={fourthPlace.flag} size={32} />
                 <div>
                   <h3 className="font-arcade text-xs text-white text-shadow-retro">{fourthPlace.name}</h3>
                   <p className="text-xs text-grass-soft">Skill: {Math.round(fourthPlace.skill)}</p>
@@ -148,29 +158,33 @@ export const ChampionCelebration = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div className="font-terminal text-3xl text-gold tabular-nums">1st</div>
-              <div className="text-sm text-grass-soft">
-                {champion.flag} {champion.name}
+              <div className="flex items-center justify-center gap-2 text-sm text-grass-soft">
+                <TeamFlag teamId={champion.id} teamName={champion.name} flagUrl={champion.flag} size={16} />
+                {champion.name}
               </div>
             </div>
             <div>
               <div className="font-terminal text-3xl text-grass-soft tabular-nums">2nd</div>
-              <div className="text-sm text-grass-soft">
-                {runnerUp.flag} {runnerUp.name}
+              <div className="flex items-center justify-center gap-2 text-sm text-grass-soft">
+                <TeamFlag teamId={runnerUp.id} teamName={runnerUp.name} flagUrl={runnerUp.flag} size={16} />
+                {runnerUp.name}
               </div>
             </div>
             {thirdPlace && (
               <div>
                 <div className="font-terminal text-3xl text-led tabular-nums">3rd</div>
-                <div className="text-sm text-grass-soft">
-                  {thirdPlace.flag} {thirdPlace.name}
+                <div className="flex items-center justify-center gap-2 text-sm text-grass-soft">
+                  <TeamFlag teamId={thirdPlace.id} teamName={thirdPlace.name} flagUrl={thirdPlace.flag} size={16} />
+                  {thirdPlace.name}
                 </div>
               </div>
             )}
             {fourthPlace && (
               <div>
                 <div className="font-terminal text-3xl text-grass-soft tabular-nums">4th</div>
-                <div className="text-sm text-grass-soft">
-                  {fourthPlace.flag} {fourthPlace.name}
+                <div className="flex items-center justify-center gap-2 text-sm text-grass-soft">
+                  <TeamFlag teamId={fourthPlace.id} teamName={fourthPlace.name} flagUrl={fourthPlace.flag} size={16} />
+                  {fourthPlace.name}
                 </div>
               </div>
             )}

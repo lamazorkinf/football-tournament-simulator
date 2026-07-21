@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingUp, TrendingDown, Target, Clock, Users } from 'lucide-react';
 import type { Match, Team } from '../../types';
@@ -21,6 +22,23 @@ export function MatchDetailModal({
   awaySkillChange = 0,
   onClose,
 }: MatchDetailModalProps) {
+  // Minutos de gol memoizados y ordenados: con Math.random() en el render
+  // saltaban a valores distintos en cada re-render y nunca estaban en orden
+  // cronológico. La semilla deriva del id del partido para ser estable.
+  const goals = useMemo(() => {
+    const total = (match.homeScore ?? 0) + (match.awayScore ?? 0);
+    let seed = 0;
+    for (let i = 0; i < match.id.length; i++) seed = (seed * 31 + match.id.charCodeAt(i)) % 100000;
+    const rand = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    return Array.from({ length: total }, (_, idx) => ({
+      isHome: idx < (match.homeScore ?? 0),
+      minute: Math.floor(rand() * 90) + 1,
+    })).sort((a, b) => a.minute - b.minute);
+  }, [match.id, match.homeScore, match.awayScore]);
+
   if (!match.isPlayed) return null;
 
   const homeWon = (match.homeScore ?? 0) > (match.awayScore ?? 0);
@@ -183,10 +201,9 @@ export function MatchDetailModal({
             <div className="bg-night p-4">
               <h4 className="font-arcade text-[10px] text-gold uppercase mb-3">Goal Timeline</h4>
               <div className="space-y-2">
-                {Array.from({ length: (match.homeScore ?? 0) + (match.awayScore ?? 0) }).map((_, idx) => {
-                  const isHome = idx < (match.homeScore ?? 0);
-                  const team = isHome ? homeTeam : awayTeam;
-                  const minute = Math.floor(Math.random() * 90) + 1;
+                {goals.map((goal, idx) => {
+                  const team = goal.isHome ? homeTeam : awayTeam;
+                  const minute = goal.minute;
 
                   return (
                     <motion.div
