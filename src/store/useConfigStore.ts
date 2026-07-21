@@ -1,12 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type ImportanceKey =
+  | 'qualifier'
+  | 'continentalEarly'
+  | 'continentalLate'
+  | 'confedGroup'
+  | 'confedKnockout'
+  | 'wcGroup'
+  | 'wcKnockout';
+
 export interface EngineConfig {
   kFactor: number;
   eloDivisor: number;
   homeAdvantage: number;
   skillMin: number;
   skillMax: number;
+  importanceByStage: Record<ImportanceKey, number>;
 }
 
 interface ConfigStore {
@@ -15,10 +25,21 @@ interface ConfigStore {
   updateEloDivisor: (value: number) => void;
   updateHomeAdvantage: (value: number) => void;
   updateSkillLimits: (min: number, max: number) => void;
+  updateImportance: (key: ImportanceKey, value: number) => void;
   resetToDefaults: () => void;
   scanlines: boolean;
   toggleScanlines: () => void;
 }
+
+const DEFAULT_IMPORTANCE: Record<ImportanceKey, number> = {
+  qualifier: 0.75,
+  continentalEarly: 0.9,
+  continentalLate: 1.2,
+  confedGroup: 1.1,
+  confedKnockout: 1.4,
+  wcGroup: 1.25,
+  wcKnockout: 1.6,
+};
 
 // kFactor 1.5 + eloDivisor 75: calibrados por simulación para que los
 // rankings sigan siendo reconocibles tras 50 temporadas (el divisor 75
@@ -30,6 +51,7 @@ const DEFAULT_CONFIG: EngineConfig = {
   homeAdvantage: 3,
   skillMin: 30,
   skillMax: 100,
+  importanceByStage: DEFAULT_IMPORTANCE,
 };
 
 export const useConfigStore = create<ConfigStore>()(
@@ -71,6 +93,19 @@ export const useConfigStore = create<ConfigStore>()(
           return { config: { ...state.config, skillMin, skillMax } };
         }),
 
+      updateImportance: (key: ImportanceKey, value: number) =>
+        set((state) => {
+          const safe = Number.isFinite(value)
+            ? Math.max(0, Math.min(5, value))
+            : state.config.importanceByStage[key];
+          return {
+            config: {
+              ...state.config,
+              importanceByStage: { ...state.config.importanceByStage, [key]: safe },
+            },
+          };
+        }),
+
       resetToDefaults: () => set({ config: DEFAULT_CONFIG }),
 
       scanlines: true,
@@ -79,12 +114,22 @@ export const useConfigStore = create<ConfigStore>()(
     }),
     {
       name: 'football-engine-config',
-      version: 2,
+      version: 3,
       migrate: (persistedState, version) => {
         const state = persistedState as ConfigStore;
         if (version < 2) {
           // v2: nuevo motor Elo calibrado — resetear config a los nuevos defaults
           return { ...state, config: DEFAULT_CONFIG };
+        }
+        if (version < 3) {
+          // v3: pesos de Elo por etapa — agregar sin perder el resto de la config
+          return {
+            ...state,
+            config: {
+              ...state.config,
+              importanceByStage: state.config.importanceByStage ?? DEFAULT_IMPORTANCE,
+            },
+          };
         }
         return state;
       },

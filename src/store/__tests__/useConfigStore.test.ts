@@ -50,3 +50,39 @@ describe('updateSkillLimits', () => {
     }
   });
 });
+
+describe('importanceByStage', () => {
+  beforeEach(() => {
+    useConfigStore.getState().resetToDefaults();
+  });
+
+  it('tiene los 7 pesos por defecto correctos', () => {
+    expect(config().importanceByStage).toEqual({
+      qualifier: 0.75,
+      continentalEarly: 0.9,
+      continentalLate: 1.2,
+      confedGroup: 1.1,
+      confedKnockout: 1.4,
+      wcGroup: 1.25,
+      wcKnockout: 1.6,
+    });
+  });
+
+  it('updateImportance cambia un solo peso sin tocar los demás', () => {
+    useConfigStore.getState().updateImportance('wcKnockout', 2);
+    expect(config().importanceByStage.wcKnockout).toBe(2);
+    expect(config().importanceByStage.qualifier).toBe(0.75);
+  });
+
+  it('updateImportance clampea al rango [0, 5]', () => {
+    useConfigStore.getState().updateImportance('qualifier', -1);
+    expect(config().importanceByStage.qualifier).toBe(0);
+    useConfigStore.getState().updateImportance('qualifier', 99);
+    expect(config().importanceByStage.qualifier).toBe(5);
+  });
+
+  it('updateImportance ignora valores no numéricos', () => {
+    useConfigStore.getState().updateImportance('wcGroup', Number.NaN);
+    expect(config().importanceByStage.wcGroup).toBe(1.25);
+  });
+});
