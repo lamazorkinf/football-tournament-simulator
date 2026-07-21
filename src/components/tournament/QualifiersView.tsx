@@ -37,16 +37,21 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
     }
   );
 
-  // Auto-select group if initialGroupId is provided
+  // Auto-select group if initialGroupId is provided.
+  //
+  // Depende SOLO de los identificadores de navegación, no de currentTournament:
+  // con éste en las dependencias, cada partido simulado re-ejecutaba
+  // setSelectedGroup y reabría el grupo viejo, dejando al usuario atrapado en
+  // el detalle. El torneo se lee del store en el momento, sin re-disparar.
   useEffect(() => {
-    if (initialGroupId && initialRegion && currentTournament) {
-      const groups = currentTournament.qualifiers[initialRegion as Region] || [];
-      const group = groups.find((g) => g.id === initialGroupId);
-      if (group) {
-        setSelectedGroup({ group, region: initialRegion as Region });
-      }
+    if (!initialGroupId || !initialRegion) return;
+    const tournament = useTournamentStore.getState().currentTournament;
+    const groups = tournament?.qualifiers[initialRegion as Region] || [];
+    const group = groups.find((g) => g.id === initialGroupId);
+    if (group) {
+      setSelectedGroup({ group, region: initialRegion as Region });
     }
-  }, [initialGroupId, initialRegion, currentTournament]);
+  }, [initialGroupId, initialRegion]);
 
   if (!currentTournament) {
     return (

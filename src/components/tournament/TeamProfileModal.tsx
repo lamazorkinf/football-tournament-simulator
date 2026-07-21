@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamTournamentHistory } from './TeamTournamentHistory';
 import { db } from '../../lib/supabaseNormalized';
-import { isSupabaseConfigured } from '../../lib/supabase';
+import { isSupabaseConfigured, escapeOrValue } from '../../lib/supabase';
 import type { Team } from '../../types';
 
 interface TeamProfileModalProps {
@@ -96,12 +96,37 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; skill: number } | null>(null);
 
   useEffect(() => {
-    loadTeamProfile();
+    // Guard de carrera + reset de estado: el modal no se desmonta al abrir otro
+    // equipo (cambia la prop team), así que sin esto se veían el gráfico, los
+    // récords y el historial del equipo anterior hasta resolver el fetch; y si
+    // la primera petición volvía después de la segunda, quedaban datos cruzados.
+    const signal = { cancelled: false };
+
+    setLoading(true);
+    setMatchHistory([]);
+    setSkillEvolution([]);
+    setStats({
+      totalMatches: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      winRate: 0,
+      avgGoalsFor: 0,
+      avgGoalsAgainst: 0,
+    });
+
+    loadTeamProfile(signal);
+
+    return () => {
+      signal.cancelled = true;
+    };
   }, [team.id]);
 
-  const loadTeamProfile = async () => {
+  const loadTeamProfile = async (signal: { cancelled: boolean }) => {
     if (!isSupabaseConfigured()) {
-      setLoading(false);
+      if (!signal.cancelled) setLoading(false);
       return;
     }
 
@@ -109,6 +134,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
       // Load all teams first for opponent names
       const { data: teamsData, error: teamsError } = await db.teams().select('*');
       if (teamsError) throw teamsError;
+      if (signal.cancelled) return;
 
       const teamsMap = new Map<string, Team>();
       teamsData?.forEach((t: any) => {
@@ -126,10 +152,11 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
       const { data: matches, error: matchesError } = await db
         .match_history()
         .select('*')
-        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+        .or(`home_team_id.eq.${escapeOrValue(team.id)},away_team_id.eq.${escapeOrValue(team.id)}`)
         .order('played_at', { ascending: false });
 
       if (matchesError) throw matchesError;
+      if (signal.cancelled) return;
 
       // Load all tournaments to map tournament IDs to years
       const { data: allTournaments, error: allTournamentsError } = await db
@@ -137,6 +164,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
         .select('id, year, status');
 
       if (allTournamentsError) throw allTournamentsError;
+      if (signal.cancelled) return;
 
       const tournamentMap = new Map<string, { year: number; status: string }>();
       allTournaments?.forEach((t: any) => {
@@ -285,6 +313,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
         .eq('status', 'completed');
 
       if (tournamentsError) throw tournamentsError;
+      if (signal.cancelled) return;
 
       const teamTitles: TournamentTitle[] = [];
       tournaments?.forEach((t: any) => {
@@ -320,11 +349,16 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
         }));
       }
     } catch (error) {
-      console.error('Error loading team profile:', error);
+      if (!signal.cancelled) console.error('Error loading team profile:', error);
     } finally {
-      setLoading(false);
+      if (!signal.cancelled) setLoading(false);
     }
   };
+
+  // Porcentaje seguro: con totalMatches === 0, la división daba NaN, que el
+  // navegador descarta como CSS inválido y la barra heredaba el 100% del ancho.
+  const barWidth = (value: number) =>
+    stats.totalMatches > 0 ? `${(value / stats.totalMatches) * 100}%` : '0%';
 
   const getPositionLabel = (position: string) => {
     switch (position) {
@@ -537,7 +571,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                       <div className="w-full bg-black/40 border border-grass h-2 mt-2">
                         <div
                           className="bg-led h-2"
-                          style={{ width: `${(stats.wins / stats.totalMatches) * 100}%` }}
+                          style={{ width: barWidth(stats.wins) }}
                         ></div>
                       </div>
                     </div>
@@ -548,7 +582,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                       <div className="w-full bg-black/40 border border-grass h-2 mt-2">
                         <div
                           className="bg-grass-soft h-2"
-                          style={{ width: `${(stats.draws / stats.totalMatches) * 100}%` }}
+                          style={{ width: barWidth(stats.draws) }}
                         ></div>
                       </div>
                     </div>
@@ -559,7 +593,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                       <div className="w-full bg-black/40 border border-grass h-2 mt-2">
                         <div
                           className="bg-loss h-2"
-                          style={{ width: `${(stats.losses / stats.totalMatches) * 100}%` }}
+                          style={{ width: barWidth(stats.losses) }}
                         ></div>
                       </div>
                     </div>

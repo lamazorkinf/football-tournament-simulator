@@ -29,65 +29,29 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
   const [selectedView, setSelectedView] = useState<'overview' | 'teams' | 'tiers'>('overview');
   const [regionalStatsHistorical, setRegionalStatsHistorical] = useState<any[]>([]);
 
+  // Un solo efecto: trae los partidos UNA vez y calcula tanto las estadísticas
+  // por equipo como las regionales. Antes eran dos efectos que descargaban los
+  // mismos ~10000 partidos por separado, ninguno con guard de desmontaje
+  // (setState tras cambiar de pestaña durante la carga).
   useEffect(() => {
-    loadStats();
-  }, []);
-
-  useEffect(() => {
-    const loadRegionalStats = async () => {
-      if (!isSupabaseConfigured()) return;
-
-      try {
-        const allMatches = await matchHistoryService.getAllMatches(10000, 0);
-
-        // Group by region using team data - ONLY qualifier matches
-        const regionMap = new Map<string, { totalGoals: number; matchesPlayed: number }>();
-
-        allMatches.forEach((match) => {
-          // Only count qualifier matches
-          if (match.stage !== 'qualifier') return;
-
-          const homeTeam = teams.find(t => t.id === match.homeTeamId);
-          const region = homeTeam?.region || 'Unknown';
-
-          if (!regionMap.has(region)) {
-            regionMap.set(region, { totalGoals: 0, matchesPlayed: 0 });
-          }
-
-          const stats = regionMap.get(region)!;
-          stats.totalGoals += match.homeScore + match.awayScore;
-          stats.matchesPlayed++;
-        });
-
-        const regionalData = Array.from(regionMap.entries()).map(([region, stats]) => ({
-          region,
-          totalGoals: stats.totalGoals,
-          matchesPlayed: stats.matchesPlayed,
-          avgGoals: stats.matchesPlayed > 0 ? stats.totalGoals / stats.matchesPlayed : 0,
-        }));
-
-        setRegionalStatsHistorical(regionalData);
-      } catch (error) {
-        console.error('Error loading regional stats:', error);
-      }
+    const signal = { cancelled: false };
+    loadStats(signal);
+    return () => {
+      signal.cancelled = true;
     };
+  }, [teams]);
 
-    if (teamStats.length > 0) {
-      loadRegionalStats();
-    }
-  }, [teamStats, teams]);
-
-  const loadStats = async () => {
+  const loadStats = async (signal: { cancelled: boolean }) => {
     if (!isSupabaseConfigured()) {
-      setLoading(false);
+      if (!signal.cancelled) setLoading(false);
       return;
     }
 
     try {
       console.log('🔄 [HistoricalStats] Fetching all matches...');
       const allMatches = await matchHistoryService.getAllMatches(10000, 0); // Get more matches
+      if (signal.cancelled) return;
       console.log(`✅ [HistoricalStats] Total matches fetched: ${allMatches.length}`);
-      console.log('📊 [HistoricalStats] Sample matches:', allMatches.slice(0, 3));
 
       // Calculate per-team statistics
       const teamStatsMap = new Map<string, TeamStats>();
@@ -152,19 +116,36 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
       });
 
       const finalTeamStats = Array.from(teamStatsMap.values());
-      console.log(`📈 [HistoricalStats] Total teams with stats: ${finalTeamStats.length}`);
-      console.log('🔝 [HistoricalStats] Top 5 teams by matches:',
-        finalTeamStats
-          .sort((a, b) => b.totalMatches - a.totalMatches)
-          .slice(0, 5)
-          .map(t => `${t.teamId}: ${t.totalMatches} matches`)
-      );
 
+      // Estadísticas regionales, sobre los MISMOS partidos ya traídos.
+      const regionMap = new Map<string, { totalGoals: number; matchesPlayed: number }>();
+      allMatches.forEach((match) => {
+        if (match.stage !== 'qualifier') return;
+        const homeTeam = teams.find((t) => t.id === match.homeTeamId);
+        const region = homeTeam?.region || 'Unknown';
+        if (!regionMap.has(region)) {
+          regionMap.set(region, { totalGoals: 0, matchesPlayed: 0 });
+        }
+        const stats = regionMap.get(region)!;
+        stats.totalGoals += match.homeScore + match.awayScore;
+        stats.matchesPlayed++;
+      });
+      const regionalData = Array.from(regionMap.entries()).map(([region, stats]) => ({
+        region,
+        totalGoals: stats.totalGoals,
+        matchesPlayed: stats.matchesPlayed,
+        avgGoals: stats.matchesPlayed > 0 ? stats.totalGoals / stats.matchesPlayed : 0,
+      }));
+
+      if (signal.cancelled) return;
       setTeamStats(finalTeamStats);
+      setRegionalStatsHistorical(regionalData);
       setLoading(false);
     } catch (error) {
-      console.error('Error loading historical stats:', error);
-      setLoading(false);
+      if (!signal.cancelled) {
+        console.error('Error loading historical stats:', error);
+        setLoading(false);
+      }
     }
   };
 

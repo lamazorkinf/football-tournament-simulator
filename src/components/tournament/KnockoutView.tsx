@@ -8,7 +8,7 @@ import { MatchDetailModal } from './MatchDetailModal';
 import { BracketLine } from './BracketLine';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamNameTooltip } from '../ui/TeamNameTooltip';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useMobileAction } from '../../hooks/useMobileAction';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -174,16 +174,6 @@ export const KnockoutView = ({
   const [showCelebration, setShowCelebration] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<KnockoutMatch | null>(null);
   const bracketRef = useRef<HTMLDivElement>(null);
-  const [, setViewportWidth] = useState(
-    typeof window !== 'undefined' ? window.innerWidth : 1024
-  );
-
-  // Update viewport width on resize
-  useEffect(() => {
-    const handleResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const handleSimulate = async (matchId: string) => {
     // Don't allow simulation if another match is being saved

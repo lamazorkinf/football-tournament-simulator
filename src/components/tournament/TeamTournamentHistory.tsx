@@ -19,17 +19,26 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadPerformances();
+    // Guard de carrera + reset: al cambiar de equipo sin desmontar, evita
+    // mostrar el historial del equipo anterior y respuestas fuera de orden.
+    const signal = { cancelled: false };
+    setLoading(true);
+    setPerformances([]);
+    loadPerformances(signal);
+    return () => {
+      signal.cancelled = true;
+    };
   }, [teamId]);
 
-  const loadPerformances = async () => {
+  const loadPerformances = async (signal: { cancelled: boolean }) => {
     if (!isSupabaseConfigured()) {
-      setLoading(false);
+      if (!signal.cancelled) setLoading(false);
       return;
     }
 
     try {
       const data = await teamTournamentPerformanceService.getTeamAllPerformances(teamId);
+      if (signal.cancelled) return;
 
       // Load tournament information
       const tournamentIds = data.map(p => p.tournamentId);
@@ -38,6 +47,7 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
           .from('tournaments_new')
           .select('id, year, name')
           .in('id', tournamentIds)) as any;
+        if (signal.cancelled) return;
 
         const tournamentMap = new Map(tournaments?.map((t: any) => [t.id, t]) || []);
 
@@ -55,9 +65,9 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
         setPerformances(data);
       }
     } catch (error) {
-      console.error('Error loading tournament performances:', error);
+      if (!signal.cancelled) console.error('Error loading tournament performances:', error);
     } finally {
-      setLoading(false);
+      if (!signal.cancelled) setLoading(false);
     }
   };
 

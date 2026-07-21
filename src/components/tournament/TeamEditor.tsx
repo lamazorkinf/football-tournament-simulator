@@ -42,7 +42,10 @@ export function TeamEditor() {
   };
 
   const handleSave = (teamId: string) => {
-    updateTeam(teamId, editForm);
+    // Clampear el skill al rango válido: el input permite escribir cualquier
+    // número y podía grabarse un skill fuera de [30, 100].
+    const skill = Math.max(30, Math.min(100, Number.isFinite(editForm.skill) ? editForm.skill : 30));
+    updateTeam(teamId, { ...editForm, skill });
     setEditingTeam(null);
   };
 
@@ -70,9 +73,13 @@ export function TeamEditor() {
       }
     }
 
-    // Remove from local state by updating with empty values will trigger re-render
-    // Actually we need a delete action in the store - for now we can filter
-    window.location.reload(); // Temporary solution - should add deleteTeam action to store
+    // Refrescar la lista de equipos desde la base en vez de recargar la página
+    // entera, que descartaba cualquier estado en memoria no persistido.
+    try {
+      await loadTeamsFromDatabase();
+    } catch (error) {
+      console.error('Error refreshing teams after delete:', error);
+    }
   };
 
   const teamsByRegion = useMemo(() => {
@@ -229,9 +236,12 @@ function TeamRow({
                 min="30"
                 max="100"
                 value={editForm.skill}
-                onChange={(e) =>
-                  onFormChange({ ...editForm, skill: parseInt(e.target.value) || 30 })
-                }
+                onChange={(e) => {
+                  // No convertir 0/vacío en 30 al vuelo: se deja el valor crudo
+                  // (0 si no es número) y el rango se valida al guardar.
+                  const parsed = parseInt(e.target.value, 10);
+                  onFormChange({ ...editForm, skill: Number.isNaN(parsed) ? 0 : parsed });
+                }}
                 className="w-full px-3 py-1 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
               />
             </div>

@@ -25,55 +25,66 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
   });
 
   useEffect(() => {
+    // Guard de cancelación: al simular partidos seguidos, el preview apunta a
+    // otro par de equipos y las respuestas fuera de orden pisaban las nuevas.
+    // Se resetea el estado para no mostrar los datos del partido anterior
+    // mientras carga el nuevo.
+    let cancelled = false;
+
+    setHomeTeamHistory([]);
+    setAwayTeamHistory([]);
+    setH2hHistory({ home: 0, draw: 0, away: 0 });
+
+    const loadMatchHistory = async () => {
+      try {
+        // Get last 5 matches for each team
+        const homeMatches = await matchHistoryService.getTeamMatches(homeTeam.id, 5);
+        const awayMatches = await matchHistoryService.getTeamMatches(awayTeam.id, 5);
+        if (cancelled) return;
+
+        setHomeTeamHistory(homeMatches);
+        setAwayTeamHistory(awayMatches);
+
+        // Calculate H2H history
+        const allHomeMatches = await matchHistoryService.getTeamMatches(homeTeam.id, 100);
+        if (cancelled) return;
+
+        const h2hMatches = allHomeMatches.filter(
+          (m) =>
+            (m.homeTeamId === homeTeam.id && m.awayTeamId === awayTeam.id) ||
+            (m.homeTeamId === awayTeam.id && m.awayTeamId === homeTeam.id)
+        );
+
+        let homeWins = 0;
+        let draws = 0;
+        let awayWins = 0;
+
+        h2hMatches.forEach((match) => {
+          if (match.homeTeamId === homeTeam.id) {
+            // homeTeam is playing at home
+            if (match.homeScore > match.awayScore) homeWins++;
+            else if (match.homeScore === match.awayScore) draws++;
+            else awayWins++;
+          } else {
+            // homeTeam is playing away (so they are the away team in the match)
+            if (match.awayScore > match.homeScore) homeWins++;
+            else if (match.homeScore === match.awayScore) draws++;
+            else awayWins++;
+          }
+        });
+
+        if (!cancelled) setH2hHistory({ home: homeWins, draw: draws, away: awayWins });
+      } catch (error) {
+        if (!cancelled) console.error('Error loading match history:', error);
+      }
+    };
+
     loadMatchHistory();
+
+    return () => {
+      cancelled = true;
+    };
   }, [homeTeam.id, awayTeam.id]);
-
-  const loadMatchHistory = async () => {
-    try {
-      // Get last 5 matches for each team
-      const homeMatches = await matchHistoryService.getTeamMatches(homeTeam.id, 5);
-      const awayMatches = await matchHistoryService.getTeamMatches(awayTeam.id, 5);
-
-      setHomeTeamHistory(homeMatches);
-      setAwayTeamHistory(awayMatches);
-
-      // Calculate H2H history
-      const allHomeMatches = await matchHistoryService.getTeamMatches(homeTeam.id, 100);
-      const h2hMatches = allHomeMatches.filter(
-        (m) =>
-          (m.homeTeamId === homeTeam.id && m.awayTeamId === awayTeam.id) ||
-          (m.homeTeamId === awayTeam.id && m.awayTeamId === homeTeam.id)
-      );
-
-      console.log(`H2H: ${homeTeam.name} vs ${awayTeam.name}`, {
-        totalHomeMatches: allHomeMatches.length,
-        h2hMatches: h2hMatches.length,
-        matches: h2hMatches
-      });
-
-      let homeWins = 0;
-      let draws = 0;
-      let awayWins = 0;
-
-      h2hMatches.forEach((match) => {
-        if (match.homeTeamId === homeTeam.id) {
-          // homeTeam is playing at home
-          if (match.homeScore > match.awayScore) homeWins++;
-          else if (match.homeScore === match.awayScore) draws++;
-          else awayWins++;
-        } else {
-          // homeTeam is playing away (so they are the away team in the match)
-          if (match.awayScore > match.homeScore) homeWins++;
-          else if (match.homeScore === match.awayScore) draws++;
-          else awayWins++;
-        }
-      });
-
-      setH2hHistory({ home: homeWins, draw: draws, away: awayWins });
-    } catch (error) {
-      console.error('Error loading match history:', error);
-    }
-  };
 
   // Sort standings
   const sortedStandings = [...group.standings].sort((a, b) => {
@@ -197,11 +208,11 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
               </div>
               <div className="flex gap-1">
                 {homeTeamHistory.length > 0 ? (
-                  homeTeamHistory.map((match, idx) => {
+                  homeTeamHistory.map((match) => {
                     const result = getMatchResult(match, homeTeam.id);
                     return (
                       <div
-                        key={idx}
+                        key={match.id}
                         className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
                           result
                         )}`}
@@ -238,11 +249,11 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
               </div>
               <div className="flex gap-1">
                 {awayTeamHistory.length > 0 ? (
-                  awayTeamHistory.map((match, idx) => {
+                  awayTeamHistory.map((match) => {
                     const result = getMatchResult(match, awayTeam.id);
                     return (
                       <div
-                        key={idx}
+                        key={match.id}
                         className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
                           result
                         )}`}

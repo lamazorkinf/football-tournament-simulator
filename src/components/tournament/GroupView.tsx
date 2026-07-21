@@ -23,17 +23,23 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
     return teams.find((t) => t.id === teamId);
   };
 
-  const handleSimulateMatch = (matchId: string) => {
+  const handleSimulateMatch = async (matchId: string) => {
     const match = group.matches.find((m) => m.id === matchId);
     if (!match) return;
 
     const homeTeam = getTeam(match.homeTeamId);
     const awayTeam = getTeam(match.awayTeamId);
 
-    simulateMatch(matchId, group.id, 'qualifier');
+    // Esperar a que termine: sin await, el toast releía group.matches del render
+    // anterior (isPlayed === false) y nunca se mostraba el resultado.
+    await simulateMatch(matchId, group.id, 'qualifier');
 
-    // Show toast with result
-    const updatedMatch = group.matches.find((m) => m.id === matchId);
+    // Leer el partido actualizado del store (la prop group está congelada).
+    const currentTournament = useTournamentStore.getState().currentTournament;
+    const updatedMatch = currentTournament?.qualifiers[group.region]
+      ?.find((g) => g.id === group.id)
+      ?.matches.find((m) => m.id === matchId);
+
     if (updatedMatch && updatedMatch.isPlayed) {
       toast.success(
         `Match played! ${homeTeam?.name} ${updatedMatch.homeScore} - ${updatedMatch.awayScore} ${awayTeam?.name}`,

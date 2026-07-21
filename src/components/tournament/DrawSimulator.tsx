@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -52,9 +52,24 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
   // Detect if we're on desktop (lg breakpoint)
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
+  // Timeouts de la animación del sorteo. Se guardan para poder cancelarlos al
+  // reiniciar, cancelar o desmontar: si no, disparaban con closures obsoletas
+  // sobre un sorteo ya reiniciado (bombo/grupo corruptos) o hacían setState
+  // sobre un componente desmontado.
+  const timeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+
+  const clearPendingTimeouts = () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  };
+
   useEffect(() => {
     initializeDraw();
+    return clearPendingTimeouts;
   }, [qualifiedTeams]);
+
+  // Cleanup final al desmontar.
+  useEffect(() => clearPendingTimeouts, []);
 
   const initializeDraw = () => {
     // Sort teams by skill rating
@@ -109,7 +124,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
     }
 
     if (currentPot >= 4) {
-      finalizeDraw();
+      finalizeDraw(groups);
       return;
     }
 
@@ -119,7 +134,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
       const nextPot = currentPot + 1;
       if (nextPot >= 4) {
         // All pots completed
-        finalizeDraw();
+        finalizeDraw(groups);
       } else {
         setCurrentPot(nextPot);
         setCurrentGroup(0);
@@ -134,16 +149,26 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
     // Animate the selected team
     setAnimatingTeam(selectedTeam.id);
 
-    setTimeout(() => {
-      // Remove team from pot
-      const updatedPots = [...pots];
-      updatedPots[currentPot].teams = pot.teams.filter((_, idx) => idx !== randomIndex);
+    const timeout = setTimeout(() => {
+      // Actualización inmutable del bombo: copiar en vez de mutar pot.teams,
+      // que es un objeto del estado anterior.
+      const updatedPots = pots.map((p, idx) =>
+        idx === currentPot
+          ? { ...p, teams: p.teams.filter((_, i) => i !== randomIndex) }
+          : p
+      );
       setPots(updatedPots);
 
-      // Add team to current group
-      const updatedGroups = [...groups];
-      updatedGroups[currentGroup].teamIds.push(selectedTeam.id);
-      updatedGroups[currentGroup].letterAssignments![selectedTeam.id] = pot.letter;
+      // Actualización inmutable del grupo (nuevos teamIds/letterAssignments).
+      const updatedGroups = groups.map((g, idx) =>
+        idx === currentGroup
+          ? {
+              ...g,
+              teamIds: [...g.teamIds, selectedTeam.id],
+              letterAssignments: { ...g.letterAssignments, [selectedTeam.id]: pot.letter },
+            }
+          : g
+      );
       setGroups(updatedGroups);
 
       setAnimatingTeam(null);
@@ -153,27 +178,25 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
       if (nextGroup >= 16) {
         // All groups have received a team from this pot
         const nextPot = currentPot + 1;
+        setCurrentPot(nextPot);
+        setCurrentGroup(0);
         if (nextPot >= 4) {
-          // All pots completed, finalize the draw
-          setCurrentPot(nextPot);
-          setCurrentGroup(0);
-          setTimeout(() => {
-            finalizeDraw();
-          }, 100);
-        } else {
-          // Move to next pot
-          setCurrentPot(nextPot);
-          setCurrentGroup(0);
+          // Se pasan los grupos recién calculados: finalizeDraw ya no puede leer
+          // `groups` de su closure (sería la versión anterior sin el último
+          // equipo, antes se salvaba por accidente gracias a la mutación).
+          finalizeDraw(updatedGroups);
         }
       } else {
         setCurrentGroup(nextGroup);
       }
     }, 800);
+
+    timeoutsRef.current.push(timeout);
   };
 
-  const finalizeDraw = () => {
+  const finalizeDraw = (sourceGroups: WorldCupGroup[]) => {
     // Generate matches for each group
-    const finalGroups = groups.map((group) => {
+    const finalGroups = sourceGroups.map((group) => {
       const matches = generateWorldCupGroupMatches(group.teamIds, group.letterAssignments || {});
       return {
         ...group,
@@ -212,7 +235,13 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
   };
 
   const handleReset = () => {
+    clearPendingTimeouts();
     initializeDraw();
+  };
+
+  const handleCancel = () => {
+    clearPendingTimeouts();
+    onCancel();
   };
 
   const getTeam = (teamId: string): Team | undefined => {
@@ -232,11 +261,11 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
             <div className="flex gap-2 w-full sm:w-auto">
               {!isComplete && (
                 <>
-                  <Button variant="outline" onClick={onCancel} className="gap-1 sm:gap-2 flex-1 sm:flex-initial">
+                  <Button variant="outline" onClick={handleCancel} disabled={animatingTeam !== null} className="gap-1 sm:gap-2 flex-1 sm:flex-initial">
                     <span className="hidden sm:inline">Cancelar</span>
                     <span className="sm:hidden">✕</span>
                   </Button>
-                  <Button variant="secondary" onClick={handleReset} className="gap-1 sm:gap-2 flex-1 sm:flex-initial">
+                  <Button variant="secondary" onClick={handleReset} disabled={animatingTeam !== null} className="gap-1 sm:gap-2 flex-1 sm:flex-initial">
                     <RotateCcw className="w-4 h-4" />
                     <span className="hidden sm:inline">Reiniciar</span>
                   </Button>
