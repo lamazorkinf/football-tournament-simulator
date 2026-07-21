@@ -108,6 +108,15 @@ export function isCurrentMatchdayComplete(cycle: Cycle): boolean {
  * completar la última jornada salta a la fase siguiente en jornada 1;
  * `'wc-knockout'` desemboca en `'completed'`. Función pura: no genera
  * partidos ni persiste (eso lo hace el store al ejecutar la transición).
+ *
+ * PRECONDICIÓN (load-bearing): asume que la jornada actual de la fase ya tiene
+ * sus partidos generados. La "última jornada" se detecta como el mayor
+ * `matchday` presente (`getPhaseMatchdayCount`), así que una fase SIN partidos
+ * generados (count 0) se trata como YA COMPLETA y se saltea. Por eso el store
+ * (Plan 5) debe: (1) generar los partidos de la ronda/jornada siguiente ANTES
+ * de llamar a esta función, y (2) NUNCA invocarla sobre una fase recién
+ * entrada pero todavía no sorteada/generada — si no, se saltearía la fase
+ * entera (ej.: `confed` vacío devolvería directamente `wc-qualifiers`).
  */
 export function getNextCalendarState(cycle: Cycle): CalendarState {
   const { phase, matchday } = cycle.calendar;

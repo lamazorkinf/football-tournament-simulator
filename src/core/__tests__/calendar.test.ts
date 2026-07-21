@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Cycle } from '../../types';
+import type { CalendarState, Cycle, CyclePhase } from '../../types';
 import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable, getPhaseMatchdayCount, isCurrentMatchdayComplete, getNextCalendarState } from '../calendar';
 import {
   makeCycle,
@@ -213,5 +213,22 @@ describe('getNextCalendarState', () => {
   it('completed es idempotente', () => {
     const cycle = makeCycle({ calendar: { phase: 'completed', matchday: 0 } });
     expect(getNextCalendarState(cycle)).toEqual({ phase: 'completed', matchday: 0 });
+  });
+});
+
+describe('getNextCalendarState — todos los bordes de fase', () => {
+  // Con fases vacías (count 0) y matchday 1, cada fase se considera terminada
+  // y el planificador salta a la siguiente: esto fija el orden de CYCLE_PHASE_ORDER.
+  const boundaries: Array<[CyclePhase, CalendarState]> = [
+    ['continental', { phase: 'confed', matchday: 1 }],
+    ['confed', { phase: 'wc-qualifiers', matchday: 1 }],
+    ['wc-qualifiers', { phase: 'wc-groups', matchday: 1 }],
+    ['wc-groups', { phase: 'wc-knockout', matchday: 1 }],
+    ['wc-knockout', { phase: 'completed', matchday: 0 }],
+  ];
+
+  it.each(boundaries)('desde %s salta a la fase siguiente', (from, expected) => {
+    const cycle = makeCycle({ calendar: { phase: from, matchday: 1 } });
+    expect(getNextCalendarState(cycle)).toEqual(expected);
   });
 });
