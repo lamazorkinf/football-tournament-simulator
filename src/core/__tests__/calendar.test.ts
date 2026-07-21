@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Cycle } from '../../types';
-import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable } from '../calendar';
+import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable, getPhaseMatchdayCount, isCurrentMatchdayComplete } from '../calendar';
 import {
   makeCycle,
   makeContinentalStage,
@@ -158,5 +158,37 @@ describe('getPlayableMatches / isMatchPlayable', () => {
     expect(isMatchPlayable(cycle, 'eu-r64-2')).toBe(false);
     expect(isMatchPlayable(cycle, 'eu-r32-1')).toBe(false);
     expect(isMatchPlayable(cycle, 'inexistente')).toBe(false);
+  });
+});
+
+describe('getPhaseMatchdayCount', () => {
+  it('devuelve el mayor número de jornada de la fase', () => {
+    const cycle = continentalCycle(); // jornadas 1 y 2
+    expect(getPhaseMatchdayCount(cycle, 'continental')).toBe(2);
+  });
+
+  it('devuelve 0 para una fase sin partidos', () => {
+    expect(getPhaseMatchdayCount(makeCycle(), 'wc-groups')).toBe(0);
+  });
+});
+
+describe('isCurrentMatchdayComplete', () => {
+  it('es false si algún partido de la jornada actual sigue sin jugar', () => {
+    const cycle = continentalCycle(); // eu-r64-1 sin jugar
+    expect(isCurrentMatchdayComplete(cycle)).toBe(false);
+  });
+
+  it('es true cuando todos los partidos de la jornada actual están jugados', () => {
+    const europe = makeEmptyBracket('Europe');
+    europe.roundOf64 = [
+      makeKnockoutMatch('eu-r64-1', 'round-of-64', 1, true),
+      makeKnockoutMatch('eu-r64-2', 'round-of-64', 1, true),
+    ];
+    const cycle = makeCycle({ continental: makeContinentalStage({ Europe: europe }) });
+    expect(isCurrentMatchdayComplete(cycle)).toBe(true);
+  });
+
+  it('es false si la jornada actual no tiene partidos', () => {
+    expect(isCurrentMatchdayComplete(makeCycle())).toBe(false);
   });
 });

@@ -88,3 +88,16 @@ export function isMatchPlayable(cycle: Cycle, matchId: string): boolean {
     (m) => m.id === matchId && !m.isPlayed,
   );
 }
+
+/** Cantidad de jornadas de una fase = mayor `matchday` presente (0 si vacía). */
+export function getPhaseMatchdayCount(cycle: Cycle, phase: CyclePhase): number {
+  const matchdays = getPhaseMatches(cycle, phase).map((m) => m.matchday ?? 0);
+  return matchdays.length ? Math.max(...matchdays) : 0;
+}
+
+/** ¿Están jugados todos los partidos de la jornada actual? (false si no hay). */
+export function isCurrentMatchdayComplete(cycle: Cycle): boolean {
+  const { phase, matchday } = cycle.calendar;
+  const matches = getMatchdayMatches(cycle, phase, matchday);
+  return matches.length > 0 && matches.every((m) => m.isPlayed);
+}
