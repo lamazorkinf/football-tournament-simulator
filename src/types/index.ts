@@ -112,9 +112,9 @@ export interface TournamentListItem {
 
 export interface TournamentState {
   teams: Team[];
-  tournaments: Tournament[]; // All tournaments
+  tournaments: Cycle[]; // All tournaments
   currentTournamentId: string | null; // ID of selected tournament
-  currentTournament: Tournament | null; // Computed from currentTournamentId
+  currentTournament: Cycle | null; // Computed from currentTournamentId
   isSavingMatch: boolean; // Track if a match is being saved to prevent race conditions
   isBatchProcessing: boolean; // Track if batch processing is active to skip individual saves
 

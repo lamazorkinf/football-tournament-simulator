@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { TournamentState, Team, Region, Tournament, Group, Match, KnockoutMatch, WorldCupGroup } from '../types';
+import type { TournamentState, Team, Region, Tournament, Cycle, Group, Match, KnockoutMatch, WorldCupGroup } from '../types';
 import teamsData from '../data/teams.json';
 import { nanoid } from 'nanoid';
 import {
@@ -11,7 +11,8 @@ import {
 } from '../core/scheduler';
 import { createSmartWorldCupDraw } from '../core/seeding';
 import { updateTeamsTiers } from '../core/tiers';
-import { simulateMatch as simulateGroupMatch, simulateMatchWithPenalties, updateTeamSkill } from '../core/engine';
+import { simulateMatch as simulateGroupMatch, simulateMatchWithPenalties, updateTeamSkill, getStageImportance } from '../core/engine';
+import { toCycle, ensureCycleFields } from '../core/cycle';
 import {
   initializeKnockoutBracket,
   areGroupsComplete,
@@ -33,6 +34,7 @@ import { performDraw, generateGroupMatches, initializeStandings } from '../utils
 import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
 import { supabase } from '../lib/supabase';
+import { getEngineConfig } from './useConfigStore';
 
 // Regresión hacia el skill base entre temporadas: evita que la caminata
 // aleatoria del Elo disperse los ratings indefinidamente tras muchas
@@ -46,7 +48,7 @@ const BASE_SKILLS: Record<string, number> = Object.fromEntries(
  * Fusiona un torneo cargado con la lista ya existente en vez de reemplazarla:
  * la lista puede venir rehidratada desde localStorage con otros torneos.
  */
-const mergeTournament = (existing: Tournament[], incoming: Tournament): Tournament[] => {
+const mergeTournament = (existing: Cycle[], incoming: Cycle): Cycle[] => {
   const index = existing.findIndex((t) => t.id === incoming.id);
   if (index === -1) return [incoming, ...existing];
   const next = [...existing];
@@ -94,6 +96,15 @@ const updateTournamentInState = (set: any, get: any, updatedTournament: Tourname
   }
 };
 
+/**
+ * Peso Elo del partido según su etapa/ronda, leyendo la config actual del
+ * engine. `round` solo aplica a partidos de knockout (los de grupo lo dejan
+ * en undefined → getStageImportance usa el peso de la etapa sin ronda).
+ */
+function importanceFor(stage: string | undefined, round: KnockoutMatch['round'] | undefined): number {
+  return getStageImportance(stage, round, getEngineConfig());
+}
+
 export const useTournamentStore = create<TournamentState>()(
   persist(
     (set, get) => {
@@ -140,12 +151,13 @@ export const useTournamentStore = create<TournamentState>()(
             const latestTournament = await adaptiveTournamentService.getLatestTournament();
             if (latestTournament) {
               console.log(`Loaded latest tournament: ${latestTournament.name}`);
+              const latestCycle = ensureCycleFields(latestTournament);
               set((state) => ({
                 // Fusionar, no reemplazar: descartar la lista rehidratada borraba
                 // el historial local de torneos y lo volvía a persistir truncado.
-                tournaments: mergeTournament(state.tournaments, latestTournament),
-                currentTournamentId: latestTournament.id,
-                currentTournament: latestTournament,
+                tournaments: mergeTournament(state.tournaments, latestCycle),
+                currentTournamentId: latestCycle.id,
+                currentTournament: latestCycle,
               }));
               return;
             }
@@ -180,7 +192,7 @@ export const useTournamentStore = create<TournamentState>()(
           Asia: createQualifierGroups(teamsWithTiers, 'Asia'),
         };
 
-        const tournament: Tournament = {
+        const tournament: Cycle = toCycle({
           id: nanoid(),
           name: 'World Cup 2026',
           year: 2026,
@@ -189,7 +201,7 @@ export const useTournamentStore = create<TournamentState>()(
           isQualifiersComplete: false,
           hasAnyMatchPlayed: false,
           originalSkills,
-        };
+        });
 
         set((state) => ({
           teams: teamsWithTiers,
@@ -238,7 +250,7 @@ export const useTournamentStore = create<TournamentState>()(
           };
 
           progress.updateProgress('Inicializando torneo...', 3);
-          const tournament: Tournament = {
+          const tournament: Cycle = toCycle({
             id: nanoid(),
             name: `World Cup ${year}`,
             year,
@@ -247,7 +259,7 @@ export const useTournamentStore = create<TournamentState>()(
             isQualifiersComplete: false,
             hasAnyMatchPlayed: false,
             originalSkills,
-          };
+          });
 
           // Se añade el torneo a la lista, pero los skills regresados NO se
           // aplican todavía al pool global: si el usuario decide no cambiarse,
@@ -616,7 +628,9 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Simulate the match (disable home advantage for World Cup)
         const disableHomeAdvantage = stage === 'world-cup';
-        const result = simulateGroupMatch(homeTeam.skill, awayTeam.skill, disableHomeAdvantage);
+        const stageKey = stage === 'qualifier' ? 'qualifier' : 'world-cup-group';
+        const importance = importanceFor(stageKey, undefined);
+        const result = simulateGroupMatch(homeTeam.skill, awayTeam.skill, disableHomeAdvantage, importance);
 
         // Update match
         const updatedMatch: Match = {
@@ -829,7 +843,8 @@ export const useTournamentStore = create<TournamentState>()(
 
             // Simulate the match
             const disableHomeAdvantage = stage === 'world-cup';
-            const result = simulateGroupMatch(homeSkill, awaySkill, disableHomeAdvantage);
+            const batchImportance = importanceFor(stage === 'qualifier' ? 'qualifier' : 'world-cup-group', undefined);
+            const result = simulateGroupMatch(homeSkill, awaySkill, disableHomeAdvantage, batchImportance);
 
             // Update match
             const updatedMatch: Match = {
@@ -1749,8 +1764,9 @@ export const useTournamentStore = create<TournamentState>()(
           return;
         }
 
-        // Simulate with penalties
-        const result = simulateMatchWithPenalties(homeTeam.skill, awayTeam.skill);
+        // Simulate with penalties (sede neutral: eliminatorias del Mundial sin ventaja local)
+        const koImportance = importanceFor('world-cup-knockout', targetMatch.round);
+        const result = simulateMatchWithPenalties(homeTeam.skill, awayTeam.skill, true, koImportance);
 
         // Determine winner
         let winnerId: string;
@@ -2087,13 +2103,20 @@ export const useTournamentStore = create<TournamentState>()(
         // currentTournament no se persiste (es derivado), así que hay que
         // reconstruirlo desde currentTournamentId. Sin esto la app arrancaba
         // siempre sin torneo activo y volvía a inicializar desde cero.
-        if (!state || state.currentTournament) return;
+        if (!state) return;
 
-        const restored =
+        // Backfill defensivo: torneos persistidos antes del ciclo continental
+        // no tienen continental/confederationsCup/calendar.
+        state.tournaments = state.tournaments.map(ensureCycleFields);
+
+        if (state.currentTournament) return;
+
+        const found =
           state.tournaments.find((t) => t.id === state.currentTournamentId) ??
           state.tournaments[0];
 
-        if (restored) {
+        if (found) {
+          const restored = ensureCycleFields(found);
           state.currentTournament = restored;
           state.currentTournamentId = restored.id;
         }
