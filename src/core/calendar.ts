@@ -1,0 +1,76 @@
+import type {
+  Cycle,
+  CyclePhase,
+  ContinentalBracket,
+  KnockoutBracket,
+  Match,
+} from '../types';
+
+/** Orden fijo de fases del ciclo. `'completed'` es el estado terminal. */
+export const CYCLE_PHASE_ORDER: CyclePhase[] = [
+  'continental',
+  'confed',
+  'wc-qualifiers',
+  'wc-groups',
+  'wc-knockout',
+  'completed',
+];
+
+function bracketMatches(b: ContinentalBracket): Match[] {
+  return [
+    ...b.roundOf64,
+    ...b.roundOf32,
+    ...b.roundOf16,
+    ...b.quarterFinals,
+    ...b.semiFinals,
+    ...(b.final ? [b.final] : []),
+  ];
+}
+
+function knockoutMatches(k: KnockoutBracket): Match[] {
+  return [
+    ...k.roundOf32,
+    ...k.roundOf16,
+    ...k.quarterFinals,
+    ...k.semiFinals,
+    ...(k.thirdPlace ? [k.thirdPlace] : []),
+    ...(k.final ? [k.final] : []),
+  ];
+}
+
+/** Todos los partidos que pertenecen a una fase del ciclo, aplanados. */
+export function getPhaseMatches(cycle: Cycle, phase: CyclePhase): Match[] {
+  switch (phase) {
+    case 'continental':
+      return Object.values(cycle.continental.brackets).flatMap(bracketMatches);
+    case 'confed': {
+      const c = cycle.confederationsCup;
+      const groupMatches = c.groups.flatMap((g) => g.matches);
+      const ko = [
+        ...c.knockout.semiFinals,
+        ...(c.knockout.thirdPlace ? [c.knockout.thirdPlace] : []),
+        ...(c.knockout.final ? [c.knockout.final] : []),
+      ];
+      return [...groupMatches, ...ko];
+    }
+    case 'wc-qualifiers':
+      return Object.values(cycle.qualifiers)
+        .flat()
+        .flatMap((g) => g.matches);
+    case 'wc-groups':
+      return cycle.worldCup ? cycle.worldCup.groups.flatMap((g) => g.matches) : [];
+    case 'wc-knockout':
+      return cycle.worldCup ? knockoutMatches(cycle.worldCup.knockout) : [];
+    case 'completed':
+      return [];
+  }
+}
+
+/** Partidos de una jornada concreta dentro de una fase. */
+export function getMatchdayMatches(
+  cycle: Cycle,
+  phase: CyclePhase,
+  matchday: number,
+): Match[] {
+  return getPhaseMatches(cycle, phase).filter((m) => (m.matchday ?? 0) === matchday);
+}
