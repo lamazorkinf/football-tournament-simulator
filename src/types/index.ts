@@ -57,7 +57,7 @@ export interface WorldCupGroup {
 }
 
 export interface KnockoutMatch extends Match {
-  round: 'round-of-32' | 'round-of-16' | 'quarter' | 'semi' | 'third-place' | 'final';
+  round: 'round-of-64' | 'round-of-32' | 'round-of-16' | 'quarter' | 'semi' | 'third-place' | 'final';
   winnerId?: string;
   loserId?: string;
   penalties?: {
@@ -136,6 +136,60 @@ export interface TournamentState {
   simulateKnockoutMatch: (matchId: string) => Promise<void>;
   generateDrawAndFixtures: () => void;
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
+}
+
+/** Fase activa del ciclo (puntero de calendario). */
+export type CyclePhase =
+  | 'continental'
+  | 'confed'
+  | 'wc-qualifiers'
+  | 'wc-groups'
+  | 'wc-knockout'
+  | 'completed';
+
+/** Puntero del calendario global dentro del ciclo. */
+export interface CalendarState {
+  phase: CyclePhase;
+  matchday: number; // 1-based: jornada/ronda actual dentro de la fase
+}
+
+/** Bracket de eliminación directa de un torneo continental (arranca en R64). */
+export interface ContinentalBracket {
+  region: Region;
+  roundOf64: KnockoutMatch[]; // solo los cruces reales; los byes no generan partido
+  roundOf32: KnockoutMatch[];
+  roundOf16: KnockoutMatch[];
+  quarterFinals: KnockoutMatch[];
+  semiFinals: KnockoutMatch[];
+  final: KnockoutMatch | null;
+  championId?: string; // finalista 1 (campeón)
+  runnerUpId?: string; // finalista 2 (subcampeón)
+  byeTeamIds: string[]; // cabezas de serie con bye directo a R32
+}
+
+/** Los 4 brackets continentales de una edición del ciclo. */
+export interface ContinentalStage {
+  brackets: Record<Region, ContinentalBracket>;
+  isComplete: boolean;
+}
+
+/** Copa Confederaciones: 2 grupos de 4 + semis/3er puesto/final. */
+export interface ConfederationsCup {
+  groups: WorldCupGroup[]; // 2 grupos de 4 (una selección por confederación por grupo)
+  knockout: {
+    semiFinals: KnockoutMatch[]; // 1ºA-2ºB, 1ºB-2ºA
+    thirdPlace: KnockoutMatch | null;
+    final: KnockoutMatch | null;
+  };
+  championId?: string;
+  isComplete: boolean;
+}
+
+/** Ciclo de 4 años: extiende el Tournament con las fases previas y el calendario. */
+export interface Cycle extends Tournament {
+  continental: ContinentalStage;
+  confederationsCup: ConfederationsCup;
+  calendar: CalendarState;
 }
 
 /**
