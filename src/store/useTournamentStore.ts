@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { TournamentState, Team, Region, Tournament, Group, Match, KnockoutMatch, WorldCupGroup } from '../types';
 import teamsData from '../data/teams.json';
 import { nanoid } from 'nanoid';
@@ -2034,6 +2034,32 @@ export const useTournamentStore = create<TournamentState>()(
     {
       name: 'football-tournament-storage',
       version: 8, // Incremented: rehidratación de currentTournament + migrate
+      // Storage que tolera errores: setItem puede lanzar QuotaExceededError
+      // (cuota de ~5MB) al acumular temporadas, o fallar en modo privado. Sin
+      // este try/catch, la excepción rompía la acción que disparó el guardado.
+      storage: createJSONStorage(() => ({
+        getItem: (name) => {
+          try {
+            return localStorage.getItem(name);
+          } catch {
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, value);
+          } catch (error) {
+            console.warn('⚠️ No se pudo persistir el estado en localStorage:', error);
+          }
+        },
+        removeItem: (name) => {
+          try {
+            localStorage.removeItem(name);
+          } catch {
+            /* noop */
+          }
+        },
+      })),
       partialize: (state) => ({
         // Persist tournament list and selected ID in localStorage
         // Full tournament state also saved to Supabase for real persistence

@@ -2,56 +2,17 @@ import type { Match, Group, Region, Team, TeamStanding } from '../types';
 import { nanoid } from 'nanoid';
 
 /**
- * Generates all matches for a round-robin group of 5 teams
- * Each team plays every other team twice (home and away)
- * Total: 5 teams * 4 opponents * 2 (home/away) = 20 matches per group
+ * Etiqueta de grupo: A-Z y luego AA, AB, ... String.fromCharCode(65 + i) solo
+ * daba letras válidas hasta 26 grupos; a partir de ahí producía '[', '\', ']'.
  */
-export function generateRoundRobinMatches(teamIds: string[]): Match[] {
-  const matches: Match[] = [];
-
-  // Each team plays every other team twice
-  for (let i = 0; i < teamIds.length; i++) {
-    for (let j = 0; j < teamIds.length; j++) {
-      if (i !== j) {
-        matches.push({
-          id: nanoid(),
-          homeTeamId: teamIds[i],
-          awayTeamId: teamIds[j],
-          homeScore: null,
-          awayScore: null,
-          isPlayed: false,
-          stage: 'qualifier',
-        });
-      }
-    }
-  }
-
-  return matches;
-}
-
-/**
- * Generates World Cup group matches (4 teams, each plays once)
- * Total: 4 teams -> 6 matches (4 choose 2)
- */
-export function generateWorldCupGroupMatches(teamIds: string[]): Match[] {
-  const matches: Match[] = [];
-
-  // Each team plays every other team once
-  for (let i = 0; i < teamIds.length; i++) {
-    for (let j = i + 1; j < teamIds.length; j++) {
-      matches.push({
-        id: nanoid(),
-        homeTeamId: teamIds[i],
-        awayTeamId: teamIds[j],
-        homeScore: null,
-        awayScore: null,
-        isPlayed: false,
-        stage: 'world-cup-group',
-      });
-    }
-  }
-
-  return matches;
+function groupLabel(index: number): string {
+  let label = '';
+  let n = index;
+  do {
+    label = String.fromCharCode(65 + (n % 26)) + label;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return label;
 }
 
 /**
@@ -70,7 +31,7 @@ export function createQualifierGroups(teams: Team[], region: Region): Group[] {
 
     groups.push({
       id: groupId,
-      name: `Group ${String.fromCharCode(65 + i)}`, // A, B, C, ...
+      name: `Group ${groupLabel(i)}`, // A, B, ... Z, AA, AB, ...
       region,
       teamIds: [], // Empty - will be filled by draw system
       matches: [], // Empty - will be generated after draw
