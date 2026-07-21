@@ -1,11 +1,21 @@
-import { useConfigStore } from '../../store/useConfigStore';
+import { useConfigStore, type ImportanceKey } from '../../store/useConfigStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Settings, RotateCcw, Info, Zap, Home, Target } from 'lucide-react';
+import { Settings, RotateCcw, Info, Zap, Home, Target, Trophy } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
+const IMPORTANCE_ROWS: Array<{ key: ImportanceKey; label: string }> = [
+  { key: 'qualifier', label: 'Clasificatorias Mundial' },
+  { key: 'continentalEarly', label: 'Continental · R64–R16' },
+  { key: 'continentalLate', label: 'Continental · QF–Final' },
+  { key: 'confedGroup', label: 'Copa Confed · grupos' },
+  { key: 'confedKnockout', label: 'Copa Confed · semis/final' },
+  { key: 'wcGroup', label: 'Mundial · grupos' },
+  { key: 'wcKnockout', label: 'Mundial · knockout' },
+];
+
 export function EngineSettings() {
-  const { config, updateKFactor, updateEloDivisor, updateHomeAdvantage, updateSkillLimits, resetToDefaults } = useConfigStore();
+  const { config, updateKFactor, updateEloDivisor, updateHomeAdvantage, updateSkillLimits, updateImportance, resetToDefaults } = useConfigStore();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -254,6 +264,44 @@ export function EngineSettings() {
                 Los equipos no podrán superar estos límites, incluso si ganan muchos partidos seguidos.
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Peso por torneo (importancia Elo) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-gold" />
+            Peso por torneo (importancia Elo)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-grass-soft">
+              Multiplica el Factor K según la etapa del partido: cuánto mueve el skill cada torneo.
+              Las clasificatorias pesan menos (muchos partidos) y el knockout del Mundial, más.
+              Los cruces por penales cuentan como empate para el Elo.
+            </p>
+            {IMPORTANCE_ROWS.map(({ key, label }) => (
+              <div key={key}>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm text-grass-soft">{label}</label>
+                  <span className="text-led font-terminal tabular-nums font-bold text-sm">
+                    {config.importanceByStage[key].toFixed(2)}×
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="0.05"
+                  value={config.importanceByStage[key]}
+                  onChange={(e) => updateImportance(key, Number(e.target.value))}
+                  className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led"
+                />
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
