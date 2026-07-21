@@ -825,22 +825,55 @@ git commit -m "feat(core): confederations stage draw + group/knockout record in 
 **Gate:** `npx tsc -b --noEmit` + `npx eslint src/types/index.ts src/store/useTournamentStore.ts`. **No node-testeable** (actions async cuelgan). Verificación: tipos + lint + reviewer + smoke manual (`npm run dev`: jugar un grupo de clasificatorias sigue funcionando).
 
 **Interfaces:**
-- Consumes: de `../core/cycle` → `ensureCycleFields`. De `../core/engine` → `getStageImportance` (ya importado el resto de engine). De `./useConfigStore` → `getEngineConfig` (el store puede importarlo — NO es core).
+- Consumes: de `../core/cycle` → `toCycle`, `ensureCycleFields`. De `../core/engine` → `getStageImportance` (ya importado el resto de engine). De `./useConfigStore` → `getEngineConfig` (el store puede importarlo — NO es core).
+
+> **Ordenamiento (crítico):** el cambio de tipo a `Cycle` NO compila solo. Hay que acompañarlo, EN ESTA MISMA TAREA, de que toda construcción/carga de torneos produzca un `Cycle` (Step 2), si no `npx tsc -b --noEmit` falla (un `Tournament` plano no es asignable a `Cycle`/`Cycle[]`). Los pasos 1 y 2 se commitean juntos.
 
 - [ ] **Step 1: Tipar el estado como `Cycle`**
 
 En `src/types/index.ts`, interface `TournamentState` (línea ~113):
 - Cambiar `tournaments: Tournament[]` → `tournaments: Cycle[]`.
 - Cambiar `currentTournament: Tournament | null` → `currentTournament: Cycle | null`.
-- Importar `Cycle` en el mismo archivo (ya está definido más abajo en el archivo; reordenar no es necesario — `Cycle` está declarada en el mismo módulo).
+- `Cycle` ya está declarada más abajo en el mismo módulo — no hace falta importar nada.
 
 En `src/store/useTournamentStore.ts` línea 3, agregar `Cycle` al import de tipos desde `../types`.
 
-- [ ] **Step 2: Backfill defensivo al rehidratar/cargar**
+- [ ] **Step 2: Que TODA construcción/carga de torneos produzca un `Cycle`** (para que `tsc -b` pase con el tipo nuevo)
 
-`import { ensureCycleFields } from '../core/cycle';` (junto a los otros imports de core).
+`import { toCycle, ensureCycleFields } from '../core/cycle';` (junto a los imports de core del store).
 
-En `onRehydrateStorage` (líneas ~2086-2100) y en `initializeTournament` (donde se cargan torneos desde DB / lista), envolver cada torneo con `ensureCycleFields(t)` antes de setearlo, para que torneos sin campos de ciclo no rompan. Concretamente, donde hoy se hace `state.tournaments = [...]` / `mergeTournament(...)` al rehidratar, mapear: `tournaments.map(ensureCycleFields)`. Y al reconstruir `currentTournament`, usar `ensureCycleFields(found)`.
+(a) **`createNewTournament`** (línea ~241): cambiar la construcción del torneo a un ciclo (el resto de la función no cambia):
+
+```ts
+const tournament: Cycle = toCycle({
+  id: nanoid(),
+  name: `World Cup ${year}`,
+  year,
+  qualifiers,
+  worldCup: null,
+  isQualifiersComplete: false,
+  hasAnyMatchPlayed: false,
+  originalSkills,
+});
+```
+
+(b) **`mergeTournament`** (línea ~49): retipar a `Cycle` para que el retorno sea `Cycle[]` (cuerpo idéntico):
+
+```ts
+const mergeTournament = (existing: Cycle[], incoming: Cycle): Cycle[] => {
+  const index = existing.findIndex((t) => t.id === incoming.id);
+  if (index === -1) return [incoming, ...existing];
+  const next = [...existing];
+  next[index] = incoming;
+  return next;
+};
+```
+
+En sus call sites, el `incoming` que venga de la DB (un `Tournament`) debe envolverse: `mergeTournament(get().tournaments, ensureCycleFields(loaded))`.
+
+(c) **`initializeTournament`** (línea ~129) y toda carga desde DB (`adaptiveTournamentService.getLatestTournament()` devuelve `Tournament`): envolver el torneo cargado con `ensureCycleFields(...)` antes de setearlo en `currentTournament`/`tournaments`. Igual en `onRehydrateStorage` (líneas ~2086-2100): al reconstruir la lista y `currentTournament` desde lo persistido, mapear con `ensureCycleFields` (`tournaments.map(ensureCycleFields)`; `ensureCycleFields(found)` para el actual) — así torneos legacy sin campos de ciclo no rompen.
+
+**Verificá antes de seguir:** `npx tsc -b --noEmit` debe pasar (exit 0) tras este step. Si algún `Tournament` plano sigue asignándose a `Cycle`, el compilador lo marca — arreglalo envolviéndolo con `ensureCycleFields`/`toCycle`.
 
 - [ ] **Step 3: Extraer helper de importancia local al store**
 
@@ -893,7 +926,7 @@ function importanceFor(stage: string | undefined, round: KnockoutMatch['round'] 
 ```bash
 npx tsc -b --noEmit && npx eslint src/types/index.ts src/store/useTournamentStore.ts
 git add src/types/index.ts src/store/useTournamentStore.ts
-git commit -m "feat(store): type state as Cycle, wire stage importance + matchday enforcement"
+git commit -m "feat(store): type state as Cycle (toCycle/ensureCycleFields) + wire stage importance"
 ```
 
 ---
@@ -907,7 +940,9 @@ git commit -m "feat(store): type state as Cycle, wire stage importance + matchda
 **Gate:** `npx tsc -b --noEmit` + `npx eslint src/types/index.ts src/store/useTournamentStore.ts` + reviewer + smoke manual. **No node-testeable.**
 
 **Interfaces:**
-- Consumes: de `../core/cycle` → `toCycle`, `drawContinentalStage`, `recordContinentalMatch`, `drawConfederationsStage`, `recordConfedGroupMatch`, `recordConfedKnockoutMatch`, tipos `KnockoutResult`, `GroupResult`. De `../core/engine` → `simulateMatchWithPenalties`, `updateTeamSkill` (ya importados). De `../core/calendar` → `isMatchPlayable` (importar; usado por los guards de las acciones nuevas).
+- Consumes: de `../core/cycle` → `drawContinentalStage`, `recordContinentalMatch`, `drawConfederationsStage`, `recordConfedGroupMatch`, `recordConfedKnockoutMatch`, tipos `KnockoutResult`, `GroupResult`. De `../core/engine` → `simulateMatchWithPenalties`, `updateTeamSkill` (ya importados). De `../core/calendar` → `isMatchPlayable` (importar; usado por los guards de las acciones nuevas).
+- **Firmas exactas del core (verificadas en Tasks 2-3):** `recordConfedGroupMatch(cycle, matchId, result, teams)` = **4 args** (usa `teams` para standings); `recordConfedKnockoutMatch(cycle, matchId, result)` = **3 args** (SIN `teams` — se eliminó porque eslint de este repo flaggea args sin usar aunque tengan prefijo `_`). Respetá esas aridades en los call sites.
+- `toCycle` ya se usa en Task 4 (`createNewTournament`); esta tarea NO lo llama.
 - Produce (nuevas acciones en `TournamentState`):
   - `drawContinental: () => void`
   - `simulateContinentalMatch: (matchId: string) => Promise<void>`
@@ -927,26 +962,9 @@ En `src/types/index.ts`, agregar a la interface (sección Actions):
   advanceToQualifiers: () => void;
 ```
 
-- [ ] **Step 2: Extender `createNewTournament` para crear un `Cycle`**
+- [ ] **Step 2: (ya hecho en Task 4)**
 
-En `createNewTournament` (línea 241), cambiar la construcción del torneo a un ciclo:
-
-```ts
-import { toCycle } from '../core/cycle';
-// ...
-const tournament: Cycle = toCycle({
-  id: nanoid(),
-  name: `World Cup ${year}`,
-  year,
-  qualifiers,
-  worldCup: null,
-  isQualifiersComplete: false,
-  hasAnyMatchPlayed: false,
-  originalSkills,
-});
-```
-
-(El resto de `createNewTournament` no cambia; `tournament` ahora es `Cycle`, compatible con `tournaments: Cycle[]`.)
+`createNewTournament` ya construye un `Cycle` vía `toCycle` (se movió a Task 4 para que el cambio de tipo compile). No hay nada que hacer acá; seguí al Step 3.
 
 - [ ] **Step 3: `drawContinental` — sortear los 4 brackets**
 
@@ -1072,7 +1090,7 @@ simulateConfederationsMatch: async (matchId: string) => {
              && result.penalties.awayScore > result.penalties.homeScore) { winnerId = away.id; loserId = home.id; }
     updated = recordConfedKnockoutMatch(cycle, matchId, {
       homeScore: result.homeScore, awayScore: result.awayScore, winnerId, loserId, penalties: result.penalties,
-    }, updatedTeams);
+    }); // 3 args: recordConfedKnockoutMatch NO recibe teams
   } else {
     updated = recordConfedGroupMatch(cycle, matchId, {
       homeScore: result.homeScore, awayScore: result.awayScore,
