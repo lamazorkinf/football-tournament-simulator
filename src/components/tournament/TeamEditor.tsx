@@ -27,10 +27,13 @@ export function TeamEditor() {
     flag: string;
   }>({ skill: 50, region: 'Europe', flag: '' });
   const filteredTeams = useMemo(() => {
+    // Búsqueda insensible a acentos (Curaçao, São Tomé).
+    const normalize = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    const q = normalize(searchTerm);
     return teams.filter((team) => {
       const matchesSearch =
-        team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.id.toLowerCase().includes(searchTerm.toLowerCase());
+        normalize(team.name).includes(q) || team.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRegion = selectedRegion === 'All' || team.region === selectedRegion;
       return matchesSearch && matchesRegion;
     });

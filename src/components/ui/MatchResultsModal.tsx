@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, Trophy } from 'lucide-react';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { Button } from './Button';
@@ -5,11 +6,32 @@ import { Button } from './Button';
 export function MatchResultsModal() {
   const { isOpen, results, title, close } = useMatchResultsStore();
 
+  // Cierre con Escape y bloqueo del scroll del body mientras está abierto.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, close]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-3xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4"
+      onClick={close}
+    >
+      <div
+        className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-3xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="border-b-4 border-grass px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">

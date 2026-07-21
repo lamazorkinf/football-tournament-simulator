@@ -31,10 +31,18 @@ export function TournamentSelector() {
       return;
     }
 
-    await createNewTournament(year);
-    setShowNewModal(false);
-    setNewYear('');
-    setIsOpen(false);
+    // try/catch: si la creación falla (p.ej. sin red), sin esto la promesa
+    // quedaba sin manejar, el modal no se cerraba y el usuario no recibía
+    // ningún feedback.
+    try {
+      await createNewTournament(year);
+      setShowNewModal(false);
+      setNewYear('');
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error creating tournament:', error);
+      alert('No se pudo crear el torneo. Revisá la conexión e intentá de nuevo.');
+    }
   };
 
   const getStatusBadge = (tournament: typeof tournaments[0]) => {

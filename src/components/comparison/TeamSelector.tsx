@@ -19,11 +19,17 @@ export function TeamSelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
 
+  // Normaliza para búsqueda insensible a acentos: sin esto, "curacao" o
+  // "sao tome" no encontraban a Curaçao ni a São Tomé.
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const normalizedQuery = normalize(searchQuery);
+
   // Filter teams
   const filteredTeams = teams.filter((team) => {
     if (excludeTeamId && team.id === excludeTeamId) return false;
 
-    const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = normalize(team.name).includes(normalizedQuery);
     const matchesRegion = selectedRegion === 'all' || team.region === selectedRegion;
 
     return matchesSearch && matchesRegion;

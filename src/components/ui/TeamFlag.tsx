@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { getFlagUrl } from '../../data/country-codes';
 
 interface TeamFlagProps {
@@ -24,8 +25,19 @@ export function TeamFlag({
   // Use provided flagUrl from database, or generate as fallback
   const flagUrl = providedFlagUrl || getFlagUrl(teamId, size, style);
 
-  if (!flagUrl) {
-    // Fallback: show team ID as text if no flag found
+  // El fallback se maneja con estado de React, no inyectando nodos DOM crudos:
+  // el onError anterior hacía document.createElement + insertBefore dentro de un
+  // padre gestionado por React, dejando spans huérfanos que se acumulaban al
+  // remontar y abrían la vía a "removeChild" en la reconciliación.
+  const [hasError, setHasError] = useState(false);
+
+  // Reintentar cuando cambia la URL (equipo distinto en la misma posición).
+  useEffect(() => {
+    setHasError(false);
+  }, [flagUrl]);
+
+  if (!flagUrl || hasError) {
+    // Fallback: show team ID as text if no flag found or it failed to load
     return (
       <span className={`inline-flex items-center justify-center font-bold font-arcade text-[10px] ${className}`}>
         {teamId.toUpperCase()}
@@ -33,7 +45,7 @@ export function TeamFlag({
     );
   }
 
-  const imageElement = (
+  return (
     <img
       src={flagUrl}
       alt={`${teamName} flag`}
@@ -42,17 +54,7 @@ export function TeamFlag({
       style={{ width: size, height: size * 0.75, imageRendering: 'pixelated' }} // Maintain 4:3 aspect ratio
       loading="lazy"
       onClick={onClick}
-      onError={(e) => {
-        // Fallback to text if image fails to load
-        const target = e.target as HTMLImageElement;
-        target.style.display = 'none';
-        const fallback = document.createElement('span');
-        fallback.className = `inline-flex items-center justify-center font-bold font-arcade text-[10px] ${className}`;
-        fallback.textContent = teamId.toUpperCase();
-        target.parentNode?.insertBefore(fallback, target);
-      }}
+      onError={() => setHasError(true)}
     />
   );
-
-  return imageElement;
 }

@@ -2,11 +2,21 @@ import { useConfigStore } from '../../store/useConfigStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Settings, RotateCcw, Info, Zap, Home, Target } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export function EngineSettings() {
   const { config, updateKFactor, updateEloDivisor, updateHomeAdvantage, updateSkillLimits, resetToDefaults } = useConfigStore();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Limpiar el timer del "confirmar reset" al desmontar: si el usuario pulsa
+  // Restaurar y cambia de pestaña antes de 3s, hacía setState sobre un
+  // componente desmontado.
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   const getKFactorLabel = (value: number): { label: string; color: string } => {
     if (value <= 2) return { label: 'Muy Estable', color: 'text-led' };
@@ -23,7 +33,8 @@ export function EngineSettings() {
       setShowResetConfirm(false);
     } else {
       setShowResetConfirm(true);
-      setTimeout(() => setShowResetConfirm(false), 3000);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = setTimeout(() => setShowResetConfirm(false), 3000);
     }
   };
 

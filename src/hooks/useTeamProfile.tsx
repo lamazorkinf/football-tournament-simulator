@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { Team } from '../types';
 import { TeamProfileModal } from '../components/tournament/TeamProfileModal';
@@ -13,16 +13,23 @@ const TeamProfileContext = createContext<TeamProfileContextType | undefined>(und
 export function TeamProfileProvider({ children }: { children: ReactNode }) {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  const openTeamProfile = (team: Team) => {
+  const openTeamProfile = useCallback((team: Team) => {
     setSelectedTeam(team);
-  };
+  }, []);
 
-  const closeTeamProfile = () => {
+  const closeTeamProfile = useCallback(() => {
     setSelectedTeam(null);
-  };
+  }, []);
+
+  // Memoizar el value: TeamProfileProvider es el nodo raíz, así que recrearlo
+  // en cada render re-renderizaba toda la app al abrir/cerrar cualquier perfil.
+  const value = useMemo(
+    () => ({ openTeamProfile, closeTeamProfile }),
+    [openTeamProfile, closeTeamProfile]
+  );
 
   return (
-    <TeamProfileContext.Provider value={{ openTeamProfile, closeTeamProfile }}>
+    <TeamProfileContext.Provider value={value}>
       {children}
       {selectedTeam && <TeamProfileModal team={selectedTeam} onClose={closeTeamProfile} />}
     </TeamProfileContext.Provider>

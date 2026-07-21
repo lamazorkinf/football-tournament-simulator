@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import type { TeamStanding, Team, Match } from '../../types';
 import { cn } from '../../lib/utils';
 import { calculateTier, getTierColor, getTierIcon } from '../../core/tiers';
@@ -28,6 +28,22 @@ export function StandingsTable({
   // Always sort standings to ensure correct order
   const sortedStandings = sortStandings(standings, teams, matches);
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+
+  // La fila de detalle solo existe en móvil (< sm). Se observa el breakpoint
+  // para no hacer interactiva la fila en desktop.
+  const [isExpandable, setIsExpandable] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsExpandable(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  const toggleExpanded = (teamId: string) => {
+    if (!isExpandable) return;
+    setExpandedTeamId((prev) => (prev === teamId ? null : teamId));
+  };
 
   const getTeam = (teamId: string) => {
     return teams.find((t) => t.id === teamId);
@@ -75,15 +91,17 @@ export function StandingsTable({
             return (
               <Fragment key={standing.teamId}>
                 <tr
-                  onClick={() =>
-                    setExpandedTeamId(expandedTeamId === standing.teamId ? null : standing.teamId)
-                  }
-                  tabIndex={0}
-                  aria-expanded={expandedTeamId === standing.teamId}
+                  onClick={() => toggleExpanded(standing.teamId)}
+                  // La fila de detalle es sm:hidden: en desktop expandir no
+                  // produce ningún cambio visual, así que solo es interactiva en
+                  // móvil (evita re-render inútil y el anuncio engañoso de a11y).
+                  tabIndex={isExpandable ? 0 : undefined}
+                  role={isExpandable ? 'button' : undefined}
+                  aria-expanded={isExpandable ? expandedTeamId === standing.teamId : undefined}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (isExpandable && (e.key === 'Enter' || e.key === ' ')) {
                       e.preventDefault();
-                      setExpandedTeamId(expandedTeamId === standing.teamId ? null : standing.teamId);
+                      toggleExpanded(standing.teamId);
                     }
                   }}
                   className={cn(

@@ -3,7 +3,7 @@ import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { PixelBar } from '../ui/PixelBar';
-import { ArrowLeft, Trophy, Target, TrendingUp, Calendar } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, Calendar } from 'lucide-react';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamSelector } from './TeamSelector';
 import { H2HMatchHistory } from './H2HMatchHistory';
@@ -16,23 +16,38 @@ export function TeamComparison() {
   const [team2, setTeam2] = useState<Team | null>(null);
   const [h2hStats, setH2hStats] = useState<HeadToHeadStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   // Load h2h stats when both teams are selected
   useEffect(() => {
-    if (team1 && team2) {
-      setLoading(true);
-      calculateHeadToHeadStats(team1.id, team2.id)
-        .then((stats) => {
-          setH2hStats(stats);
-          setLoading(false);
-        })
-        .catch((error) => {
-          console.error('Error calculating h2h stats:', error);
-          setLoading(false);
-        });
-    } else {
+    if (!team1 || !team2) {
       setH2hStats(null);
+      setError(false);
+      return;
     }
+
+    // Guard de carrera al cambiar de par de equipos durante el fetch.
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+
+    calculateHeadToHeadStats(team1.id, team2.id)
+      .then((stats) => {
+        if (cancelled) return;
+        setH2hStats(stats);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // Sin marcar el error, h2hStats quedaba null y el spinner era eterno.
+        console.error('Error calculating h2h stats:', err);
+        setError(true);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [team1, team2]);
 
   const handleBack = () => {
@@ -40,6 +55,7 @@ export function TeamComparison() {
     setTeam1(null);
     setTeam2(null);
     setH2hStats(null);
+    setError(false);
   };
 
   // If no teams selected, show selection screen
@@ -84,21 +100,32 @@ export function TeamComparison() {
                 </div>
               </div>
 
-              {team1 && team2 && (
-                <div className="flex justify-center">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="gap-2"
-                    onClick={() => {
-                      // Teams are already selected, this will trigger the comparison view
-                    }}
-                  >
-                    <Trophy className="w-5 h-5" />
-                    Comparar Equipos
-                  </Button>
-                </div>
-              )}
+              {/* Al seleccionar ambos equipos, el efecto carga el H2H y la
+                  vista de comparación se muestra automáticamente. */}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Estado de error: con salida para no quedar atrapado.
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-12 pb-12">
+            <div className="text-center space-y-4">
+              <p className="text-loss font-arcade text-xs uppercase">
+                No se pudieron cargar las estadísticas
+              </p>
+              <p className="text-grass-soft text-sm">
+                Revisá la conexión e intentá con otro par de equipos.
+              </p>
+              <Button variant="outline" size="sm" onClick={handleBack} className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Cambiar Equipos
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BarChart3, GitCompare, Medal, History, Archive, Settings } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
 
@@ -20,6 +21,22 @@ interface PauseMenuProps {
 }
 
 export function PauseMenu({ isOpen, onClose, currentView, onViewChange }: PauseMenuProps) {
+  // Cierre con Escape y bloqueo del scroll del body mientras está abierto (en
+  // iOS el fondo seguía desplazándose por debajo del overlay).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (

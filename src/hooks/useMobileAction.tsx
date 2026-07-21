@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
 export interface MobileAction {
@@ -14,8 +14,12 @@ const MobileActionContext = createContext<{
 
 export function MobileActionProvider({ children }: { children: ReactNode }) {
   const [action, setAction] = useState<MobileAction | null>(null);
+  // Memoizar el value: sin esto se recreaba en cada render y, como el Provider
+  // envuelve toda la app, cada setAction re-renderizaba el árbol completo
+  // (incluidas tablas de 200+ filas). setAction del useState ya es estable.
+  const value = useMemo(() => ({ action, setAction }), [action]);
   return (
-    <MobileActionContext.Provider value={{ action, setAction }}>
+    <MobileActionContext.Provider value={value}>
       {children}
     </MobileActionContext.Provider>
   );

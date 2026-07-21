@@ -11,6 +11,10 @@ export function TeamNameTooltip({ children, teamName, position = 'top' }: TeamNa
   const [isVisible, setIsVisible] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // En móvil, un toque dispara touchstart y ~300ms después un click sintético.
+  // Sin esta bandera, el click fantasma volvía a togglear el tooltip y lo
+  // apagaba al instante: el nombre completo era inaccesible en la tabla.
+  const touchHandledRef = useRef(false);
 
   // Clear timeout on unmount
   useEffect(() => {
@@ -21,9 +25,7 @@ export function TeamNameTooltip({ children, teamName, position = 'top' }: TeamNa
     };
   }, [hideTimeout]);
 
-  const handleInteraction = (e: React.MouseEvent | React.TouchEvent) => {
-    e.stopPropagation();
-
+  const toggleTooltip = () => {
     // Clear any existing timeout
     if (hideTimeout) {
       clearTimeout(hideTimeout);
@@ -44,6 +46,22 @@ export function TeamNameTooltip({ children, teamName, position = 'top' }: TeamNa
 
       setHideTimeout(timeout);
     }
+  };
+
+  const handleTouch = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    touchHandledRef.current = true;
+    toggleTooltip();
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Ignorar el click sintético que sigue a un toque ya procesado.
+    if (touchHandledRef.current) {
+      touchHandledRef.current = false;
+      return;
+    }
+    toggleTooltip();
   };
 
   const handleMouseEnter = () => {
@@ -80,8 +98,8 @@ export function TeamNameTooltip({ children, teamName, position = 'top' }: TeamNa
   return (
     <div ref={containerRef} className="relative inline-block">
       <div
-        onClick={handleInteraction}
-        onTouchStart={handleInteraction}
+        onClick={handleClick}
+        onTouchStart={handleTouch}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="cursor-pointer touch-manipulation"

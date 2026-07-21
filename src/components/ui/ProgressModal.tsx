@@ -1,15 +1,39 @@
-import { CheckCircle } from 'lucide-react';
+import { useEffect } from 'react';
+import { CheckCircle, X } from 'lucide-react';
 import { useProgressStore } from '../../store/useProgressStore';
 import { PixelBar } from './PixelBar';
 
 export function ProgressModal() {
-  const { isOpen, title, currentStep, progress, completedSteps, totalSteps } = useProgressStore();
+  const { isOpen, title, currentStep, progress, completedSteps, totalSteps, resetProgress } =
+    useProgressStore();
+
+  // Vía de escape: el modal es un overlay a pantalla completa sin más salida.
+  // Si una operación falla o queda colgada sin cerrar el progreso, el usuario
+  // quedaba atrapado hasta recargar. Cerrar aquí es solo visual: la operación
+  // en curso (si la hay) sigue en segundo plano.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') resetProgress();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, resetProgress]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="bg-grass-dark border-4 border-line shadow-hard-panel p-8 max-w-md w-full mx-4">
+      <div className="relative bg-grass-dark border-4 border-line shadow-hard-panel p-8 max-w-md w-full mx-4">
+        {/* Botón de cierre de emergencia */}
+        <button
+          onClick={resetProgress}
+          aria-label="Cerrar"
+          className="absolute top-2 right-2 p-2 text-grass-soft hover:text-white hover:bg-grass/40 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         {/* Title */}
         <h2 className="font-arcade text-xs text-gold uppercase mb-6 text-center">
           {title}
