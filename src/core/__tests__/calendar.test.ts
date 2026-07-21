@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Cycle } from '../../types';
-import { getPhaseMatches, getMatchdayMatches } from '../calendar';
+import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable } from '../calendar';
 import {
   makeCycle,
   makeContinentalStage,
@@ -142,5 +142,21 @@ describe('getPhaseMatches — otras fases con datos', () => {
   it('wc-knockout / wc-groups: [] cuando no hay worldCup', () => {
     expect(getPhaseMatches(makeCycle(), 'wc-knockout')).toEqual([]);
     expect(getPhaseMatches(makeCycle(), 'wc-groups')).toEqual([]);
+  });
+});
+
+describe('getPlayableMatches / isMatchPlayable', () => {
+  it('solo devuelve partidos no jugados de la jornada actual', () => {
+    const cycle = continentalCycle();
+    const ids = getPlayableMatches(cycle).map((m) => m.id);
+    expect(ids).toEqual(['eu-r64-1']);
+  });
+
+  it('isMatchPlayable es true solo para partidos de la jornada actual sin jugar', () => {
+    const cycle = continentalCycle();
+    expect(isMatchPlayable(cycle, 'eu-r64-1')).toBe(true);
+    expect(isMatchPlayable(cycle, 'eu-r64-2')).toBe(false);
+    expect(isMatchPlayable(cycle, 'eu-r32-1')).toBe(false);
+    expect(isMatchPlayable(cycle, 'inexistente')).toBe(false);
   });
 });

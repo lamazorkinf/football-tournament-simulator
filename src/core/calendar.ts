@@ -74,3 +74,17 @@ export function getMatchdayMatches(
 ): Match[] {
   return getPhaseMatches(cycle, phase).filter((m) => (m.matchday ?? 0) === matchday);
 }
+
+/** Partidos jugables ahora: fase y jornada actuales del calendario, sin jugar. */
+export function getPlayableMatches(cycle: Cycle): Match[] {
+  const { phase, matchday } = cycle.calendar;
+  return getMatchdayMatches(cycle, phase, matchday).filter((m) => !m.isPlayed);
+}
+
+/** Un partido es jugable si está en la jornada actual y todavía no se jugó. */
+export function isMatchPlayable(cycle: Cycle, matchId: string): boolean {
+  const { phase, matchday } = cycle.calendar;
+  return getMatchdayMatches(cycle, phase, matchday).some(
+    (m) => m.id === matchId && !m.isPlayed,
+  );
+}
