@@ -23,14 +23,16 @@ function validateImportData(data: unknown): string | null {
   if (!Array.isArray(d.teams) || d.teams.length === 0) {
     return 'El archivo no contiene una lista de equipos válida.';
   }
-  const teamsOk = d.teams.every(
-    (t) =>
-      t && typeof t === 'object' &&
-      typeof (t as any).id === 'string' &&
-      typeof (t as any).name === 'string' &&
-      typeof (t as any).skill === 'number' &&
-      REGIONS.includes((t as any).region)
-  );
+  const teamsOk = d.teams.every((t) => {
+    if (!t || typeof t !== 'object') return false;
+    const team = t as Record<string, unknown>;
+    return (
+      typeof team.id === 'string' &&
+      typeof team.name === 'string' &&
+      typeof team.skill === 'number' &&
+      REGIONS.includes(team.region as (typeof REGIONS)[number])
+    );
+  });
   if (!teamsOk) return 'Algún equipo tiene un formato o una región inválidos.';
 
   const tournament = d.tournament as Record<string, unknown> | null | undefined;

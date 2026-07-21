@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getFlagUrl } from '../../data/country-codes';
 
 interface TeamFlagProps {
@@ -31,10 +31,14 @@ export function TeamFlag({
   // remontar y abrían la vía a "removeChild" en la reconciliación.
   const [hasError, setHasError] = useState(false);
 
-  // Reintentar cuando cambia la URL (equipo distinto en la misma posición).
-  useEffect(() => {
+  // Reset del error cuando cambia la URL (equipo distinto en la misma
+  // posición), ajustando el estado durante el render — el patrón de React para
+  // "derivar estado de props" sin un efecto que dispare renders en cascada.
+  const [prevFlagUrl, setPrevFlagUrl] = useState(flagUrl);
+  if (flagUrl !== prevFlagUrl) {
+    setPrevFlagUrl(flagUrl);
     setHasError(false);
-  }, [flagUrl]);
+  }
 
   if (!flagUrl || hasError) {
     // Fallback: show team ID as text if no flag found or it failed to load
