@@ -1,14 +1,46 @@
-import type { MatchResult } from '../types';
+import type { EngineConfig, KnockoutMatch, MatchResult } from '../types';
 import { getEngineConfig } from '../store/useConfigStore';
+
+// Rondas continentales "tardías" (mayor peso Elo). El resto (R64/R32/R16) es "temprana".
+const CONTINENTAL_LATE_ROUNDS: ReadonlyArray<KnockoutMatch['round']> = ['quarter', 'semi', 'final'];
+
+/**
+ * Peso de importancia (multiplicador del K-Factor) según la etapa y la ronda
+ * del partido. Etapa desconocida → 1 (neutro). Solo afecta el cambio de skill.
+ */
+export function getStageImportance(
+  stage: string | undefined,
+  round: KnockoutMatch['round'] | undefined,
+  config: EngineConfig,
+): number {
+  const w = config.importanceByStage;
+  switch (stage) {
+    case 'qualifier':
+      return w.qualifier;
+    case 'continental':
+      return round && CONTINENTAL_LATE_ROUNDS.includes(round) ? w.continentalLate : w.continentalEarly;
+    case 'confed-group':
+      return w.confedGroup;
+    case 'confed-knockout':
+      return w.confedKnockout;
+    case 'world-cup-group':
+      return w.wcGroup;
+    case 'world-cup-knockout':
+      return w.wcKnockout;
+    default:
+      return 1;
+  }
+}
 
 /**
  * Simulates a football match based on team skills
  * @param homeSkill - Home team skill rating (0-100)
  * @param awaySkill - Away team skill rating (0-100)
  * @param disableHomeAdvantage - If true, no home advantage is applied (for World Cup/Knockouts)
+ * @param importance - Multiplier for skill changes (default 1)
  * @returns Match result with scores and skill changes
  */
-export function simulateMatch(homeSkill: number, awaySkill: number, disableHomeAdvantage = false): MatchResult {
+export function simulateMatch(homeSkill: number, awaySkill: number, disableHomeAdvantage = false, importance = 1): MatchResult {
   const config = getEngineConfig();
 
   // Home advantage: configurable skill points (disabled for World Cup and knockouts)
@@ -30,7 +62,8 @@ export function simulateMatch(homeSkill: number, awaySkill: number, disableHomeA
     homeSkill,
     awaySkill,
     homeScore,
-    awayScore
+    awayScore,
+    importance,
   );
 
   return {
@@ -63,18 +96,19 @@ function generateGoals(expectedGoals: number): number {
 
 /**
  * Calculates skill rating changes based on match result
- * Uses ELO-like system with K-factor
+ * Uses ELO-like system with K-factor scaled by importance
  */
-function calculateSkillChanges(
+export function calculateSkillChanges(
   homeSkill: number,
   awaySkill: number,
   homeScore: number,
-  awayScore: number
+  awayScore: number,
+  importance = 1,
 ): { homeChange: number; awayChange: number } {
   const config = getEngineConfig();
 
-  // K-factor: how much ratings can change (configured by user)
-  const kFactor = config.kFactor;
+  // K-factor escalado por la importancia de la etapa
+  const kFactor = config.kFactor * importance;
 
   // Expected result (0-1 scale). The divisor is calibrated so the Elo
   // expectation matches the actual win probability of the goal model
@@ -108,13 +142,15 @@ export function updateTeamSkill(currentSkill: number, change: number): number {
 
 /**
  * Simulates a match with potential penalties (for knockout stages)
+ * @param importance - Multiplier for skill changes (default 1)
  */
 export function simulateMatchWithPenalties(
   homeSkill: number,
   awaySkill: number,
-  disableHomeAdvantage = true // Knockouts are always neutral
+  disableHomeAdvantage = true, // Knockouts are always neutral
+  importance = 1,
 ): MatchResult & { penalties?: { homeScore: number; awayScore: number } } {
-  const result = simulateMatch(homeSkill, awaySkill, disableHomeAdvantage);
+  const result = simulateMatch(homeSkill, awaySkill, disableHomeAdvantage, importance);
 
   // If it's a draw, simulate penalties
   if (result.homeScore === result.awayScore) {
