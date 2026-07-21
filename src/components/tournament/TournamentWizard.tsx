@@ -8,6 +8,18 @@ import {
   canAdvanceToWorldCup,
   canAdvanceToKnockout,
 } from '../../utils/tournamentProgress';
+import {
+  getContinentalProgress,
+  getConfederationsProgress,
+  canDrawContinental,
+  canDrawConfederations,
+  canAdvanceToQualifiers,
+  canDrawQualifiers,
+  isContinentalDrawn,
+  isConfederationsDrawn,
+  continentalRoundLabel,
+  confedRoundLabel,
+} from '../../utils/cycleProgress';
 import { sortStandings, getBestRunnersUp } from '../../core/scheduler';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Card';
@@ -26,7 +38,7 @@ import { toast } from 'sonner';
 import { DrawSimulator } from './DrawSimulator';
 import type { WorldCupGroup, Group, Region, Team } from '../../types';
 
-export function TournamentWizard() {
+export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const {
     currentTournament,
     teams,
@@ -35,6 +47,9 @@ export function TournamentWizard() {
     advanceToKnockout,
     generateDrawAndFixtures,
     regenerateWorldCupDrawAndFixtures,
+    drawContinental,
+    drawConfederations,
+    advanceToQualifiers,
   } = useTournamentStore();
 
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
@@ -60,11 +75,46 @@ export function TournamentWizard() {
     }
   };
 
-  useMobileAction(
-    currentTournament && !currentTournament.hasAnyMatchPlayed
-      ? { label: '▶ PRESS START', onPress: handleGenerateDraw }
-      : null
-  );
+  const handleDrawContinental = () => {
+    if (confirm('¿Sortear los 4 torneos continentales?\n\nSe generarán los brackets (byes + bombos) y comenzará la fase continental.')) {
+      drawContinental();
+      toast.success('🌍 ¡Torneos continentales sorteados!');
+      onNavigate?.('continental');
+    }
+  };
+
+  const handleDrawConfederations = () => {
+    if (confirm('¿Sortear la Copa Confederaciones con los 8 finalistas continentales?')) {
+      drawConfederations();
+      toast.success('🏆 ¡Copa Confederaciones sorteada!');
+      onNavigate?.('confederations');
+    }
+  };
+
+  const handleAdvanceToQualifiers = () => {
+    if (confirm('¿Avanzar a las Clasificatorias del Mundial?\n\nLa Copa Confederaciones quedará cerrada.')) {
+      advanceToQualifiers();
+      toast.success('⚽ ¡Fase de Clasificatorias habilitada!');
+      onNavigate?.('qualifiers');
+    }
+  };
+
+  const mobileAction = (() => {
+    if (!currentTournament) return null;
+    const c = currentTournament;
+    if (canDrawContinental(c)) return { label: '▶ SORTEAR CONTINENTAL', onPress: handleDrawContinental };
+    if (c.calendar.phase === 'continental' && !c.continental.isComplete) {
+      return { label: '▶ JUGAR CONTINENTAL', onPress: () => onNavigate?.('continental') };
+    }
+    if (canDrawConfederations(c)) return { label: '▶ SORTEAR CONFED', onPress: handleDrawConfederations };
+    if (c.calendar.phase === 'confed' && !c.confederationsCup.isComplete) {
+      return { label: '▶ JUGAR CONFED', onPress: () => onNavigate?.('confederations') };
+    }
+    if (canAdvanceToQualifiers(c)) return { label: '▶ IR A CLASIFICATORIAS', onPress: handleAdvanceToQualifiers };
+    if (canDrawQualifiers(c)) return { label: '▶ PRESS START', onPress: handleGenerateDraw };
+    return null;
+  })();
+  useMobileAction(mobileAction);
 
   // Los useMemo deben ir ANTES de cualquier return condicional: si no, cuando
   // currentTournament pasa de null a existente cambia la cantidad de hooks
@@ -89,8 +139,14 @@ export function TournamentWizard() {
     return null;
   }
 
+  const continentalProgress = getContinentalProgress(currentTournament);
+  const confederationsProgress = getConfederationsProgress(currentTournament);
+  const canDrawCont = canDrawContinental(currentTournament);
+  const canDrawConfed = canDrawConfederations(currentTournament);
+  const canAdvanceQual = canAdvanceToQualifiers(currentTournament);
+
   // Check if actions are available
-  const canGenerateDraw = !currentTournament.hasAnyMatchPlayed;
+  const canGenerateDraw = canDrawQualifiers(currentTournament);
   const canStartWorldCup = canAdvanceToWorldCup(currentTournament);
   const canRegenerateWorldCup =
     currentTournament.worldCup &&
@@ -213,14 +269,88 @@ export function TournamentWizard() {
 
         {/* Steps */}
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Step 1: Qualifiers */}
+          {/* Step 1: Torneos Continentales */}
           <StepCard
             number={1}
+            title="Torneos Continentales"
+            description="Eliminación directa por confederación (R64 → Final)"
+            icon={<Globe2 className="w-6 h-6" />}
+            status={
+              continentalProgress.isComplete
+                ? 'complete'
+                : continentalProgress.playedMatches > 0
+                ? 'in-progress'
+                : 'pending'
+            }
+            progress={continentalProgress.percentage}
+            stats={[
+              { label: 'Partidos jugados', value: `${continentalProgress.playedMatches}/${continentalProgress.totalMatches}` },
+              { label: 'Fase', value: continentalRoundLabel(currentTournament.calendar.matchday) },
+            ]}
+            actions={
+              canDrawCont ? (
+                <Button variant="primary" size="sm" onClick={handleDrawContinental} className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Sortear Continentales
+                </Button>
+              ) : isContinentalDrawn(currentTournament) && !continentalProgress.isComplete ? (
+                <Button variant="secondary" size="sm" onClick={() => onNavigate?.('continental')} className="gap-2">
+                  <Globe2 className="w-4 h-4" />
+                  Ver / Jugar
+                </Button>
+              ) : null
+            }
+          />
+
+          {/* Step 2: Copa Confederaciones */}
+          <StepCard
+            number={2}
+            title="Copa Confederaciones"
+            description="8 finalistas · 2 grupos → semis → final + 3º"
+            icon={<Award className="w-6 h-6" />}
+            status={
+              !currentTournament.continental.isComplete
+                ? 'locked'
+                : confederationsProgress.isComplete
+                ? 'complete'
+                : confederationsProgress.playedMatches > 0
+                ? 'in-progress'
+                : 'pending'
+            }
+            progress={confederationsProgress.percentage}
+            stats={
+              currentTournament.continental.isComplete
+                ? [
+                    { label: 'Partidos jugados', value: `${confederationsProgress.playedMatches}/${confederationsProgress.totalMatches}` },
+                    { label: 'Fase', value: confedRoundLabel(currentTournament.calendar.matchday) },
+                  ]
+                : []
+            }
+            actions={
+              canDrawConfed ? (
+                <Button variant="primary" size="sm" onClick={handleDrawConfederations} className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Sortear Confederaciones
+                </Button>
+              ) : isConfederationsDrawn(currentTournament) && !confederationsProgress.isComplete ? (
+                <Button variant="secondary" size="sm" onClick={() => onNavigate?.('confederations')} className="gap-2">
+                  <Award className="w-4 h-4" />
+                  Ver / Jugar
+                </Button>
+              ) : null
+            }
+          />
+
+          {/* Step 3: Qualifiers */}
+          <StepCard
+            number={3}
             title="Clasificatorias"
             description="Genera fixtures y completa partidos de clasificación"
             icon={<Globe2 className="w-6 h-6" />}
             status={
-              qualifierProgress.isComplete
+              !currentTournament.confederationsCup.isComplete
+                ? 'locked'
+                : qualifierProgress.isComplete
                 ? 'complete'
                 : qualifierProgress.playedMatches > 0
                 ? 'in-progress'
@@ -238,7 +368,11 @@ export function TournamentWizard() {
               },
             ]}
             actions={
-              canGenerateDraw ? (
+              canAdvanceQual ? (
+                <Button variant="primary" size="lg" onClick={handleAdvanceToQualifiers} className="gap-2">
+                  ⚽ Ir a Clasificatorias
+                </Button>
+              ) : canGenerateDraw ? (
                 <Button size="lg" onClick={handleGenerateDraw} className="hidden lg:inline-flex">
                   ▶ PRESS START
                 </Button>
@@ -246,9 +380,9 @@ export function TournamentWizard() {
             }
           />
 
-          {/* Step 2: World Cup Groups */}
+          {/* Step 4: World Cup Groups */}
           <StepCard
-            number={2}
+            number={4}
             title="Mundial - Fase de Grupos"
             description="64 equipos en 16 grupos compiten por clasificar"
             icon={<Trophy className="w-6 h-6" />}
@@ -312,9 +446,9 @@ export function TournamentWizard() {
             }
           />
 
-          {/* Step 3: Knockout Phase */}
+          {/* Step 5: Knockout Phase */}
           <StepCard
-            number={3}
+            number={5}
             title="Playoffs - Eliminación Directa"
             description="Dieciseisavos → Octavos → Cuartos → Semis → Final"
             icon={<Award className="w-6 h-6" />}
