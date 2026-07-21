@@ -17,7 +17,7 @@
 - **Rondas (`KnockoutMatch['round']`):** `'round-of-64' | 'round-of-32' | 'round-of-16' | 'quarter' | 'semi' | 'final'`. Continental **no** tiene tercer puesto (finalistas = campeón + subcampeón).
 - **Sede neutral / penales:** se resuelven al simular (Plan 5). Este módulo **no** simula ni setea `winnerId`/scores en la generación.
 - **Tests:** en `src/core/__tests__/continental.test.ts`, siguiendo la convención existente (`import { describe, it, expect } from 'vitest'`, imports relativos `../continental`).
-- **GATE por tarea:** Vitest en verde (`npx vitest run src/core/__tests__/continental.test.ts`) + `npx tsc --noEmit` sin errores.
+- **GATE por tarea (los tres):** Vitest en verde (`npx vitest run src/core/__tests__/continental.test.ts`) + `npx tsc -b --noEmit` exit 0 + `npx eslint src/core/continental.ts src/core/__tests__/continental.test.ts` exit 0. Nota: `npx tsc --noEmit` (sin `-b`) es un **no-op** en este repo (tsconfig raíz solution-style, chequea 0 archivos) — usar SIEMPRE `tsc -b`. No dejar imports sin usar: agregá cada import junto con el código que lo consume.
 - **Fuera de alcance (Plan 5):** `ContinentalView`, guards del store, transiciones de fase, simulación real. No se crea ningún componente React en este plan.
 
 ---
@@ -115,12 +115,9 @@ Expected: FAIL — `Cannot find module '../continental'` (el archivo no existe t
 
 - [ ] **Step 3: Implementación mínima**
 
-Crear `src/core/continental.ts`:
+Crear `src/core/continental.ts` (sin imports: son funciones aritméticas puras; `nanoid` y los tipos los agrega la Task 2 cuando los usa):
 
 ```ts
-import { nanoid } from 'nanoid';
-import type { ContinentalBracket, KnockoutMatch, Region, Team } from '../types';
-
 /**
  * Byes directos a R32 en un torneo continental de `teamCount` equipos.
  * Fórmula (spec §3): los que juegan R64 son `2·(teamCount − 32)`, así que
@@ -172,13 +169,13 @@ export function seedSlots(size: number): number[] {
 }
 ```
 
-Nota: `Team`, `Region`, `ContinentalBracket`, `KnockoutMatch` se importan ya (los usan las tareas 2-4). TypeScript no marca imports de tipo sin usar como error, así que el gate `tsc` pasa; si el linter se quejara, se resuelve al agregar los usos en la Task 2.
+Nota: esta tarea NO importa nada. `nanoid` y los tipos (`Team`, `Region`, `ContinentalBracket`, `KnockoutMatch`) se agregan en la Task 2, junto con el código que los usa — así el gate real (`tsc -b --noEmit` + `eslint`) queda en verde en cada tarea, sin imports sin usar.
 
 - [ ] **Step 4: Correr el test y verificar que pasa**
 
 Run: `npx vitest run src/core/__tests__/continental.test.ts`
 Expected: PASS (4 + 2 + 4 casos).
-Run: `npx tsc --noEmit`
+Run: `npx tsc -b --noEmit`
 Expected: exit 0.
 
 - [ ] **Step 5: Commit**
@@ -362,7 +359,7 @@ export function generateContinentalBracket(
 
 Run: `npx vitest run src/core/__tests__/continental.test.ts`
 Expected: PASS.
-Run: `npx tsc --noEmit`
+Run: `npx tsc -b --noEmit`
 Expected: exit 0.
 
 - [ ] **Step 5: Commit**
@@ -505,7 +502,7 @@ export function generateContinentalRoundOf32(bracket: ContinentalBracket): Knock
 
 Run: `npx vitest run src/core/__tests__/continental.test.ts`
 Expected: PASS.
-Run: `npx tsc --noEmit`
+Run: `npx tsc -b --noEmit`
 Expected: exit 0.
 
 - [ ] **Step 5: Commit**
@@ -671,7 +668,7 @@ export function generateContinentalFinal(semiFinals: KnockoutMatch[]): KnockoutM
 
 Run: `npx vitest run src/core/__tests__/continental.test.ts`
 Expected: PASS.
-Run: `npx tsc --noEmit`
+Run: `npx tsc -b --noEmit`
 Expected: exit 0.
 
 - [ ] **Step 5: Commit**
@@ -772,7 +769,7 @@ Este task es solo de cobertura/acceptance; no agrega código a `continental.ts`.
 
 Run: `npx vitest run`
 Expected: toda la suite en verde (incluye la del ciclo previa).
-Run: `npx tsc --noEmit`
+Run: `npx tsc -b --noEmit`
 Expected: exit 0.
 
 - [ ] **Step 5: Commit**
