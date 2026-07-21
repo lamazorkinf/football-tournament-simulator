@@ -1,6 +1,3 @@
-import { nanoid } from 'nanoid';
-import type { ContinentalBracket, KnockoutMatch, Region, Team } from '../types';
-
 /**
  * Byes directos a R32 en un torneo continental de `teamCount` equipos.
  * Fórmula (spec §3): los que juegan R64 son `2·(teamCount − 32)`, así que
