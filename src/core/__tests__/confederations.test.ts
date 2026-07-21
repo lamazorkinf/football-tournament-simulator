@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   generateConfederationsGroups,
   generateConfederationsSemiFinals,
@@ -7,6 +7,8 @@ import {
 } from '../confederations';
 import type { ConfederationFinalists } from '../confederations';
 import type { Team, Region, WorldCupGroup, TeamStanding, KnockoutMatch } from '../../types';
+import { getStageImportance } from '../engine';
+import { useConfigStore } from '../../store/useConfigStore';
 
 /** 4 confederaciones (Europe, America, Africa, Asia), campeón + subcampeón c/u. */
 const FINALISTS: ConfederationFinalists[] = [
@@ -236,5 +238,22 @@ describe('final y tercer puesto confed', () => {
   it('guards: semis incompletas → null', () => {
     expect(generateConfederationsFinal([])).toBeNull();
     expect(generateConfederationsThirdPlace([])).toBeNull();
+  });
+});
+
+describe('acceptance: pesos Elo confed vivos', () => {
+  beforeEach(() => {
+    useConfigStore.getState().resetToDefaults();
+  });
+
+  it('un partido de grupo confed da importance 1.1 y uno de llave 1.4', () => {
+    const cfg = useConfigStore.getState().config;
+    const groups = generateConfederationsGroups(FINALISTS, makeFinalistTeams());
+    const groupMatch = groups[0].matches[0];
+    expect(getStageImportance(groupMatch.stage, undefined, cfg)).toBe(1.1);
+    expect(getStageImportance(groupMatch.stage, undefined, cfg)).not.toBe(1);
+
+    const final = generateConfederationsFinal(playedSemis())!;
+    expect(getStageImportance(final.stage, final.round, cfg)).toBe(1.4);
   });
 });
