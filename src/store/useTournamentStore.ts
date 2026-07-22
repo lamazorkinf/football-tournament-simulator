@@ -334,6 +334,50 @@ export const useTournamentStore = create<TournamentState>()(
             // Este dispositivo tenía cambios sin subir (save fallido/offline) → re-empujar.
             await persistTournamentWithSync(winner, set, get);
           }
+
+          // 4. Poblar el selector con TODOS los torneos de la DB. Los pasos 1-3
+          //    sólo reconcilian el más reciente (para currentTournament), así
+          //    que un navegador nuevo (localStorage vacío) se quedaba con ese
+          //    único torneo. Acá traemos el resto y los agregamos a la lista.
+          //    Los torneos ya presentes en el store NO se pisan: preservan el
+          //    ganador recién reconciliado y cualquier cambio local sin subir.
+          if (configured) {
+            try {
+              const summaries = await adaptiveTournamentService.getTournamentsList();
+              const known = new Set(get().tournaments.map((t) => t.id));
+              const missingIds = summaries.map((s) => s.id).filter((id) => !known.has(id));
+
+              const loaded: Cycle[] = [];
+              for (const id of missingIds) {
+                const t = await adaptiveTournamentService.loadTournament(id);
+                if (!t) continue;
+                // Cada torneo con su cycle_state (continental/confed/calendar);
+                // sin row → legacy, reconstructCycle deriva la fase Mundial.
+                const cs = await cycleStateService.loadCycleState(id);
+                loaded.push(ensureCycleFields(reconstructCycle(t, cs)));
+              }
+
+              if (loaded.length > 0) {
+                set((s: TournamentState) => {
+                  const have = new Set(s.tournaments.map((t) => t.id));
+                  const toAdd = loaded.filter((t) => !have.has(t.id));
+                  if (toAdd.length === 0) return {};
+                  return {
+                    tournaments: [...s.tournaments, ...toAdd].sort((a, b) => b.year - a.year),
+                    syncMeta: {
+                      ...s.syncMeta,
+                      ...Object.fromEntries(
+                        toAdd.map((t) => [t.id, { syncedUpdatedAt: null, dirty: false }]),
+                      ),
+                    },
+                  };
+                });
+                console.log(`📋 Selector: +${loaded.length} torneos cargados de la DB`);
+              }
+            } catch (error) {
+              console.error('Error cargando la lista completa de torneos:', error);
+            }
+          }
         })();
 
         try {
