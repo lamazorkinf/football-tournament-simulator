@@ -59,6 +59,22 @@ export interface GetMatchesPageParams {
   stage?: MatchHistoryEntry['stage'];
 }
 
+export interface TeamStatsRow {
+  teamId: string;
+  totalMatches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+}
+
+export interface RegionStatsRow {
+  region: string;
+  totalGoals: number;
+  matchesPlayed: number;
+}
+
 // Ensambla una página keyset a partir de las filas ya convertidas.
 // hasMore es true sólo si la página vino llena (== pageSize); en ese caso el
 // cursor apunta al último partido para pedir la siguiente.
@@ -292,59 +308,57 @@ export const matchHistoryService = {
     return data.map(dbMatchToMatch);
   },
 
-  // Get match statistics
+  // Estadísticas globales (una sola llamada agregada en el servidor).
   async getMatchStatistics() {
     if (!isSupabaseConfigured()) {
-      return {
-        totalMatches: 0,
-        totalGoals: 0,
-        averageGoalsPerMatch: 0,
-        biggestWin: null,
-      };
+      return { totalMatches: 0, totalGoals: 0, averageGoalsPerMatch: 0 };
     }
 
-    // Paginar con .range() en vez de un SELECT plano: sin esto PostgREST
-    // devolvía como mucho db-max-rows filas (1000) y las estadísticas
-    // globales quedaban truncadas al superar ese umbral.
-    const pageSize = 1000;
-    const data: Array<{ home_score: number; away_score: number }> = [];
+    const { data, error } = await (supabase as any).rpc('get_match_statistics');
+    if (error) throw error;
 
-    for (let page = 0; ; page++) {
-      const from = page * pageSize;
-      const { data: pageData, error } = await supabase
-        .from('match_history')
-        .select('home_score, away_score, home_team_id, away_team_id, played_at')
-        .range(from, from + pageSize - 1);
-
-      if (error) throw error;
-      if (!pageData || pageData.length === 0) break;
-      data.push(...(pageData as any[]));
-      if (pageData.length < pageSize) break;
-    }
-
-    const totalMatches = data.length;
-    const totalGoals = data.reduce((sum: number, match: any) => sum + match.home_score + match.away_score, 0);
-    const averageGoalsPerMatch = totalMatches > 0 ? totalGoals / totalMatches : 0;
-
-    // Find biggest win
-    let biggestWin: {
-      margin: number;
-      match: any;
-    } | null = null;
-
-    data.forEach((match: any) => {
-      const margin = Math.abs(match.home_score - match.away_score);
-      if (!biggestWin || margin > biggestWin.margin) {
-        biggestWin = { margin, match };
-      }
-    });
-
-    return {
-      totalMatches,
-      totalGoals,
-      averageGoalsPerMatch,
-      biggestWin,
+    const row = (data?.[0] ?? {}) as {
+      total_matches?: number | string;
+      total_goals?: number | string;
+      avg_goals?: number | string;
     };
+    return {
+      totalMatches: Number(row.total_matches ?? 0),
+      totalGoals: Number(row.total_goals ?? 0),
+      averageGoalsPerMatch: Number(row.avg_goals ?? 0),
+    };
+  },
+
+  // Stats agregadas por equipo (una fila por equipo con partidos).
+  async getTeamStats(): Promise<TeamStatsRow[]> {
+    if (!isSupabaseConfigured()) return [];
+
+    const { data, error } = await (supabase as any).rpc('get_team_stats');
+    if (error) throw error;
+
+    return ((data ?? []) as any[]).map((r) => ({
+      teamId: r.team_id,
+      totalMatches: Number(r.total_matches ?? 0),
+      wins: Number(r.wins ?? 0),
+      draws: Number(r.draws ?? 0),
+      losses: Number(r.losses ?? 0),
+      goalsFor: Number(r.goals_for ?? 0),
+      goalsAgainst: Number(r.goals_against ?? 0),
+    }));
+  },
+
+  // Stats regionales de eliminatorias (una fila por región).
+  async getRegionStats(): Promise<RegionStatsRow[]> {
+    if (!isSupabaseConfigured()) return [];
+
+    const { data, error } = await (supabase as any).rpc('get_region_stats');
+    if (error) throw error;
+
+    return ((data ?? []) as any[]).map((r) => ({
+      region: r.region,
+      totalGoals: Number(r.total_goals ?? 0),
+      matchesPlayed: Number(r.matches_played ?? 0),
+    }));
   },
 
   // IDs (metadata.cycleMatchId) de partidos continental/confed ya persistidos

@@ -128,3 +128,57 @@ describe('getMatchesPage', () => {
     });
   });
 });
+
+describe('getMatchStatistics', () => {
+  it('mapea bigint-como-string a number', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { rpc: (...a: unknown[]) => unknown }, 'rpc')
+      .mockResolvedValue({
+        data: [{ total_matches: '1234', total_goals: '3456', avg_goals: 2.8 }],
+        error: null,
+      } as never);
+
+    const s = await matchHistoryService.getMatchStatistics();
+    expect(s).toEqual({ totalMatches: 1234, totalGoals: 3456, averageGoalsPerMatch: 2.8 });
+  });
+
+  it('sin Supabase ⇒ ceros', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(false);
+    const s = await matchHistoryService.getMatchStatistics();
+    expect(s).toEqual({ totalMatches: 0, totalGoals: 0, averageGoalsPerMatch: 0 });
+  });
+});
+
+describe('getTeamStats', () => {
+  it('mapea snake_case → camelCase con Number()', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { rpc: (...a: unknown[]) => unknown }, 'rpc')
+      .mockResolvedValue({
+        data: [{
+          team_id: 'A', total_matches: '10', wins: '6', draws: '2',
+          losses: '2', goals_for: '18', goals_against: '9',
+        }],
+        error: null,
+      } as never);
+
+    const rows = await matchHistoryService.getTeamStats();
+    expect(rows).toEqual([{
+      teamId: 'A', totalMatches: 10, wins: 6, draws: 2,
+      losses: 2, goalsFor: 18, goalsAgainst: 9,
+    }]);
+  });
+});
+
+describe('getRegionStats', () => {
+  it('mapea snake_case → camelCase con Number()', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { rpc: (...a: unknown[]) => unknown }, 'rpc')
+      .mockResolvedValue({
+        data: [{ region: 'Europe', total_goals: '120', matches_played: '40' }],
+        error: null,
+      } as never);
+
+    const rows = await matchHistoryService.getRegionStats();
+    expect(rows).toEqual([{ region: 'Europe', totalGoals: 120, matchesPlayed: 40 }]);
+  });
+});
