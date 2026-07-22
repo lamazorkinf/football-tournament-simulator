@@ -16,6 +16,7 @@ import { ContinentalView } from './components/tournament/ContinentalView';
 import { ConfederationsCupView } from './components/tournament/ConfederationsCupView';
 import { FavoritesView } from './components/favorites/FavoritesView';
 import { LiveMatchModal } from './components/tournament/LiveMatchModal';
+import { LiveMatchdayOverlay } from './components/tournament/LiveMatchdayOverlay';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
 import { ProgressModal } from './components/ui/ProgressModal';
@@ -101,6 +102,9 @@ function App() {
 
         {/* Live Match Modal */}
         <LiveMatchModal />
+
+        {/* Live Matchday Overlay */}
+        <LiveMatchdayOverlay />
 
       {/* Desktop Sidebar */}
       <Sidebar

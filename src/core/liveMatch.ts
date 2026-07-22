@@ -69,3 +69,25 @@ export function buildMatchTimeline(
 
   return { goals, finalHomeScore: homeScore, finalAwayScore: awayScore, penalties };
 }
+
+export interface LiveScoreAt {
+  homeScore: number;
+  awayScore: number;
+  /** Minuto del último gol revelado; null si todavía no hubo goles. */
+  lastGoalMinute: number | null;
+}
+
+/**
+ * Marcador acumulado de un timeline a un minuto dado. Derivación pura para
+ * que N tarjetas compartan un único reloj sin estado propio por partido.
+ */
+export function scoreAtMinute(timeline: LiveTimeline, minute: number): LiveScoreAt {
+  let last: LiveGoalEvent | undefined;
+  for (const goal of timeline.goals) {
+    if (goal.minute > minute) break;
+    last = goal;
+  }
+  return last
+    ? { homeScore: last.homeScore, awayScore: last.awayScore, lastGoalMinute: last.minute }
+    : { homeScore: 0, awayScore: 0, lastGoalMinute: null };
+}
