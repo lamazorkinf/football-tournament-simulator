@@ -24,7 +24,7 @@ interface MatchCenterProps {
 }
 
 export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps) {
-  const { simulateMatch, simulateMatchdayBatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch, isBatchProcessing } = useTournamentStore();
+  const { simulateMatch, simulateMatchdayBatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch, isBatchProcessing } = useTournamentStore();
   const { showResults } = useMatchResultsStore();
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
   const [selectedStage, setSelectedStage] = useState<MatchStage | 'all'>('all');
@@ -91,16 +91,6 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
   const handleSimulateMatch = async (matchWithContext: MatchWithContext) => {
     const { match, stage, groupId } = matchWithContext;
 
-    if (stage === 'knockout') {
-      toast.info('Knockout matches must be simulated from Knockout view');
-      return;
-    }
-
-    if (stage === 'continental' || stage === 'confederations') {
-      toast.info('Los partidos de Continental/Confederaciones se simulan desde su propia vista');
-      return;
-    }
-
     // Don't allow simulation if another match is being saved
     if (isSavingMatch) {
       toast.warning('Espera a que se guarde el partido anterior');
@@ -110,30 +100,59 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     const homeTeam = getTeam(match.homeTeamId);
     const awayTeam = getTeam(match.awayTeamId);
 
-    // Simulate the match and WAIT for it to complete
-    await simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
-
-    // Get the updated match after simulation completes
-    const currentTournament = useTournamentStore.getState().currentTournament;
-    if (!currentTournament) return;
-
-    let updatedMatch = match;
-    if (stage === 'qualifier' && matchWithContext.region) {
-      const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
-      updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-    } else if (stage === 'world-cup') {
-      const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
-      updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+    // Knockout/Continental/Confederaciones pueden tener equipos "por definir"
+    // hasta que se resuelve la ronda anterior. Evita el no-op silencioso de las
+    // funciones del store (que devuelven null si faltan equipos) con un mensaje.
+    if (!homeTeam || !awayTeam) {
+      toast.info('Este partido todavía no tiene definidos los dos equipos');
+      return;
     }
 
-    // Show result toast with the actual scores
+    // Cada fase se simula con su propia función del store. Las de
+    // knockout/continental/confederaciones devuelven el marcador directamente;
+    // qualifier/world-cup actualizan el estado y hay que releer el partido.
+    let homeScore: number | null | undefined;
+    let awayScore: number | null | undefined;
+
+    if (stage === 'qualifier' || stage === 'world-cup') {
+      await simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
+
+      const currentTournament = useTournamentStore.getState().currentTournament;
+      if (!currentTournament) return;
+
+      let updatedMatch = match;
+      if (stage === 'qualifier' && matchWithContext.region) {
+        const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
+        updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+      } else if (stage === 'world-cup') {
+        const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
+        updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+      }
+      homeScore = updatedMatch.homeScore;
+      awayScore = updatedMatch.awayScore;
+    } else {
+      const result =
+        stage === 'knockout' ? await simulateKnockoutMatch(match.id)
+        : stage === 'continental' ? await simulateContinentalMatch(match.id)
+        : await simulateConfederationsMatch(match.id);
+
+      if (!result) {
+        // null = fuera de jornada, ronda anterior sin terminar, o ya jugado.
+        toast.info('No se pudo simular ahora (puede estar fuera de la jornada o la ronda anterior aún no terminó)');
+        return;
+      }
+      homeScore = result.homeScore;
+      awayScore = result.awayScore;
+    }
+
+    // Toast de resultado (mismo formato para todas las fases)
     toast.success(
       <div className="flex items-center gap-3">
         <span>⚽</span>
         <div className="flex items-center gap-2">
-          {homeTeam && <span className="font-semibold">{homeTeam.name}</span>}
-          <span className="font-bold text-lg px-2">{updatedMatch.homeScore} - {updatedMatch.awayScore}</span>
-          {awayTeam && <span className="font-semibold">{awayTeam.name}</span>}
+          <span className="font-semibold">{homeTeam.name}</span>
+          <span className="font-bold text-lg px-2">{homeScore} - {awayScore}</span>
+          <span className="font-semibold">{awayTeam.name}</span>
         </div>
       </div>,
       { duration: 5000 }
@@ -563,7 +582,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
               group = tournament.worldCup?.groups.find(g => g.id === nextMatch.groupId);
             }
 
-            return homeTeam && awayTeam && group ? (
+            return homeTeam && awayTeam ? (
               <Card className="flex flex-col">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 flex-wrap min-w-0">
@@ -579,12 +598,21 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                     homeScore={nextMatch.match.isPlayed ? nextMatch.match.homeScore : null}
                     awayScore={nextMatch.match.isPlayed ? nextMatch.match.awayScore : null}
                   />
-                  <MatchPreview
-                    homeTeam={homeTeam}
-                    awayTeam={awayTeam}
-                    group={group}
-                    teams={teams}
-                  />
+                  {/* El preview detallado (posiciones/H2H) solo existe para fases
+                      con grupo. Para knockout/continental/confed mostramos el
+                      marcador y un rótulo de la ronda. */}
+                  {group ? (
+                    <MatchPreview
+                      homeTeam={homeTeam}
+                      awayTeam={awayTeam}
+                      group={group}
+                      teams={teams}
+                    />
+                  ) : (
+                    <p className="text-center text-sm text-grass-soft">
+                      {nextMatch.groupName}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ) : (
@@ -616,7 +644,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
             group = tournament.worldCup?.groups.find(g => g.id === nextMatch.groupId);
           }
 
-          return homeTeam && awayTeam && group ? (
+          return homeTeam && awayTeam ? (
             <>
               {/* Backdrop */}
               <motion.div
@@ -651,12 +679,18 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                     homeScore={nextMatch.match.isPlayed ? nextMatch.match.homeScore : null}
                     awayScore={nextMatch.match.isPlayed ? nextMatch.match.awayScore : null}
                   />
-                  <MatchPreview
-                    homeTeam={homeTeam}
-                    awayTeam={awayTeam}
-                    group={group}
-                    teams={teams}
-                  />
+                  {group ? (
+                    <MatchPreview
+                      homeTeam={homeTeam}
+                      awayTeam={awayTeam}
+                      group={group}
+                      teams={teams}
+                    />
+                  ) : (
+                    <p className="text-center text-sm text-grass-soft">
+                      {nextMatch.groupName}
+                    </p>
+                  )}
                 </div>
               </motion.div>
             </>
@@ -682,6 +716,10 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
   const { match, stage, groupName, region } = matchCtx;
   const homeTeam = teams.find((t) => t.id === match.homeTeamId);
   const awayTeam = teams.find((t) => t.id === match.awayTeamId);
+  // Knockout/continental/confed pueden tener equipos aún sin resolver: sin
+  // ambos definidos, la simulación es un no-op en el store, así que se
+  // deshabilita el botón en lugar de dejar que falle en silencio.
+  const bothTeamsKnown = Boolean(homeTeam && awayTeam);
 
   const getStageBadge = () => {
     const colors: Record<MatchStage, string> = {
@@ -772,11 +810,12 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
                 e.stopPropagation();
                 onSimulate();
               }}
-              disabled={disabled}
+              disabled={disabled || !bothTeamsKnown}
               className="gap-2 flex-1 sm:flex-none"
+              title={!bothTeamsKnown ? 'Equipos por definir (falta resolver la ronda anterior)' : undefined}
             >
               <Play className="w-3 h-3" />
-              {disabled ? '...' : 'Play'}
+              {disabled ? '...' : !bothTeamsKnown ? 'Por definir' : 'Play'}
             </Button>
             <WatchLiveButton
               matchId={matchCtx.match.id}
@@ -784,7 +823,7 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
               awayTeamId={matchCtx.match.awayTeamId}
               kind={matchCtx.stage}
               groupId={matchCtx.groupId}
-              disabled={disabled}
+              disabled={disabled || !bothTeamsKnown}
             />
           </div>
         )}
