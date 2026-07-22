@@ -287,8 +287,7 @@ export function ChampionsHistory() {
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-grass">
-                {rows.map((row, index) => {
-                  const isMostRecent = index === 0;
+                {rows.map((row) => {
                   return (
                     <tr key={row.key} className="hover:bg-grass/40 transition-colors">
                       <td className="py-4 px-2 sm:px-4">
@@ -304,7 +303,6 @@ export function ChampionsHistory() {
                           team={row.champion}
                           size={32}
                           onOpen={openTeamProfile}
-                          blink={isMostRecent}
                         />
                       </td>
                       <td className="py-4 px-4">
