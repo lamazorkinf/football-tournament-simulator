@@ -40,7 +40,7 @@ import { matchHistoryService } from '../services/matchHistoryService';
 import { teamsService } from '../services/teamsService';
 import { adaptiveTournamentService } from '../services/adaptiveTournamentService';
 import { cycleStateService } from '../services/cycleStateService';
-import { buildMatchParams } from '../services/cycleMatchHistory';
+import { buildMatchParams, backfillCycleMatchHistory } from '../services/cycleMatchHistory';
 import { normalizedQualifiersService } from '../services/normalizedQualifiersService';
 import { normalizedWorldCupService } from '../services/normalizedWorldCupService';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -182,6 +182,11 @@ export const useTournamentStore = create<TournamentState>()(
                 currentTournamentId: latestCycle.id,
                 currentTournament: latestCycle,
               }));
+              // Backfill best-effort: exponer en H2H los partidos continental/
+              // confed ya jugados (antes de que se normalizaran a match_history).
+              backfillCycleMatchHistory(latestCycle, get().teams)
+                .then((n) => { if (n > 0) console.log(`🔁 Backfill continental/confed: +${n} partidos`); })
+                .catch((error) => console.error('Backfill continental/confed falló:', error));
               return;
             }
           } catch (error) {

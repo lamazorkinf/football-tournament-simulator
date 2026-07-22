@@ -289,6 +289,31 @@ export const matchHistoryService = {
     };
   },
 
+  // IDs (metadata.cycleMatchId) de partidos continental/confed ya persistidos
+  // para un torneo — base de la idempotencia del backfill.
+  async getExistingCycleMatchIds(tournamentId: string): Promise<Set<string>> {
+    if (!isSupabaseConfigured()) return new Set();
+    const { data, error } = await supabase
+      .from('match_history')
+      .select('metadata')
+      .eq('tournament_id', tournamentId)
+      .in('stage', ['continental', 'confed-group', 'confed-knockout']);
+    if (error) {
+      console.error('getExistingCycleMatchIds:', error);
+      return new Set();
+    }
+    const ids = new Set<string>();
+    // El select() de una sola columna sobre `match_history` colapsa el tipo
+    // inferido de `data` a `never` (bug de inferencia preexistente en este
+    // archivo — ver `match: any` en getMatchStatistics); se castea a la forma
+    // esperada en vez de depender de esa inferencia.
+    for (const row of (data ?? []) as Array<{ metadata: { cycleMatchId?: string } | null }>) {
+      const cid = row.metadata?.cycleMatchId;
+      if (cid) ids.add(cid);
+    }
+    return ids;
+  },
+
   // Batch create multiple match history entries
   async createMatchesBatch(matchesParams: CreateMatchHistoryParams[]): Promise<MatchHistoryEntry[]> {
     if (!isSupabaseConfigured()) {
