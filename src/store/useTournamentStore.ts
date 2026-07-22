@@ -100,15 +100,17 @@ const updateTournamentInState = (set: any, get: any, updatedTournament: Tourname
     };
   });
 
-  // Save to database (skip if in batch mode or explicitly disabled)
+  // Save to database (skip if in batch mode or explicitly disabled).
+  // Encadenado: el header debe existir ANTES del upsert de cycle_state
+  // (FK tournament_cycle_state.tournament_id → tournaments_new). Si corrieran en
+  // paralelo, el upsert de cycle_state podría llegar primero, violar la FK y
+  // perderse → el torneo se reconstruiría como legacy en una carga sin localStorage.
   const state = get();
   if (isSupabaseConfigured() && !skipDbSave && !state.isBatchProcessing) {
     adaptiveTournamentService
       .saveTournament(updatedTournament)
+      .then(() => cycleStateService.saveCycleState(ensureCycleFields(updatedTournament)))
       .catch((error) => console.error('Error auto-saving tournament:', error));
-    cycleStateService
-      .saveCycleState(ensureCycleFields(updatedTournament))
-      .catch((error) => console.error('Error auto-saving cycle state:', error));
   }
 };
 
@@ -230,14 +232,14 @@ export const useTournamentStore = create<TournamentState>()(
           currentTournament: tournament
         }));
 
-        // Save new tournament to database
+        // Save new tournament to database. Encadenado (ver nota en
+        // updateTournamentInState): el header debe existir antes del upsert de
+        // cycle_state, o la FK falla y el ciclo nuevo queda sin estado persistido.
         if (isSupabaseConfigured()) {
           adaptiveTournamentService
             .saveTournament(tournament)
+            .then(() => cycleStateService.saveCycleState(tournament))
             .catch((error) => console.error('Error saving new tournament:', error));
-          cycleStateService
-            .saveCycleState(tournament)
-            .catch((error) => console.error('Error saving new cycle state:', error));
         }
         })();
 
@@ -2230,7 +2232,7 @@ export const useTournamentStore = create<TournamentState>()(
     },
     {
       name: 'football-tournament-storage',
-      version: 9, // Release del ciclo: descarta saves legacy de localStorage una vez.
+      version: 10, // v10: descarta el cache legacy reconstruido (torneos pre-cycle_state) que quedó en localStorage durante el desarrollo del ciclo.
       // Storage que tolera errores: setItem puede lanzar QuotaExceededError
       // (cuota de ~5MB) al acumular temporadas, o fallar en modo privado. Sin
       // este try/catch, la excepción rompía la acción que disparó el guardado.
@@ -2264,11 +2266,11 @@ export const useTournamentStore = create<TournamentState>()(
         tournaments: state.tournaments,
         currentTournamentId: state.currentTournamentId,
       }),
-      // v9: release del ciclo de 4 años. Los saves locales previos son data
-      // legacy (torneos sin estado de ciclo persistido en Supabase); se
-      // descartan una vez. Desde v9, migrate preserva el shape como antes.
+      // v10: descarta los saves locales previos (torneos reconstruidos como
+      // legacy y cacheados durante el desarrollo del ciclo). Con versión >= 10,
+      // migrate preserva el shape como antes.
       migrate: (persistedState, version) => {
-        if (version < 9) {
+        if (version < 10) {
           return { tournaments: [], currentTournamentId: null };
         }
         const previous = (persistedState ?? {}) as {
