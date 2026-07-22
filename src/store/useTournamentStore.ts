@@ -2229,7 +2229,7 @@ export const useTournamentStore = create<TournamentState>()(
     },
     {
       name: 'football-tournament-storage',
-      version: 8, // Incremented: rehidratación de currentTournament + migrate
+      version: 9, // Release del ciclo: descarta saves legacy de localStorage una vez.
       // Storage que tolera errores: setItem puede lanzar QuotaExceededError
       // (cuota de ~5MB) al acumular temporadas, o fallar en modo privado. Sin
       // este try/catch, la excepción rompía la acción que disparó el guardado.
@@ -2263,10 +2263,13 @@ export const useTournamentStore = create<TournamentState>()(
         tournaments: state.tournaments,
         currentTournamentId: state.currentTournamentId,
       }),
-      // Sin migrate, Zustand DESCARTA todo el estado guardado cuando la versión
-      // no coincide. Como el shape persistido (tournaments + currentTournamentId)
-      // no cambió, se conserva tal cual en lugar de perder el historial local.
-      migrate: (persistedState) => {
+      // v9: release del ciclo de 4 años. Los saves locales previos son data
+      // legacy (torneos sin estado de ciclo persistido en Supabase); se
+      // descartan una vez. Desde v9, migrate preserva el shape como antes.
+      migrate: (persistedState, version) => {
+        if (version < 9) {
+          return { tournaments: [], currentTournamentId: null };
+        }
         const previous = (persistedState ?? {}) as {
           tournaments?: Tournament[];
           currentTournamentId?: string | null;
