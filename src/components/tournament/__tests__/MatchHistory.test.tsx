@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import type { Team } from '../../../types';
 import { MatchHistory } from '../MatchHistory';
 import { matchHistoryService, type MatchHistoryEntry, type MatchPage } from '../../../services/matchHistoryService';
@@ -181,5 +181,39 @@ describe('MatchHistory — loadingMore no queda pegado si el filtro cambia con u
       expect(btn).not.toBeDisabled();
       expect(btn.textContent).toMatch(/cargar más/i);
     });
+  });
+});
+
+describe('MatchHistory — callback de tiempo real (subscribeToMatches)', () => {
+  it('antepone un partido nuevo y descarta uno cuyo id ya está en la lista (dedup)', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(matchHistoryService, 'getMatchStatistics').mockResolvedValue({
+      totalMatches: 2, totalGoals: 3, averageGoalsPerMatch: 1.5,
+    });
+    vi.spyOn(matchHistoryService, 'getMatchesPage').mockResolvedValue({
+      matches: [q('a', '2026-01-03T00:00:00Z'), q('b', '2026-01-02T00:00:00Z')],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    let capturedCb: ((newMatch: MatchHistoryEntry) => void) | undefined;
+    vi.spyOn(matchHistoryService, 'subscribeToMatches').mockImplementation((cb) => {
+      capturedCb = cb;
+      return () => {};
+    });
+
+    render(<MatchHistory teams={teams} />);
+
+    // Primera página cargada: 2 partidos qualifier ("Eliminatoria").
+    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(2));
+    expect(capturedCb).toBeDefined();
+
+    // Caso A (prepend): un partido nuevo (id distinto) debe anteponerse a la lista.
+    act(() => capturedCb!(q('nuevo', '2026-01-04T00:00:00Z')));
+    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(3));
+
+    // Caso B (dedup): un partido con un id ya presente en la lista no debe duplicarse.
+    act(() => capturedCb!(q('nuevo', '2026-01-04T00:00:00Z')));
+    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(3));
   });
 });

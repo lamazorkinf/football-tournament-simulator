@@ -42,7 +42,6 @@ CREATE TABLE match_history (
 -- Create indexes for match history
 CREATE INDEX idx_match_history_home_team ON match_history(home_team_id);
 CREATE INDEX idx_match_history_away_team ON match_history(away_team_id);
-CREATE INDEX idx_match_history_played_at ON match_history(played_at DESC);
 CREATE INDEX idx_match_history_stage ON match_history(stage);
 CREATE INDEX idx_match_history_tournament ON match_history(tournament_id);
 CREATE INDEX idx_match_history_keyset ON match_history (played_at DESC, id DESC);
