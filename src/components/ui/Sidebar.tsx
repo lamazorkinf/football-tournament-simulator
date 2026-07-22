@@ -1,8 +1,8 @@
-import { Trophy, Globe2, Award, BarChart3, Settings, History, CalendarDays, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight, Medal } from 'lucide-react';
+import { Trophy, Globe2, Award, BarChart3, Settings, History, CalendarDays, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight, Medal, Star } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
 import { useSidebarCollapse } from '../../hooks/useSidebarCollapse';
 
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
 
 interface SidebarProps {
   currentView: View;
@@ -15,6 +15,7 @@ export function Sidebar({ currentView, onViewChange, tournamentYear }: SidebarPr
   const menuItems = [
     { id: 'wizard' as View, icon: Workflow, label: 'Progreso' },
     { id: 'matches' as View, icon: CalendarDays, label: 'Centro de Partidos' },
+    { id: 'favorites' as View, icon: Star, label: 'Favoritos' },
     { id: 'qualifiers' as View, icon: Globe2, label: 'Clasificatorias' },
     { id: 'worldcup' as View, icon: Award, label: 'Mundial' },
     { id: 'continental' as View, icon: Globe2, label: 'Continental' },

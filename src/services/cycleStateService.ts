@@ -5,10 +5,12 @@ import type { CycleStatePayload } from '../core/cycle';
 import type { Cycle } from '../types';
 
 /**
- * Persistencia del estado del ciclo (continental + confederaciones + calendario)
- * como documento JSONB en la tabla lateral `tournament_cycle_state` (1:1 con el
- * torneo). El detalle por-partido queryable vive normalizado en `match_history`;
- * acá guardamos el snapshot que permite reanudar el ciclo en otro dispositivo.
+ * Persistencia del estado del ciclo (continental + confederaciones + calendario
+ * + Mundial completo) como documento JSONB en la tabla lateral
+ * `tournament_cycle_state` (1:1 con el torneo). El detalle por-partido queryable
+ * vive normalizado en `match_history`; acá guardamos el snapshot ATÓMICO que
+ * permite reanudar el ciclo entero en otro dispositivo — incluida la llave del
+ * Mundial, que antes dependía de escrituras por-partido frágiles.
  */
 export const cycleStateService = {
   /** Upsert del estado del ciclo. No-op si Supabase no está configurado. */
@@ -18,7 +20,10 @@ export const cycleStateService = {
       {
         tournament_id: cycle.id,
         state: serializeCycleState(cycle),
-        schema_version: 1,
+        // v2: el snapshot incluye ahora el Mundial completo (grupos + llave +
+        // campeón), no sólo continental/confed/calendario. loadCycleState no
+        // gatea por versión; el bump es documental.
+        schema_version: 2,
       },
       { onConflict: 'tournament_id' },
     );

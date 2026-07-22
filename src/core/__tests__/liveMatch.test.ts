@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildMatchTimeline, hashSeed } from '../liveMatch';
+import { buildMatchTimeline, hashSeed, scoreAtMinute } from '../liveMatch';
 
 // rng determinista que devuelve valores de una secuencia (cicla si se agota)
 function seqRng(values: number[]): () => number {
@@ -68,5 +68,38 @@ describe('buildMatchTimeline', () => {
     // tie-break estable: el gol local (encolado primero) va antes que el visitante
     expect(tl.goals[0].side).toBe('home');
     expect(tl.goals[1].side).toBe('away');
+  });
+});
+
+describe('scoreAtMinute', () => {
+  const tl = {
+    goals: [
+      { minute: 10, side: 'home' as const, homeScore: 1, awayScore: 0 },
+      { minute: 40, side: 'away' as const, homeScore: 1, awayScore: 1 },
+      { minute: 88, side: 'home' as const, homeScore: 2, awayScore: 1 },
+    ],
+    finalHomeScore: 2,
+    finalAwayScore: 1,
+  };
+
+  it('antes del primer gol devuelve 0-0 sin último minuto', () => {
+    expect(scoreAtMinute(tl, 0)).toEqual({ homeScore: 0, awayScore: 0, lastGoalMinute: null });
+    expect(scoreAtMinute(tl, 9)).toEqual({ homeScore: 0, awayScore: 0, lastGoalMinute: null });
+  });
+
+  it('en un minuto intermedio acumula solo los goles revelados', () => {
+    expect(scoreAtMinute(tl, 10)).toEqual({ homeScore: 1, awayScore: 0, lastGoalMinute: 10 });
+    expect(scoreAtMinute(tl, 87)).toEqual({ homeScore: 1, awayScore: 1, lastGoalMinute: 40 });
+  });
+
+  it('a los 90 coincide con el marcador final del timeline', () => {
+    expect(scoreAtMinute(tl, 90)).toEqual({ homeScore: 2, awayScore: 1, lastGoalMinute: 88 });
+  });
+
+  it('es consistente con cualquier timeline generado', () => {
+    const generated = buildMatchTimeline(3, 2, hashSeed('consistencia'));
+    const at90 = scoreAtMinute(generated, 90);
+    expect(at90.homeScore).toBe(generated.finalHomeScore);
+    expect(at90.awayScore).toBe(generated.finalAwayScore);
   });
 });

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { TournamentState, Team, Region, Tournament, Cycle, Group, Match, KnockoutMatch, WorldCupGroup } from '../types';
+import type { TournamentState, Team, Region, Tournament, Cycle, Group, Match, KnockoutMatch, WorldCupGroup, MatchdayOutcome } from '../types';
 import teamsData from '../data/teams.json';
 import { nanoid } from 'nanoid';
 import {
@@ -24,7 +24,7 @@ import {
   type KnockoutResult,
   type GroupResult,
 } from '../core/cycle';
-import { isMatchPlayable } from '../core/calendar';
+import { isMatchPlayable, getPhaseMatches } from '../core/calendar';
 import {
   initializeKnockoutBracket,
   areGroupsComplete,
@@ -333,6 +333,56 @@ export const useTournamentStore = create<TournamentState>()(
           if (result.action === 'push-local') {
             // Este dispositivo tenía cambios sin subir (save fallido/offline) → re-empujar.
             await persistTournamentWithSync(winner, set, get);
+          }
+
+          // 4. Poblar el selector con TODOS los torneos de la DB. Los pasos 1-3
+          //    sólo reconcilian el más reciente (para currentTournament), así
+          //    que un navegador nuevo (localStorage vacío) se quedaba con ese
+          //    único torneo. Acá traemos el resto y los agregamos a la lista.
+          //    Los torneos ya presentes en el store NO se pisan: preservan el
+          //    ganador recién reconciliado y cualquier cambio local sin subir.
+          if (configured) {
+            try {
+              const summaries = await adaptiveTournamentService.getTournamentsList();
+              const known = new Set(get().tournaments.map((t) => t.id));
+              const missingIds = summaries.map((s) => s.id).filter((id) => !known.has(id));
+
+              // Cada id faltante se carga en paralelo (torneo + cycle_state):
+              // son N round-trips independientes; en serie demoraban el arranque
+              // del selector linealmente con la cantidad de torneos.
+              const loaded = (
+                await Promise.all(
+                  missingIds.map(async (id) => {
+                    const t = await adaptiveTournamentService.loadTournament(id);
+                    if (!t) return null;
+                    // Cada torneo con su cycle_state (continental/confed/calendar);
+                    // sin row → legacy, reconstructCycle deriva la fase Mundial.
+                    const cs = await cycleStateService.loadCycleState(id);
+                    return ensureCycleFields(reconstructCycle(t, cs));
+                  }),
+                )
+              ).filter((c): c is Cycle => c !== null);
+
+              if (loaded.length > 0) {
+                set((s: TournamentState) => {
+                  const have = new Set(s.tournaments.map((t) => t.id));
+                  const toAdd = loaded.filter((t) => !have.has(t.id));
+                  if (toAdd.length === 0) return {};
+                  return {
+                    tournaments: [...s.tournaments, ...toAdd].sort((a, b) => b.year - a.year),
+                    syncMeta: {
+                      ...s.syncMeta,
+                      ...Object.fromEntries(
+                        toAdd.map((t) => [t.id, { syncedUpdatedAt: null, dirty: false }]),
+                      ),
+                    },
+                  };
+                });
+                console.log(`📋 Selector: +${loaded.length} torneos cargados de la DB`);
+              }
+            } catch (error) {
+              console.error('Error cargando la lista completa de torneos:', error);
+            }
           }
         })();
 
@@ -889,12 +939,12 @@ export const useTournamentStore = create<TournamentState>()(
 
       simulateMatchdayBatch: async (matches) => {
         const state = get();
-        if (!state.currentTournament) return;
+        if (!state.currentTournament) return [];
 
         // Prevent simultaneous batch processing
         if (state.isBatchProcessing || state.isSavingMatch) {
           console.warn('⚠️ Batch processing or saving already in progress. Please wait...');
-          return;
+          return [];
         }
 
         console.log(`🚀 Starting batch simulation for ${matches.length} matches...`);
@@ -911,6 +961,8 @@ export const useTournamentStore = create<TournamentState>()(
           const matchResultUpdates: Array<{
             matchId: string;
             stage: 'qualifier' | 'world-cup';
+            homeTeamId: string;
+            awayTeamId: string;
             homeScore: number;
             awayScore: number;
           }> = [];
@@ -1015,6 +1067,8 @@ export const useTournamentStore = create<TournamentState>()(
             matchResultUpdates.push({
               matchId,
               stage,
+              homeTeamId: homeTeam.id,
+              awayTeamId: awayTeam.id,
               homeScore: result.homeScore,
               awayScore: result.awayScore,
             });
@@ -1170,6 +1224,15 @@ export const useTournamentStore = create<TournamentState>()(
           console.log(`✅ Batch simulation completed successfully for ${matches.length} matches`);
           progress.completeProgress();
 
+          // Outcomes con equipos para que el caller pueda armar el resumen o
+          // reproducir la jornada en vivo sin re-leer y diffear el torneo.
+          return matchResultUpdates.map(({ matchId, homeTeamId, awayTeamId, homeScore, awayScore }) => ({
+            matchId,
+            homeTeamId,
+            awayTeamId,
+            homeScore,
+            awayScore,
+          }));
         } catch (error) {
           console.error('❌ Error in batch simulation:', error);
           set({ isBatchProcessing: false });
@@ -1178,6 +1241,98 @@ export const useTournamentStore = create<TournamentState>()(
           useProgressStore.getState().resetProgress();
           throw error;
         }
+      },
+
+      simulateRoundBatch: async (items) => {
+        const state = get();
+        if (!state.currentTournament || items.length === 0) return [];
+        if (state.isBatchProcessing || state.isSavingMatch) {
+          console.warn('⚠️ Batch processing or saving already in progress. Please wait...');
+          return [];
+        }
+
+        // Busca el partido en las fases eliminatorias/confed del ciclo ACTUAL.
+        // Se re-lee get() en cada iteración porque cada acción simulate*
+        // reemplaza el objeto currentTournament (y puede generar la ronda
+        // siguiente o avanzar el calendario).
+        const findMatch = (matchId: string): Match | undefined => {
+          const cycle = get().currentTournament;
+          if (!cycle) return undefined;
+          for (const phase of ['continental', 'confed', 'wc-knockout'] as const) {
+            const found = getPhaseMatches(cycle, phase).find((m) => m.id === matchId);
+            if (found) return found;
+          }
+          return undefined;
+        };
+
+        // La final se juega última: el camino feliz del bracket del mundial
+        // lee el resultado del 3er puesto al armar el podio de la final.
+        // Prioridad pre-computada una vez (findMatch recorre 3 fases; no
+        // repetirlo dentro del comparador, que corre O(n log n) veces).
+        const priorityByMatchId = new Map(
+          items.map((item) => {
+            const match = findMatch(item.matchId) as KnockoutMatch | undefined;
+            return [item.matchId, match?.round === 'final' ? 1 : 0];
+          }),
+        );
+        const ordered = [...items].sort(
+          (a, b) =>
+            (priorityByMatchId.get(a.matchId) ?? 0) - (priorityByMatchId.get(b.matchId) ?? 0),
+        );
+
+        set({ isBatchProcessing: true });
+        const progress = useProgressStore.getState();
+        progress.startProgress('Simulando jornada', ordered.length);
+
+        const outcomes: MatchdayOutcome[] = [];
+        let skipped = 0;
+
+        try {
+          // Loop SECUENCIAL: cada acción togglea isSavingMatch y relee el
+          // estado a la entrada; en paralelo se pisarían entre sí.
+          for (let i = 0; i < ordered.length; i++) {
+            const { matchId, kind } = ordered[i];
+            progress.updateProgress(`Simulando partido ${i + 1}/${ordered.length}`, i + 1);
+
+            const match = findMatch(matchId);
+            if (!match || match.isPlayed) {
+              skipped++;
+              continue;
+            }
+            const { homeTeamId, awayTeamId } = match;
+
+            const result =
+              kind === 'knockout'
+                ? await get().simulateKnockoutMatch(matchId)
+                : kind === 'continental'
+                  ? await get().simulateContinentalMatch(matchId)
+                  : await get().simulateConfederationsMatch(matchId);
+
+            if (!result) {
+              skipped++;
+              continue;
+            }
+            outcomes.push({ matchId, homeTeamId, awayTeamId, ...result });
+          }
+
+          progress.completeProgress();
+        } catch (error) {
+          console.error('❌ Error in round batch simulation:', error);
+          useProgressStore.getState().resetProgress();
+          throw error;
+        } finally {
+          set({ isBatchProcessing: false });
+          // Persistencia final única: durante el batch, updateTournamentInState
+          // salteó el guardado del torneo (isBatchProcessing). Con el flag ya
+          // bajo, este último llamado ejecuta el persist diferido.
+          const finalCycle = get().currentTournament;
+          if (finalCycle) updateTournamentInState(set, get, finalCycle);
+        }
+
+        if (skipped > 0) {
+          console.warn(`⚠️ ${skipped} partidos del batch no se pudieron simular (ya jugados o fuera de jornada)`);
+        }
+        return outcomes;
       },
 
       advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => {

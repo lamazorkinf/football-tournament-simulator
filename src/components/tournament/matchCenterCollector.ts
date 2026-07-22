@@ -1,29 +1,23 @@
-import type { Cycle, Match, Region } from '../../types';
+import type { Cycle, Region } from '../../types';
+import { getDisplayJornada, type MatchStage, type MatchWithContext } from '../../core/jornada';
 
-export type MatchStage =
-  | 'qualifier'
-  | 'world-cup'
-  | 'knockout'
-  | 'continental'
-  | 'confederations';
-
-export type MatchWithContext = {
-  match: Match;
-  stage: MatchStage;
-  groupId: string;
-  groupName: string;
-  region?: Region;
-};
+// Los tipos viven en core/jornada (el modelo de jornada los necesita sin
+// depender de components); se re-exportan para no romper los imports existentes.
+export type { MatchStage, MatchWithContext };
 
 /** Recorre todas las fases del ciclo y devuelve los partidos con su contexto. */
 export function collectAllMatches(tournament: Cycle): MatchWithContext[] {
   const matches: MatchWithContext[] = [];
 
+  const push = (item: Omit<MatchWithContext, 'displayJornada'>) => {
+    matches.push({ ...item, displayJornada: getDisplayJornada(item.stage, item.match) });
+  };
+
   // Clasificatorias
   Object.entries(tournament.qualifiers).forEach(([region, groups]) => {
     groups.forEach((group) => {
       group.matches.forEach((match) => {
-        matches.push({ match, stage: 'qualifier', groupId: group.id, groupName: group.name, region: region as Region });
+        push({ match, stage: 'qualifier', groupId: group.id, groupName: group.name, region: region as Region });
       });
     });
   });
@@ -32,7 +26,7 @@ export function collectAllMatches(tournament: Cycle): MatchWithContext[] {
   if (tournament.worldCup) {
     tournament.worldCup.groups.forEach((group) => {
       group.matches.forEach((match) => {
-        matches.push({ match, stage: 'world-cup', groupId: group.id, groupName: group.name });
+        push({ match, stage: 'world-cup', groupId: group.id, groupName: group.name });
       });
     });
     const knockoutMatches = [
@@ -44,7 +38,7 @@ export function collectAllMatches(tournament: Cycle): MatchWithContext[] {
       ...(tournament.worldCup.knockout.final ? [tournament.worldCup.knockout.final] : []),
     ];
     knockoutMatches.forEach((match) => {
-      matches.push({ match, stage: 'knockout', groupId: 'knockout', groupName: match.round || 'Knockout' });
+      push({ match, stage: 'knockout', groupId: 'knockout', groupName: match.round || 'Knockout' });
     });
   }
 
@@ -59,7 +53,7 @@ export function collectAllMatches(tournament: Cycle): MatchWithContext[] {
         ...(b.thirdPlace ? [b.thirdPlace] : []),
       ];
       bracketMatches.forEach((match) => {
-        matches.push({ match, stage: 'continental', groupId: `continental-${region}`, groupName: match.round || 'Continental', region });
+        push({ match, stage: 'continental', groupId: `continental-${region}`, groupName: match.round || 'Continental', region });
       });
     });
   }
@@ -68,7 +62,7 @@ export function collectAllMatches(tournament: Cycle): MatchWithContext[] {
   if (tournament.confederationsCup) {
     tournament.confederationsCup.groups.forEach((group) => {
       group.matches.forEach((match) => {
-        matches.push({ match, stage: 'confederations', groupId: group.id, groupName: group.name });
+        push({ match, stage: 'confederations', groupId: group.id, groupName: group.name });
       });
     });
     const ko = tournament.confederationsCup.knockout;
@@ -78,7 +72,7 @@ export function collectAllMatches(tournament: Cycle): MatchWithContext[] {
       ...(ko.thirdPlace ? [ko.thirdPlace] : []),
     ];
     koMatches.forEach((match) => {
-      matches.push({ match, stage: 'confederations', groupId: 'confed-knockout', groupName: match.round || 'Confederaciones' });
+      push({ match, stage: 'confederations', groupId: 'confed-knockout', groupName: match.round || 'Confederaciones' });
     });
   }
 

@@ -164,8 +164,13 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
     !currentTournament.worldCup.knockout.semiFinals.some(m => m.isPlayed) &&
     !currentTournament.worldCup.knockout.thirdPlace?.isPlayed &&
     !currentTournament.worldCup.knockout.final?.isPlayed;
+  // Solo mientras los dieciseisavos NO estén generados: sin este guard el
+  // botón "Generar Dieciseisavos" queda visible para siempre (incluso con el
+  // torneo terminado) y permite re-generar la ronda. Una vez generado, el
+  // fallback "Ver / Jugar" toma el relevo; con el torneo completo, ninguno.
   const canStartKnockout =
     currentTournament.worldCup &&
+    currentTournament.worldCup.knockout.roundOf32.length === 0 &&
     canAdvanceToKnockout(currentTournament.worldCup.groups);
 
   const handleAdvanceToWorldCup = () => {
@@ -256,6 +261,12 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   // Determine tournament phase
   const isComplete =
     knockoutProgress?.isComplete && currentTournament.worldCup?.champion;
+
+  // Con campeón coronado el torneo está terminado: la barra debe leer 100%
+  // aunque `getKnockoutProgress` calcule menos por huecos en la llave (p. ej.
+  // una copia legacy de la DB a la que le faltan filas de rondas intermedias).
+  // Sin esto se veía "88% + ¡Torneo Completado!" a la vez.
+  const knockoutPercentage = isComplete ? 100 : knockoutProgress?.percentage ?? 0;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -479,17 +490,19 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                 ? 'complete'
                 : 'in-progress'
             }
-            progress={knockoutProgress?.percentage || 0}
+            progress={knockoutPercentage}
             stats={
               knockoutProgress
                 ? [
                     {
                       label: 'Ronda actual',
-                      value: getRoundLabel(knockoutProgress.currentRound),
+                      value: isComplete
+                        ? getRoundLabel('complete')
+                        : getRoundLabel(knockoutProgress.currentRound),
                     },
                     {
                       label: 'Progreso',
-                      value: `${knockoutProgress.percentage}%`,
+                      value: `${knockoutPercentage}%`,
                     },
                   ]
                 : []

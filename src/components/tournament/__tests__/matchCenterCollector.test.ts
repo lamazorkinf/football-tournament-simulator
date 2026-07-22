@@ -49,4 +49,10 @@ describe('collectAllMatches — continental/confed', () => {
     expect(grp?.stage).toBe('confederations');
     expect(ko?.stage).toBe('confederations');
   });
+
+  it('estampa displayJornada en cada partido recolectado', () => {
+    const res = collectAllMatches(makeCycle());
+    expect(res.length).toBeGreaterThan(0);
+    res.forEach((m) => expect(typeof m.displayJornada).toBe('number'));
+  });
 });

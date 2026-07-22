@@ -1,0 +1,71 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useLiveMatchdayPlayback } from '../useLiveMatchdayPlayback';
+
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
+describe('useLiveMatchdayPlayback', () => {
+  it('sin sesión el reloj no corre', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback(null, false));
+    act(() => vi.advanceTimersByTime(5000));
+    expect(result.current.minute).toBe(0);
+    expect(result.current.phase).toBe('playing');
+  });
+
+  it('avanza 1 minuto por segundo a 1x y termina a los 90 sin penales', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback('j1', false));
+    act(() => vi.advanceTimersByTime(10 * 1000));
+    expect(result.current.minute).toBe(10);
+    act(() => vi.advanceTimersByTime(80 * 1000));
+    expect(result.current.minute).toBe(90);
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.penaltiesRevealed).toBe(true);
+  });
+
+  it('con penales pasa por la fase penalties antes de finished', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback('j1', true));
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    expect(result.current.phase).toBe('penalties');
+    expect(result.current.penaltiesRevealed).toBe(false);
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.penaltiesRevealed).toBe(true);
+  });
+
+  it('setSpeed acelera el reloj compartido (4x = 250ms/min)', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback('j1', false));
+    act(() => result.current.setSpeed(4));
+    act(() => vi.advanceTimersByTime(10 * 250));
+    expect(result.current.minute).toBe(10);
+  });
+
+  it('skipToEnd salta a 90 con penales revelados', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback('j1', true));
+    act(() => result.current.skipToEnd());
+    expect(result.current.minute).toBe(90);
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.penaltiesRevealed).toBe(true);
+  });
+
+  it('al cambiar de sesión el reloj se resetea', () => {
+    const { result, rerender } = renderHook(
+      ({ key }: { key: string | null }) => useLiveMatchdayPlayback(key, false),
+      { initialProps: { key: 'j1' as string | null } },
+    );
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    expect(result.current.phase).toBe('finished');
+
+    rerender({ key: 'j2' });
+    expect(result.current.minute).toBe(0);
+    expect(result.current.phase).toBe('playing');
+    act(() => vi.advanceTimersByTime(5000));
+    expect(result.current.minute).toBe(5);
+  });
+
+  it('limpia timers al desmontar', () => {
+    const { unmount } = renderHook(() => useLiveMatchdayPlayback('j1', true));
+    unmount();
+    expect(() => vi.advanceTimersByTime(120 * 1000)).not.toThrow();
+  });
+});

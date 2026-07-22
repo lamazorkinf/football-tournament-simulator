@@ -139,7 +139,8 @@ export interface TournamentState {
   resetCurrentTournamentMatches: () => Promise<void>;
   updateTeam: (teamId: string, updates: Partial<Team>) => Promise<void>;
   simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => Promise<SimulatedMatchOutcome | null>;
-  simulateMatchdayBatch: (matches: Array<{ matchId: string; groupId: string; stage: 'qualifier' | 'world-cup'; groupName: string; region?: Region }>) => Promise<void>;
+  simulateMatchdayBatch: (matches: Array<{ matchId: string; groupId: string; stage: 'qualifier' | 'world-cup'; groupName: string; region?: Region }>) => Promise<MatchdayOutcome[]>;
+  simulateRoundBatch: (items: Array<{ matchId: string; kind: 'knockout' | 'continental' | 'confederations' }>) => Promise<MatchdayOutcome[]>;
   advanceToWorldCup: () => void;
   advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => void;
   advanceToKnockout: () => Promise<void>;
@@ -229,4 +230,11 @@ export interface SimulatedMatchOutcome {
   homeScore: number;
   awayScore: number;
   penalties?: { homeScore: number; awayScore: number };
+}
+
+/** Resultado de un partido dentro de un batch de jornada, con sus equipos. */
+export interface MatchdayOutcome extends SimulatedMatchOutcome {
+  matchId: string;
+  homeTeamId: string;
+  awayTeamId: string;
 }
