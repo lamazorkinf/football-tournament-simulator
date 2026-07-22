@@ -1,0 +1,76 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useLiveMatchPlayback } from '../useLiveMatchPlayback';
+import type { LiveTimeline } from '../../core/liveMatch';
+
+const timeline: LiveTimeline = {
+  goals: [
+    { minute: 10, side: 'home', homeScore: 1, awayScore: 0 },
+    { minute: 80, side: 'away', homeScore: 1, awayScore: 1 },
+  ],
+  finalHomeScore: 1,
+  finalAwayScore: 1,
+};
+
+const timelineWithPens: LiveTimeline = {
+  ...timeline,
+  penalties: { homeScore: 5, awayScore: 4 },
+};
+
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
+describe('useLiveMatchPlayback', () => {
+  it('timeline null → sin correr, marcador 0-0', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(null, 1));
+    act(() => vi.advanceTimersByTime(5000));
+    expect(result.current.minute).toBe(0);
+    expect(result.current.displayHomeScore).toBe(0);
+  });
+
+  it('revela cada gol al llegar su minuto (1x = 1000ms/min)', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timeline, 1));
+    act(() => vi.advanceTimersByTime(10 * 1000));
+    expect(result.current.minute).toBe(10);
+    expect(result.current.displayHomeScore).toBe(1);
+    expect(result.current.displayAwayScore).toBe(0);
+    act(() => vi.advanceTimersByTime(70 * 1000));
+    expect(result.current.displayAwayScore).toBe(1);
+  });
+
+  it('al llegar a 90 sin penales termina en finished', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timeline, 1));
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    expect(result.current.minute).toBe(90);
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.revealedGoals).toHaveLength(2);
+  });
+
+  it('con penales: playing → penalties → finished y revela el marcador de penales', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timelineWithPens, 1));
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    expect(result.current.phase).toBe('penalties');
+    expect(result.current.penalties).toBeUndefined();
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.penalties).toEqual({ homeScore: 5, awayScore: 4 });
+  });
+
+  it('setSpeed acelera el reloj (2x = 500ms/min)', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timeline, 1));
+    act(() => result.current.setSpeed(2));
+    act(() => vi.advanceTimersByTime(10 * 500));
+    expect(result.current.minute).toBe(10);
+  });
+
+  it('skipToEnd revela todo y termina', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timelineWithPens, 1));
+    act(() => result.current.skipToEnd());
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.minute).toBe(90);
+    expect(result.current.revealedGoals).toHaveLength(2);
+    expect(result.current.displayHomeScore).toBe(1);
+    expect(result.current.displayAwayScore).toBe(1);
+    expect(result.current.penalties).toEqual({ homeScore: 5, awayScore: 4 });
+  });
+});
