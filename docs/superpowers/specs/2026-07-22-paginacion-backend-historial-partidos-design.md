@@ -59,7 +59,7 @@ CREATE INDEX idx_match_history_stage_keyset ON match_history (stage, played_at D
 DROP INDEX IF EXISTS idx_match_history_played_at; -- cubierto como prefijo del keyset
 ```
 
-**Tres RPCs.** SECURITY INVOKER (la RLS de `match_history` ya da read público a `anon`),
+**Cuatro RPCs.** SECURITY INVOKER (la RLS de `match_history` ya da read público a `anon`),
 `GRANT EXECUTE` a `anon` y `authenticated`. Siguen el patrón del `get_team_recent_matches`
 existente.
 
@@ -75,10 +75,9 @@ existente.
   - Devuelve las filas completas de `match_history` (mismo shape que un `SELECT *`).
   - `p_cursor_*` NULL ⇒ primera página. `p_stage` NULL ⇒ sin filtro.
 
-- `get_match_statistics()` → una fila / JSON:
-  `total_matches` (COUNT), `total_goals` (SUM(home+away)), `avg_goals` (AVG), y la fila del
-  partido de **mayor goleada** (`ORDER BY abs(home_score-away_score) DESC LIMIT 1`), embebida
-  para que la UI pueda mostrarla.
+- `get_match_statistics()` → una fila:
+  `total_matches` (COUNT), `total_goals` (SUM(home+away)), `avg_goals` (AVG).
+  **No** incluye "mayor goleada": la UI actual (`MatchHistory`) no la consume (YAGNI).
 
 - `get_team_stats()` → una fila por equipo (~210):
   ```sql
@@ -97,6 +96,21 @@ existente.
   GROUP BY team_id;
   ```
 
+- `get_region_stats()` → una fila por región (~4). Replica **exactamente** el cálculo actual
+  de `HistoricalStats` (solo `qualifier`, agrupado por la región del equipo **local**,
+  contando por partido). El join a `teams` por `home_team_id` garantiza equivalencia con el
+  código actual sin depender de que la columna `match_history.region` esté poblada:
+  ```sql
+  SELECT ht.region,
+         SUM(mh.home_score + mh.away_score) AS total_goals,
+         COUNT(*)                           AS matches_played
+  FROM match_history mh
+  JOIN teams ht ON ht.id = mh.home_team_id
+  WHERE mh.stage = 'qualifier'
+  GROUP BY ht.region;
+  ```
+  El `avgGoals` (= total_goals / matches_played) se calcula en el cliente, igual que hoy.
+
 ### 2. Capa de servicio — `matchHistoryService.ts`
 
 Tipo de cursor:
@@ -110,8 +124,12 @@ export interface MatchCursor { playedAt: string; id: string; }
   - `hasMore = matches.length === pageSize`.
   - `nextCursor = hasMore ? { playedAt: last.playedAt, id: last.id } : null`.
 - `getMatchStatistics()` → una llamada a `rpc('get_match_statistics')`. Elimina el bucle
-  full-table.
+  full-table. Devuelve `{ totalMatches, totalGoals, averageGoalsPerMatch }` (mismo shape que
+  consume `MatchHistory` hoy; se descarta `biggestWin`).
 - `getTeamStats()` → **nueva**, `rpc('get_team_stats')`. Reemplaza el `getAllMatches(10000)`.
+  Devuelve `TeamStatsRow[]` con `{ teamId, totalMatches, wins, draws, losses, goalsFor, goalsAgainst }`.
+- `getRegionStats()` → **nueva**, `rpc('get_region_stats')`. Devuelve
+  `{ region, totalGoals, matchesPlayed }[]`.
 - **Se elimina** el camino `limit >= 10000` de `getAllMatches` y la función
   `getMatchesByStage` (el filtro por etapa se absorbe en `getMatchesPage`).
 - `getTeamMatches` (consumido por `MatchPreview`, ya acotado a ≤100) **queda igual**.
@@ -131,23 +149,27 @@ export interface MatchCursor { playedAt: string; id: string; }
 
 ### 4. UI — `HistoricalStats.tsx`
 
-- Reemplaza `getAllMatches(10000)` + agregación en JS por `getTeamStats()` (RPC).
-- Stats **regionales** y **por tier**: se derivan en cliente a partir de las ~210 filas
-  por-equipo + el array `teams` (ambos ya disponibles en el componente). El agrupado por tier
-  ya era client-side (`calculateTier`, `groupTeamsByTier`).
-- **Semántica de "stats regionales":** suma por equipo — un partido intra-región cuenta para
-  ambos equipos. Es idéntico al comportamiento actual (aprobado explícitamente).
+- Reemplaza `getAllMatches(10000)` + agregación en JS por **dos** llamadas RPC en paralelo:
+  `getTeamStats()` (stats por equipo) y `getRegionStats()` (stats regionales).
+- **Stats por equipo:** de `getTeamStats()`; el `winRate` se calcula en el cliente
+  (`wins / totalMatches * 100`), igual que hoy.
+- **Stats por tier / top-scorers / top-teams:** se derivan en cliente desde las filas
+  por-equipo + `teams` (ya era client-side vía `calculateTier`, `groupTeamsByTier`, y los
+  `sort/slice` sobre `teamStats`). Sin cambios de lógica.
+- **Stats regionales:** de `getRegionStats()`; `avgGoals` se calcula en el cliente. Replica
+  exactamente el cálculo actual (solo `qualifier`, por región del equipo local, por partido).
 
 ### 5. Tests (Vitest, TDD)
 
 Se testea la lógica pura y la capa de servicio con `supabase.rpc` mockeado:
 
-- Codec del cursor (encode/decode `MatchCursor`) y cálculo de `hasMore`/`nextCursor` a partir
-  de una respuesta mockeada del RPC (página llena ⇒ `hasMore true` + cursor del último;
-  página parcial ⇒ `hasMore false` + `nextCursor null`; página vacía ⇒ idem).
-- Derivación client-side de stats regionales/por-tier desde filas por-equipo (agrupado
-  correcto, winRate, totales por región).
-- Mock de `supabase.rpc` para `getMatchesPage`, `getMatchStatistics`, `getTeamStats`.
+- `assembleMatchPage(entries, pageSize)` (helper puro): cálculo de `hasMore`/`nextCursor`
+  (página llena ⇒ `hasMore true` + cursor `{playedAt,id}` del último; página parcial ⇒
+  `hasMore false` + `nextCursor null`; página vacía ⇒ idem).
+- Helper puro `computeWinRate(wins, totalMatches)` (`wins/totalMatches*100`, 0 si
+  `totalMatches===0`) — usado por `HistoricalStats` al mapear las filas del RPC.
+- Mock de `supabase.rpc` para `getMatchesPage`, `getMatchStatistics`, `getTeamStats`,
+  `getRegionStats` (un happy-path por método verificando el mapeo snake_case → camelCase).
 
 Las funciones SQL (RPCs) no se cubren con Vitest; se validan con un smoke query manual contra
 la base tras aplicar la migración.
