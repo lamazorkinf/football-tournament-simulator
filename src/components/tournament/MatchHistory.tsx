@@ -3,7 +3,7 @@ import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ScoreBug } from '../ui/ScoreBug';
 import { History, Filter, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { matchHistoryService, type MatchHistoryEntry } from '../../services/matchHistoryService';
+import { matchHistoryService, type MatchHistoryEntry, type MatchCursor } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 
 interface MatchHistoryProps {
@@ -12,7 +12,10 @@ interface MatchHistoryProps {
 
 export function MatchHistory({ teams }: MatchHistoryProps) {
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
+  const [nextCursor, setNextCursor] = useState<MatchCursor | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filter, setFilter] = useState<'all' | 'qualifier' | 'world-cup-group'>('all');
   const [statistics, setStatistics] = useState({
     totalMatches: 0,
@@ -20,36 +23,65 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
     averageGoalsPerMatch: 0,
   });
 
+  const PAGE_SIZE = 30;
+
   useEffect(() => {
-    loadMatches();
+    loadFirstPage();
     loadStatistics();
-
-    // Subscribe to real-time updates
-    const unsubscribe = matchHistoryService.subscribeToMatches((newMatches) => {
-      setMatches(newMatches);
-      loadStatistics();
-    });
-
-    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  const loadMatches = async () => {
+  // Suscripción a inserts: antepone el partido nuevo (si matchea el filtro) y
+  // refresca las stats. No re-descarga la lista (rompería el estado paginado).
+  useEffect(() => {
+    const unsubscribe = matchHistoryService.subscribeToMatches((newMatch) => {
+      setMatches((prev) => {
+        if (filter !== 'all' && newMatch.stage !== filter) return prev;
+        if (prev.some((m) => m.id === newMatch.id)) return prev;
+        return [newMatch, ...prev];
+      });
+      loadStatistics();
+    });
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
+
+  const loadFirstPage = async () => {
     try {
       setLoading(true);
-      let matchData: MatchHistoryEntry[];
-
-      if (filter === 'all') {
-        matchData = await matchHistoryService.getAllMatches(100);
-      } else {
-        matchData = await matchHistoryService.getMatchesByStage(filter);
-      }
-
-      setMatches(matchData);
+      const page = await matchHistoryService.getMatchesPage({
+        pageSize: PAGE_SIZE,
+        stage: filter === 'all' ? undefined : filter,
+      });
+      setMatches(page.matches);
+      setNextCursor(page.nextCursor);
+      setHasMore(page.hasMore);
     } catch (error) {
       console.error('Error loading matches:', error);
       setMatches([]);
+      setNextCursor(null);
+      setHasMore(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    try {
+      setLoadingMore(true);
+      const page = await matchHistoryService.getMatchesPage({
+        cursor: nextCursor,
+        pageSize: PAGE_SIZE,
+        stage: filter === 'all' ? undefined : filter,
+      });
+      setMatches((prev) => [...prev, ...page.matches]);
+      setNextCursor(page.nextCursor);
+      setHasMore(page.hasMore);
+    } catch (error) {
+      console.error('Error loading more matches:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -255,6 +287,17 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
                   </div>
                 );
               })}
+              {hasMore && (
+                <div className="pt-2 text-center">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="font-arcade text-[10px] uppercase bg-black/40 text-gold border-2 border-gold px-4 py-2 hover:bg-gold hover:text-night transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore ? 'Cargando…' : 'Cargar más'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

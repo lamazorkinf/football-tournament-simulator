@@ -438,8 +438,10 @@ export const matchHistoryService = {
     if (error) throw error;
   },
 
-  // Subscribe to match history changes
-  subscribeToMatches(callback: (matches: MatchHistoryEntry[]) => void) {
+  // Suscripción a inserts en tiempo real. Entrega la fila nueva ya convertida;
+  // el consumidor decide cómo integrarla (p.ej. anteponerla a su lista paginada)
+  // en vez de re-descargar todo el historial.
+  subscribeToMatches(callback: (newMatch: MatchHistoryEntry) => void) {
     if (!isSupabaseConfigured()) {
       console.warn('Supabase not configured, real-time updates disabled');
       return () => {};
@@ -449,14 +451,9 @@ export const matchHistoryService = {
       .channel('match-history-changes')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'match_history',
-        },
-        async () => {
-          const matches = await matchHistoryService.getAllMatches(50);
-          callback(matches);
+        { event: 'INSERT', schema: 'public', table: 'match_history' },
+        (payload) => {
+          callback(dbMatchToMatch(payload.new as MatchHistoryRow));
         }
       )
       .subscribe();
