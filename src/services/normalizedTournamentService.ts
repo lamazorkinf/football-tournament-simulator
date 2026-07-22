@@ -387,10 +387,10 @@ export const normalizedTournamentService = {
   /**
    * Save or update tournament in normalized schema
    */
-  async saveTournament(tournament: Tournament): Promise<void> {
+  async saveTournament(tournament: Tournament): Promise<string | null> {
     if (!isSupabaseConfigured()) {
       console.log('Supabase not configured, tournament not saved to database');
-      return;
+      return null;
     }
 
     try {
@@ -411,9 +411,11 @@ export const normalizedTournamentService = {
         ? (tournament.worldCup.champion ? 'completed' : 'world-cup')
         : 'qualifiers';
 
+      let headerUpdatedAt: string | null = null;
+
       if (existing) {
         // Update existing tournament
-        const { error } = await db
+        const { data, error } = await db
           .tournaments_new()
           .update({
             name: tournament.name,
@@ -426,13 +428,16 @@ export const normalizedTournamentService = {
             third_place_team_id: tournament.worldCup?.thirdPlace || null,
             fourth_place_team_id: tournament.worldCup?.fourthPlace || null,
           })
-          .eq('id', tournament.id);
+          .eq('id', tournament.id)
+          .select('updated_at')
+          .single();
 
         if (error) throw error;
+        headerUpdatedAt = (data as { updated_at?: string } | null)?.updated_at ?? null;
         console.log(`Tournament ${tournament.id} updated in database`);
       } else {
         // Insert new tournament
-        const { error } = await db
+        const { data, error } = await db
           .tournaments_new()
           .insert({
             id: tournament.id,
@@ -445,9 +450,12 @@ export const normalizedTournamentService = {
             runner_up_team_id: tournament.worldCup?.runnerUp || null,
             third_place_team_id: tournament.worldCup?.thirdPlace || null,
             fourth_place_team_id: tournament.worldCup?.fourthPlace || null,
-          });
+          })
+          .select('updated_at')
+          .single();
 
         if (error) throw error;
+        headerUpdatedAt = (data as { updated_at?: string } | null)?.updated_at ?? null;
         console.log(`Tournament ${tournament.id} created in database`);
       }
 
@@ -470,6 +478,7 @@ export const normalizedTournamentService = {
 
       // Note: Qualifier groups, teams, and matches should be saved separately
       // through dedicated methods to maintain proper relationships
+      return headerUpdatedAt;
     } catch (error) {
       console.error('Error saving tournament to normalized schema:', error);
       throw error;
