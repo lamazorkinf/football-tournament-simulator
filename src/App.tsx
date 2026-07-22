@@ -62,12 +62,14 @@ function App() {
     loadTeamsFromDatabase();
   }, [loadTeamsFromDatabase]);
 
-  // Initialize tournament after teams are loaded
+  // Reconcile local ↔ DB on mount: initializeTournament ahora reconcilia por
+  // recencia (no crea a ciegas) y es idempotente vía initializationInFlight,
+  // así que se llama incondicionalmente. Con currentTournament ya rehidratado
+  // desde localStorage, esta llamada es la que trae el estado más reciente de
+  // la DB (p. ej. lo jugado en otro dispositivo) y actualiza la vista.
   useEffect(() => {
-    if (!currentTournament) {
-      initializeTournament();
-    }
-  }, [currentTournament, initializeTournament]);
+    initializeTournament();
+  }, [initializeTournament]);
 
   if (!currentTournament) {
     return (
