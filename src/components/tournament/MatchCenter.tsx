@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
+import { WatchLiveButton } from './WatchLiveButton';
 import { Play, Filter, Clock, CheckCircle, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
@@ -760,23 +761,33 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
         </div>
       </div>
 
-      {/* Action Button */}
+      {/* Action Buttons */}
       <div className="mt-3 sm:mt-0 sm:ml-4 w-full sm:w-auto">
-        {!match.isPlayed && onSimulate ? (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSimulate();
-            }}
-            disabled={disabled}
-            className="gap-2 w-full sm:w-auto"
-          >
-            <Play className="w-3 h-3" />
-            {disabled ? '...' : 'Play'}
-          </Button>
-        ) : null}
+        {!match.isPlayed && onSimulate && (
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSimulate();
+              }}
+              disabled={disabled}
+              className="gap-2 flex-1 sm:flex-none"
+            >
+              <Play className="w-3 h-3" />
+              {disabled ? '...' : 'Play'}
+            </Button>
+            <WatchLiveButton
+              matchId={matchCtx.match.id}
+              homeTeamId={matchCtx.match.homeTeamId}
+              awayTeamId={matchCtx.match.awayTeamId}
+              kind={matchCtx.stage}
+              groupId={matchCtx.groupId}
+              disabled={disabled}
+            />
+          </div>
+        )}
       </div>
     </motion.div>
   );
