@@ -6,7 +6,7 @@ import { PixelBar } from '../ui/PixelBar';
 import { matchHistoryService, computeWinRate } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { Trophy, Award, BarChart3 } from 'lucide-react';
-import { calculateTier, getTierColor, getTierIcon, groupTeamsByTier } from '../../core/tiers';
+import { getTierColor, getTierIcon, groupTeamsByTier } from '../../core/tiers';
 
 interface HistoricalStatsProps {
   teams: Team[];
@@ -23,27 +23,28 @@ interface TeamStats {
   winRate: number;
 }
 
+interface RegionalStat {
+  region: string;
+  totalGoals: number;
+  matchesPlayed: number;
+  avgGoals: number;
+}
+
 export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
   const [loading, setLoading] = useState(true);
   const [teamStats, setTeamStats] = useState<TeamStats[]>([]);
   const [selectedView, setSelectedView] = useState<'overview' | 'teams' | 'tiers'>('overview');
-  const [regionalStatsHistorical, setRegionalStatsHistorical] = useState<any[]>([]);
+  const [regionalStatsHistorical, setRegionalStatsHistorical] = useState<RegionalStat[]>([]);
 
   // Un solo efecto: trae los partidos UNA vez y calcula tanto las estadísticas
   // por equipo como las regionales. Antes eran dos efectos que descargaban los
   // mismos ~10000 partidos por separado, ninguno con guard de desmontaje
   // (setState tras cambiar de pestaña durante la carga).
-  useEffect(() => {
-    const signal = { cancelled: false };
-    loadStats(signal);
-    return () => {
-      signal.cancelled = true;
-    };
-  }, [teams]);
-
   const loadStats = async (signal: { cancelled: boolean }) => {
     if (!isSupabaseConfigured()) {
-      if (!signal.cancelled) setLoading(false);
+      // Sin Supabase, el render devuelve la card "Not Configured" antes de leer
+      // `loading`, así que no hace falta tocar el estado. Evitar el setState
+      // síncrono acá impide el warning de renders en cascada dentro del efecto.
       return;
     }
 
@@ -82,6 +83,18 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
       }
     }
   };
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    loadStats(signal);
+    return () => {
+      signal.cancelled = true;
+    };
+    // loadStats se omite a propósito de las deps: su única entrada reactiva es
+    // `teams` (ya presente); incluirla dispararía el efecto en cada render y
+    // recargaría ~10000 partidos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams]);
 
   if (!isSupabaseConfigured()) {
     return (
@@ -312,8 +325,6 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                 const team = teams.find((t) => t.id === teamStat.teamId);
                 if (!team) return null;
 
-                const tier = team.tier || calculateTier(team.skill);
-
                 return (
                   <div
                     key={teamStat.teamId}
@@ -329,13 +340,6 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-white">
                               {team.name}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 text-xs border ${getTierColor(
-                                tier
-                              )}`}
-                            >
-                              {getTierIcon(tier)} {tier}
                             </span>
                           </div>
                           <div className="text-sm text-grass-soft mt-1">

@@ -1,7 +1,6 @@
 import { Fragment, useState, useEffect } from 'react';
 import type { TeamStanding, Team, Match } from '../../types';
 import { cn } from '../../lib/utils';
-import { calculateTier, getTierColor, getTierIcon } from '../../core/tiers';
 import { TeamFlag } from './TeamFlag';
 import { TeamNameTooltip } from './TeamNameTooltip';
 import { sortStandings } from '../../core/scheduler';
@@ -130,20 +129,6 @@ export function StandingsTable({
                                   {team.id.toUpperCase()}
                                 </span>
                               </TeamNameTooltip>
-                              {(() => {
-                                const tier = team.tier || calculateTier(team.skill);
-                                return (
-                                  <span
-                                    className={cn(
-                                      'px-2 py-0.5 text-xs border flex-shrink-0',
-                                      getTierColor(tier)
-                                    )}
-                                    title={`${tier} - Skill: ${Math.round(team.skill)}`}
-                                  >
-                                    {getTierIcon(tier)} <span className="hidden sm:inline ml-1">{tier}</span>
-                                  </span>
-                                );
-                              })()}
                             </>
                           );
                         }
