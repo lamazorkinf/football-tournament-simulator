@@ -17,7 +17,11 @@ import {
   type CycleStatePayload,
 } from '../cycle';
 import type { Cycle, KnockoutMatch, Region, Team, Tournament, WorldCup } from '../../types';
-import { canDrawContinental } from '../../utils/cycleProgress';
+import {
+  canDrawContinental,
+  canDrawConfederations,
+  canAdvanceToQualifiers,
+} from '../../utils/cycleProgress';
 import { makeDrawnContinentalCycle } from '../../test/fixtures/cycle';
 
 const REGIONS: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
@@ -302,6 +306,8 @@ describe('serializeCycleState / reconstructCycle (persistencia)', () => {
     const restored = reconstructCycle(base, null);
     expect(restored.calendar.phase).toBe('completed');
     expect(canDrawContinental(restored)).toBe(false);
+    expect(canDrawConfederations(restored)).toBe(false);
+    expect(canAdvanceToQualifiers(restored)).toBe(false);
   });
 
   it('legacy (state=null) con Mundial en curso → phase "wc-groups", NO continental', () => {
@@ -309,6 +315,8 @@ describe('serializeCycleState / reconstructCycle (persistencia)', () => {
     const restored = reconstructCycle(base, null);
     expect(restored.calendar.phase).toBe('wc-groups');
     expect(canDrawContinental(restored)).toBe(false);
+    expect(canDrawConfederations(restored)).toBe(false);
+    expect(canAdvanceToQualifiers(restored)).toBe(false);
   });
 
   it('legacy (state=null) solo clasificatorias → phase "wc-qualifiers", NO continental', () => {
@@ -316,5 +324,7 @@ describe('serializeCycleState / reconstructCycle (persistencia)', () => {
     const restored = reconstructCycle(base, null);
     expect(restored.calendar.phase).toBe('wc-qualifiers');
     expect(canDrawContinental(restored)).toBe(false);
+    expect(canDrawConfederations(restored)).toBe(false);
+    expect(canAdvanceToQualifiers(restored)).toBe(false);
   });
 });

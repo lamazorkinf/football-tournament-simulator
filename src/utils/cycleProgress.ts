@@ -43,11 +43,15 @@ export function canDrawContinental(cycle: Cycle): boolean {
 }
 
 export function canDrawConfederations(cycle: Cycle): boolean {
-  return cycle.continental.isComplete && !isConfederationsDrawn(cycle);
+  return (
+    cycle.continental.isComplete &&
+    !isConfederationsDrawn(cycle) &&
+    !cycle.confederationsCup.isComplete
+  );
 }
 
 export function canAdvanceToQualifiers(cycle: Cycle): boolean {
-  return cycle.confederationsCup.isComplete && cycle.calendar.phase !== 'wc-qualifiers';
+  return cycle.confederationsCup.isComplete && cycle.calendar.phase === 'confed';
 }
 
 export function canDrawQualifiers(cycle: Cycle): boolean {
