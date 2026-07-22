@@ -162,29 +162,48 @@ export function simulateMatchWithPenalties(
 }
 
 /**
- * Simulates penalty shootout
+ * Simula una tanda de penales realista: tiros alternados con "muerte
+ * matemática" (la tanda termina en cuanto un equipo ya no puede ser
+ * alcanzado con los tiros que le quedan al rival) y muerte súbita si
+ * la fase regular termina empatada. `rng` inyectable para tests.
  */
-function simulatePenalties(
+export function simulatePenalties(
   homeSkill: number,
-  awaySkill: number
+  awaySkill: number,
+  rng: () => number = Math.random,
 ): { homeScore: number; awayScore: number } {
-  // Penalty conversion rate based on skill (75-90% conversion)
+  // Tasa de conversión según skill (75-90%).
   const homeConversionRate = 0.75 + (homeSkill / 100) * 0.15;
   const awayConversionRate = 0.75 + (awaySkill / 100) * 0.15;
 
   let homeScore = 0;
   let awayScore = 0;
+  let homeRemaining = 5;
+  let awayRemaining = 5;
 
-  // Standard 5 penalties each
-  for (let i = 0; i < 5; i++) {
-    if (Math.random() < homeConversionRate) homeScore++;
-    if (Math.random() < awayConversionRate) awayScore++;
+  const decided = () =>
+    homeScore > awayScore + awayRemaining || awayScore > homeScore + homeRemaining;
+
+  // Fase regular: hasta 5 por lado, alternando; corta al quedar decidida.
+  while (homeRemaining > 0 || awayRemaining > 0) {
+    if (homeRemaining > 0) {
+      if (rng() < homeConversionRate) homeScore++;
+      homeRemaining--;
+      if (decided()) break;
+    }
+    if (awayRemaining > 0) {
+      if (rng() < awayConversionRate) awayScore++;
+      awayRemaining--;
+      if (decided()) break;
+    }
   }
 
-  // Sudden death if tied
+  // Muerte súbita: de a pares hasta que un par rompa el empate.
   while (homeScore === awayScore) {
-    if (Math.random() < homeConversionRate) homeScore++;
-    if (Math.random() < awayConversionRate) awayScore++;
+    const homeGoal = rng() < homeConversionRate;
+    const awayGoal = rng() < awayConversionRate;
+    if (homeGoal) homeScore++;
+    if (awayGoal) awayScore++;
   }
 
   return { homeScore, awayScore };
