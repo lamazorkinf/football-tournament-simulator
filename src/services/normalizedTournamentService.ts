@@ -493,21 +493,21 @@ export const normalizedTournamentService = {
     }
 
     try {
+      // Sin `.single()`: con la DB vacía (0 filas) PostgREST responde 406
+      // (Not Acceptable) y ensucia la consola. Pedimos un array de a lo sumo
+      // una fila y tomamos la primera; 0 filas → array vacío (200), sin ruido.
       const { data, error } = await db
         .tournaments_new()
         .select('id')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null;
-        }
-        throw error;
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        return null;
       }
 
-      return loadTournamentFromNormalizedSchema(data.id);
+      return loadTournamentFromNormalizedSchema(data[0].id);
     } catch (error) {
       console.error('Error loading latest tournament:', error);
       return null;
