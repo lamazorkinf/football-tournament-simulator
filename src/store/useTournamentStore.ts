@@ -15,6 +15,7 @@ import { simulateMatch as simulateGroupMatch, simulateMatchWithPenalties, update
 import {
   toCycle,
   ensureCycleFields,
+  reconstructCycle,
   drawContinentalStage,
   recordContinentalMatch,
   drawConfederationsStage,
@@ -38,6 +39,7 @@ import {
 import { matchHistoryService } from '../services/matchHistoryService';
 import { teamsService } from '../services/teamsService';
 import { adaptiveTournamentService } from '../services/adaptiveTournamentService';
+import { cycleStateService } from '../services/cycleStateService';
 import { normalizedQualifiersService } from '../services/normalizedQualifiersService';
 import { normalizedWorldCupService } from '../services/normalizedWorldCupService';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -104,6 +106,9 @@ const updateTournamentInState = (set: any, get: any, updatedTournament: Tourname
     adaptiveTournamentService
       .saveTournament(updatedTournament)
       .catch((error) => console.error('Error auto-saving tournament:', error));
+    cycleStateService
+      .saveCycleState(ensureCycleFields(updatedTournament))
+      .catch((error) => console.error('Error auto-saving cycle state:', error));
   }
 };
 
@@ -162,7 +167,11 @@ export const useTournamentStore = create<TournamentState>()(
             const latestTournament = await adaptiveTournamentService.getLatestTournament();
             if (latestTournament) {
               console.log(`Loaded latest tournament: ${latestTournament.name}`);
-              const latestCycle = ensureCycleFields(latestTournament);
+              // Cargar el estado del ciclo persistido; si no hay row, es un torneo
+              // legacy (previo al ciclo) → reconstructCycle deriva un calendario
+              // de fase Mundial en vez de ofrecer "Sortear Continental".
+              const cycleState = await cycleStateService.loadCycleState(latestTournament.id);
+              const latestCycle = reconstructCycle(latestTournament, cycleState);
               set((state) => ({
                 // Fusionar, no reemplazar: descartar la lista rehidratada borraba
                 // el historial local de torneos y lo volvía a persistir truncado.
@@ -226,6 +235,9 @@ export const useTournamentStore = create<TournamentState>()(
           adaptiveTournamentService
             .saveTournament(tournament)
             .catch((error) => console.error('Error saving new tournament:', error));
+          cycleStateService
+            .saveCycleState(tournament)
+            .catch((error) => console.error('Error saving new cycle state:', error));
         }
         })();
 
@@ -286,6 +298,7 @@ export const useTournamentStore = create<TournamentState>()(
             try {
               progress.updateProgress('Guardando torneo en base de datos...', 4);
               await adaptiveTournamentService.saveTournament(tournament);
+              await cycleStateService.saveCycleState(tournament);
               console.log(`Tournament ${year} created and saved to database`);
 
               // Save empty qualifier groups to database
