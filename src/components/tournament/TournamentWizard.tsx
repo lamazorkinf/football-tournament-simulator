@@ -376,6 +376,11 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                 <Button size="lg" onClick={handleGenerateDraw} className="hidden lg:inline-flex">
                   ▶ PRESS START
                 </Button>
+              ) : qualifierProgress.playedMatches > 0 && !qualifierProgress.isComplete ? (
+                <Button variant="secondary" size="sm" onClick={() => onNavigate?.('qualifiers')} className="gap-2">
+                  <Globe2 className="w-4 h-4" />
+                  Ver / Jugar
+                </Button>
               ) : null
             }
           />
@@ -442,6 +447,11 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                   <Zap className="w-4 h-4" />
                   Regenerar Sorteo & Fixtures
                 </Button>
+              ) : worldCupProgress && worldCupProgress.playedMatches > 0 && !worldCupProgress.isComplete ? (
+                <Button variant="secondary" size="sm" onClick={() => onNavigate?.('worldcup')} className="gap-2">
+                  <Trophy className="w-4 h-4" />
+                  Ver / Jugar
+                </Button>
               ) : null
             }
           />
@@ -485,6 +495,13 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                 >
                   <Zap className="w-4 h-4" />
                   Generar Dieciseisavos
+                </Button>
+              ) : currentTournament.worldCup?.knockout &&
+                currentTournament.worldCup.knockout.roundOf32.length > 0 &&
+                !isComplete ? (
+                <Button variant="secondary" size="sm" onClick={() => onNavigate?.('worldcup')} className="gap-2">
+                  <Award className="w-4 h-4" />
+                  Ver / Jugar
                 </Button>
               ) : null
             }

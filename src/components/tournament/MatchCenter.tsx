@@ -6,7 +6,7 @@ import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
 import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Filter, Clock, CheckCircle, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Play, Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
@@ -24,7 +24,7 @@ interface MatchCenterProps {
 }
 
 export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps) {
-  const { simulateMatch, simulateMatchdayBatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch, isBatchProcessing } = useTournamentStore();
+  const { simulateMatch, simulateMatchdayBatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch, isSavingMatch, isBatchProcessing } = useTournamentStore();
   const { showResults } = useMatchResultsStore();
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
   const [selectedStage, setSelectedStage] = useState<MatchStage | 'all'>('all');
@@ -85,8 +85,6 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     () => unplayedMatches.filter((m) => isBatchSimulableStage(m.stage)),
     [unplayedMatches]
   );
-
-  const totalPlayed = allMatches.filter((m) => m.match.isPlayed).length;
 
   const handleSimulateMatch = async (matchWithContext: MatchWithContext) => {
     const { match, stage, groupId } = matchWithContext;
@@ -319,57 +317,6 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     }
   );
 
-  const handleResetTournamentMatches = async () => {
-    // Count how many matches have been played
-    const playedMatchesCount = allMatches.filter((m) => m.match.isPlayed).length;
-
-    if (playedMatchesCount === 0) {
-      toast.info('No hay partidos jugados para resetear');
-      return;
-    }
-
-    // Show confirmation dialog with detailed warning
-    const confirmed = confirm(
-      `⚠️ ADVERTENCIA: Regeneración de Fixture\n\n` +
-      `Esta acción eliminará:\n` +
-      `• ${playedMatchesCount} partido(s) jugado(s)\n` +
-      `• Todo el historial de este torneo\n` +
-      `• Todos los fixtures actuales\n` +
-      `• La fase de Copa del Mundo (si existe)\n\n` +
-      `Las habilidades de los equipos se mantendrán.\n\n` +
-      `¿Estás seguro de que quieres continuar?`
-    );
-
-    if (!confirmed) return;
-
-    // Second confirmation for extra safety
-    const doubleConfirmed = confirm(
-      `⚠️ ÚLTIMA CONFIRMACIÓN\n\n` +
-      `Esta acción NO se puede deshacer.\n` +
-      `Se perderán ${playedMatchesCount} partidos y todo el progreso del torneo.\n\n` +
-      `¿Realmente deseas continuar?`
-    );
-
-    if (!doubleConfirmed) return;
-
-    const loadingToast = toast.loading('Reseteando torneo...');
-
-    try {
-      // Reset matches and tournament data
-      await resetCurrentTournamentMatches();
-
-      // Regenerate draw and fixtures
-      generateDrawAndFixtures();
-
-      toast.dismiss(loadingToast);
-      toast.success('✅ Torneo reseteado y fixture regenerado correctamente');
-    } catch (error) {
-      console.error('Error resetting tournament:', error);
-      toast.dismiss(loadingToast);
-      toast.error('❌ Error al resetear el torneo');
-    }
-  };
-
   const getTeam = (teamId: string) => teams.find((t) => t.id === teamId);
 
   const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
@@ -482,20 +429,6 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 <span className="hidden sm:inline">{isBatchProcessing ? 'Simulando...' : 'Simular Jornada'}</span>
                 <span className="sm:hidden">{isBatchProcessing ? '...' : 'Jornada'}</span>
               </Button>
-
-              {/* Danger action: Reset tournament */}
-              {totalPlayed > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={handleResetTournamentMatches}
-                  className="gap-2 border-loss text-loss hover:bg-loss/20"
-                  title="Regenerar fixture completo (elimina todos los partidos jugados)"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span className="hidden sm:inline">Regenerar Fixture</span>
-                  <span className="sm:hidden">Regenerar</span>
-                </Button>
-              )}
             </div>
           </div>
         </CardContent>
