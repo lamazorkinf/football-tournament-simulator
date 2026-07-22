@@ -8,7 +8,7 @@ import { makeDrawnConfedCycle } from '../../../test/fixtures/cycle';
 describe('ConfederationsCupView', () => {
   it('renderiza 2 grupos con partidos de la jornada 1 jugables e invoca la acción', async () => {
     const { cycle, teams } = makeDrawnConfedCycle();
-    const simulateConfederationsMatch = vi.fn(async () => {});
+    const simulateConfederationsMatch = vi.fn(async () => null);
     useTournamentStore.setState({ simulateConfederationsMatch, isSavingMatch: false });
 
     render(<ConfederationsCupView cycle={cycle} teams={teams} />);

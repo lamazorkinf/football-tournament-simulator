@@ -127,19 +127,19 @@ export interface TournamentState {
   recalculateTournamentPerformances: (tournamentId: string) => Promise<void>;
   resetCurrentTournamentMatches: () => Promise<void>;
   updateTeam: (teamId: string, updates: Partial<Team>) => Promise<void>;
-  simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => Promise<void>;
+  simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => Promise<SimulatedMatchOutcome | null>;
   simulateMatchdayBatch: (matches: Array<{ matchId: string; groupId: string; stage: 'qualifier' | 'world-cup'; groupName: string; region?: Region }>) => Promise<void>;
   advanceToWorldCup: () => void;
   advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => void;
   advanceToKnockout: () => Promise<void>;
   regenerateKnockoutStage: () => Promise<void>;
-  simulateKnockoutMatch: (matchId: string) => Promise<void>;
+  simulateKnockoutMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
   generateDrawAndFixtures: () => void;
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
   drawContinental: () => void;
-  simulateContinentalMatch: (matchId: string) => Promise<void>;
+  simulateContinentalMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
   drawConfederations: () => void;
-  simulateConfederationsMatch: (matchId: string) => Promise<void>;
+  simulateConfederationsMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
   advanceToQualifiers: () => void;
 }
 
@@ -211,4 +211,11 @@ export interface MatchResult {
   awayScore: number;
   homeSkillChange: number;
   awaySkillChange: number;
+}
+
+/** Resultado comprometido por una acción simulate*, para reproducir en vivo. */
+export interface SimulatedMatchOutcome {
+  homeScore: number;
+  awayScore: number;
+  penalties?: { homeScore: number; awayScore: number };
 }

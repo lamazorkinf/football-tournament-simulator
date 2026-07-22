@@ -608,12 +608,12 @@ export const useTournamentStore = create<TournamentState>()(
 
       simulateMatch: async (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => {
         const state = get();
-        if (!state.currentTournament) return;
+        if (!state.currentTournament) return null;
 
         // Prevent simultaneous match simulations
         if (state.isSavingMatch) {
           console.warn('⚠️ Another match is being saved. Please wait...');
-          return;
+          return null;
         }
 
         // Find the group and match
@@ -635,13 +635,13 @@ export const useTournamentStore = create<TournamentState>()(
           }
         }
 
-        if (!targetGroup) return;
+        if (!targetGroup) return null;
 
         const matchIndex = targetGroup.matches.findIndex((m) => m.id === matchId);
-        if (matchIndex === -1) return;
+        if (matchIndex === -1) return null;
 
         const match = targetGroup.matches[matchIndex];
-        if (match.isPlayed) return;
+        if (match.isPlayed) return null;
 
         // Set saving state
         set({ isSavingMatch: true });
@@ -655,7 +655,7 @@ export const useTournamentStore = create<TournamentState>()(
           // siempre, deshabilitando todos los botones de simular.
           console.warn(`⚠️ Equipos no encontrados para el partido ${matchId}`);
           set({ isSavingMatch: false });
-          return;
+          return null;
         }
 
         // Simulate the match (disable home advantage for World Cup)
@@ -785,6 +785,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Reset saving state after everything is done
         set({ isSavingMatch: false });
+        return { homeScore: result.homeScore, awayScore: result.awayScore };
       },
 
       simulateMatchdayBatch: async (matches) => {
@@ -1749,12 +1750,12 @@ export const useTournamentStore = create<TournamentState>()(
 
       simulateKnockoutMatch: async (matchId: string) => {
         const state = get();
-        if (!state.currentTournament?.worldCup) return;
+        if (!state.currentTournament?.worldCup) return null;
 
         // Prevent simultaneous match simulations
         if (state.isSavingMatch) {
           console.warn('⚠️ Another match is being saved. Please wait...');
-          return;
+          return null;
         }
 
         const knockout = state.currentTournament.worldCup.knockout;
@@ -1784,7 +1785,7 @@ export const useTournamentStore = create<TournamentState>()(
           roundName = 'final';
         }
 
-        if (!targetMatch || !roundName || targetMatch.isPlayed) return;
+        if (!targetMatch || !roundName || targetMatch.isPlayed) return null;
 
         // Set saving state
         set({ isSavingMatch: true });
@@ -1795,7 +1796,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (!homeTeam || !awayTeam) {
           set({ isSavingMatch: false });
-          return;
+          return null;
         }
 
         // Simulate with penalties (sede neutral: eliminatorias del Mundial sin ventaja local)
@@ -1825,7 +1826,7 @@ export const useTournamentStore = create<TournamentState>()(
           // flag bloquearía toda simulación posterior hasta recargar.
           console.warn(`⚠️ Partido de eliminatorias empatado sin penales: ${matchId}`);
           set({ isSavingMatch: false });
-          return;
+          return null;
         }
 
         // Update match
@@ -2046,7 +2047,7 @@ export const useTournamentStore = create<TournamentState>()(
 
           // Reset saving state
           set({ isSavingMatch: false });
-          return;
+          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
         } else if (roundName === 'thirdPlace' && updatedKnockout.thirdPlace?.winnerId) {
           // El partido por el tercer puesto puede jugarse DESPUÉS de la final.
           // En ese caso la rama de la final ya corrió leyendo un thirdPlace sin
@@ -2065,7 +2066,7 @@ export const useTournamentStore = create<TournamentState>()(
           set({ teams: updatedTeams });
           updateTournamentInState(set, get, updatedTournament);
           set({ isSavingMatch: false });
-          return;
+          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
         }
 
         const updatedTournament = {
@@ -2081,6 +2082,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Reset saving state
         set({ isSavingMatch: false });
+        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
       },
 
       drawContinental: () => {
@@ -2096,11 +2098,11 @@ export const useTournamentStore = create<TournamentState>()(
       simulateContinentalMatch: async (matchId: string) => {
         const state = get();
         const cycle = state.currentTournament;
-        if (!cycle) return;
-        if (state.isSavingMatch) return;
+        if (!cycle) return null;
+        if (state.isSavingMatch) return null;
         if (!isMatchPlayable(cycle, matchId)) {
           console.warn(`⛔ Continental ${matchId} fuera de jornada.`);
-          return;
+          return null;
         }
         // Localizar el match en los brackets:
         const all = Object.values(cycle.continental.brackets).flatMap((b): KnockoutMatch[] => [
@@ -2109,10 +2111,10 @@ export const useTournamentStore = create<TournamentState>()(
           ...(b.thirdPlace ? [b.thirdPlace] : []),
         ]);
         const match = all.find((m) => m.id === matchId);
-        if (!match || match.isPlayed) return;
+        if (!match || match.isPlayed) return null;
         const home = state.teams.find((t) => t.id === match.homeTeamId);
         const away = state.teams.find((t) => t.id === match.awayTeamId);
-        if (!home || !away) return;
+        if (!home || !away) return null;
 
         set({ isSavingMatch: true });
         const importance = importanceFor('continental', match.round);
@@ -2163,6 +2165,7 @@ export const useTournamentStore = create<TournamentState>()(
         set({ teams: updatedTeams });
         updateTournamentInState(set, get, updated);
         set({ isSavingMatch: false });
+        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
       },
 
       drawConfederations: () => {
@@ -2180,10 +2183,10 @@ export const useTournamentStore = create<TournamentState>()(
       simulateConfederationsMatch: async (matchId: string) => {
         const state = get();
         const cycle = state.currentTournament;
-        if (!cycle || state.isSavingMatch) return;
+        if (!cycle || state.isSavingMatch) return null;
         if (!isMatchPlayable(cycle, matchId)) {
           console.warn(`⛔ Confed ${matchId} fuera de jornada.`);
-          return;
+          return null;
         }
         const conf = cycle.confederationsCup;
         const groupMatch = conf.groups.flatMap((g) => g.matches).find((m) => m.id === matchId);
@@ -2193,10 +2196,10 @@ export const useTournamentStore = create<TournamentState>()(
           ...(conf.knockout.thirdPlace ? [conf.knockout.thirdPlace] : []),
         ].find((m) => m.id === matchId);
         const match = groupMatch ?? koMatch;
-        if (!match || match.isPlayed) return;
+        if (!match || match.isPlayed) return null;
         const home = state.teams.find((t) => t.id === match.homeTeamId);
         const away = state.teams.find((t) => t.id === match.awayTeamId);
-        if (!home || !away) return;
+        if (!home || !away) return null;
 
         set({ isSavingMatch: true });
         const isKo = Boolean(koMatch);
@@ -2246,6 +2249,7 @@ export const useTournamentStore = create<TournamentState>()(
         set({ teams: updatedTeams });
         updateTournamentInState(set, get, updated);
         set({ isSavingMatch: false });
+        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
       },
 
       advanceToQualifiers: () => {

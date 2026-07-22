@@ -8,7 +8,7 @@ import { makeDrawnContinentalCycle } from '../../../test/fixtures/cycle';
 describe('ContinentalView', () => {
   it('renderiza el bracket de Europa con partidos R64 jugables e invoca la acción', async () => {
     const { cycle, teams } = makeDrawnContinentalCycle();
-    const simulateContinentalMatch = vi.fn(async () => {});
+    const simulateContinentalMatch = vi.fn(async () => null);
     useTournamentStore.setState({ simulateContinentalMatch, isSavingMatch: false });
 
     render(<ContinentalView cycle={cycle} teams={teams} />);
