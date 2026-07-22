@@ -207,6 +207,7 @@ import {
   generateContinentalQuarterFinals,
   generateContinentalSemiFinals,
   generateContinentalFinal,
+  generateContinentalThirdPlace,
 } from '../continental';
 
 /** Construye una ronda "jugada" de `count` partidos con winner = `w{pos}`. */
@@ -265,6 +266,20 @@ describe('avance de rondas continentales', () => {
     expect(final!.stage).toBe('continental');
     expect(final!.homeTeamId).toBe('w0');
     expect(final!.awayTeamId).toBe('w1');
+  });
+
+  it('3er puesto: 1 partido, matchday 6, empareja los perdedores de las 2 semis', () => {
+    const third = generateContinentalThirdPlace(playedRound('semi', 5, 2));
+    expect(third).not.toBeNull();
+    expect(third!.matchday).toBe(6);
+    expect(third!.round).toBe('third-place');
+    expect(third!.stage).toBe('continental');
+    expect(third!.homeTeamId).toBe('l0');
+    expect(third!.awayTeamId).toBe('l1');
+  });
+
+  it('3er puesto: null si faltan semis', () => {
+    expect(generateContinentalThirdPlace([])).toBeNull();
   });
 
   it('guards: ronda incompleta (sin winnerId) no genera la siguiente', () => {

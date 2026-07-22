@@ -167,8 +167,10 @@ export interface ContinentalBracket {
   quarterFinals: KnockoutMatch[];
   semiFinals: KnockoutMatch[];
   final: KnockoutMatch | null;
+  thirdPlace: KnockoutMatch | null;
   championId?: string; // finalista 1 (campeón)
   runnerUpId?: string; // finalista 2 (subcampeón)
+  thirdPlaceId?: string;
   byeTeamIds: string[]; // cabezas de serie con bye directo a R32
 }
 

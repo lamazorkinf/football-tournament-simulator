@@ -47,6 +47,7 @@ export function makeEmptyBracket(region: Region): ContinentalBracket {
     quarterFinals: [],
     semiFinals: [],
     final: null,
+    thirdPlace: null,
     byeTeamIds: [],
   };
 }

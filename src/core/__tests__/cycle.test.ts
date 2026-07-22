@@ -118,7 +118,9 @@ function playContinentalMatchday(cycle: Cycle): Cycle {
   const matches = Object.values(cycle.continental.brackets)
     .flatMap((b): KnockoutMatch[] => [
       ...b.roundOf64, ...b.roundOf32, ...b.roundOf16,
-      ...b.quarterFinals, ...b.semiFinals, ...(b.final ? [b.final] : []),
+      ...b.quarterFinals, ...b.semiFinals,
+      ...(b.final ? [b.final] : []),
+      ...(b.thirdPlace ? [b.thirdPlace] : []),
     ])
     .filter((m) => (m.matchday ?? 0) === md && !m.isPlayed);
   let next = cycle;
@@ -179,9 +181,38 @@ describe('cycle: continental', () => {
       expect(b.championId).toBeTruthy();
       expect(b.runnerUpId).toBeTruthy();
       expect(b.championId).not.toBe(b.runnerUpId);
+      expect(b.thirdPlace?.isPlayed).toBe(true);
+      expect(b.thirdPlaceId).toBeTruthy();
+      expect(b.thirdPlaceId).not.toBe(b.championId);
     }
     // Boundary: el calendario NO saltó solo a confed (queda en continental md6).
     expect(cycle.calendar).toEqual({ phase: 'continental', matchday: 6 });
+  });
+
+  it('en md6, jugar solo la final (sin 3er puesto) NO corona: jornada incompleta', () => {
+    let cycle = drawContinentalStage(toCycle({
+      id: 't', name: 'c', year: 2026,
+      qualifiers: { Europe: [], America: [], Africa: [], Asia: [] },
+      worldCup: null, isQualifiersComplete: false, hasAnyMatchPlayed: false,
+    }), fullTeamsByRegion());
+
+    // 5 jornadas → md6 generada (final + 3er puesto), nada jugado en md6.
+    for (let i = 0; i < 5; i++) cycle = playContinentalMatchday(cycle);
+    expect(cycle.calendar).toEqual({ phase: 'continental', matchday: 6 });
+
+    // Jugar SOLO las finales (no los 3er puestos):
+    let c = cycle;
+    for (const r of ['Europe', 'America', 'Africa', 'Asia'] as Region[]) {
+      const f = c.continental.brackets[r].final!;
+      c = recordContinentalMatch(c, f.id, {
+        homeScore: 1, awayScore: 0, winnerId: f.homeTeamId, loserId: f.awayTeamId,
+      });
+    }
+
+    expect(c.continental.isComplete).toBe(false); // faltan los 3er puestos
+    for (const r of ['Europe', 'America', 'Africa', 'Asia'] as Region[]) {
+      expect(c.continental.brackets[r].championId).toBeFalsy();
+    }
   });
 });
 

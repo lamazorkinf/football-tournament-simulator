@@ -22,6 +22,7 @@ describe('getStageImportance', () => {
     expect(getStageImportance('continental', 'round-of-16', cfg())).toBe(0.9);
     expect(getStageImportance('continental', 'quarter', cfg())).toBe(1.2);
     expect(getStageImportance('continental', 'final', cfg())).toBe(1.2);
+    expect(getStageImportance('continental', 'third-place', cfg())).toBe(1.2);
   });
 
   it('etapa desconocida o sin definir → 1 (neutro)', () => {

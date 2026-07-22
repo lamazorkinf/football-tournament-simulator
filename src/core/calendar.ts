@@ -25,6 +25,7 @@ function bracketMatches(b: ContinentalBracket): Match[] {
     ...b.quarterFinals,
     ...b.semiFinals,
     ...(b.final ? [b.final] : []),
+    ...(b.thirdPlace ? [b.thirdPlace] : []),
   ];
 }
 

@@ -2,7 +2,7 @@ import type { EngineConfig, KnockoutMatch, MatchResult } from '../types';
 import { getEngineConfig } from '../store/useConfigStore';
 
 // Rondas continentales "tardías" (mayor peso Elo). El resto (R64/R32/R16) es "temprana".
-const CONTINENTAL_LATE_ROUNDS: ReadonlyArray<KnockoutMatch['round']> = ['quarter', 'semi', 'final'];
+const CONTINENTAL_LATE_ROUNDS: ReadonlyArray<KnockoutMatch['round']> = ['quarter', 'semi', 'third-place', 'final'];
 
 /**
  * Peso de importancia (multiplicador del K-Factor) según la etapa y la ronda

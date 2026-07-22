@@ -54,7 +54,9 @@ export function playContinentalMatchday(cycle: Cycle): Cycle {
   const matches = Object.values(cycle.continental.brackets)
     .flatMap((b): KnockoutMatch[] => [
       ...b.roundOf64, ...b.roundOf32, ...b.roundOf16,
-      ...b.quarterFinals, ...b.semiFinals, ...(b.final ? [b.final] : []),
+      ...b.quarterFinals, ...b.semiFinals,
+      ...(b.final ? [b.final] : []),
+      ...(b.thirdPlace ? [b.thirdPlace] : []),
     ])
     .filter((m) => (m.matchday ?? 0) === md && !m.isPlayed);
   let next = cycle;

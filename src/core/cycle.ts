@@ -18,6 +18,7 @@ import {
   generateContinentalQuarterFinals,
   generateContinentalSemiFinals,
   generateContinentalFinal,
+  generateContinentalThirdPlace,
 } from './continental';
 import {
   generateConfederationsGroups,
@@ -46,6 +47,7 @@ function emptyBracket(region: Region): ContinentalBracket {
     quarterFinals: [],
     semiFinals: [],
     final: null,
+    thirdPlace: null,
     byeTeamIds: [],
   };
 }
@@ -208,6 +210,10 @@ function replaceContinentalMatch(cycle: Cycle, matchId: string, result: Knockout
         b.final && b.final.id === matchId
           ? applyResultTo([b.final], matchId, result)[0]
           : b.final,
+      thirdPlace:
+        b.thirdPlace && b.thirdPlace.id === matchId
+          ? applyResultTo([b.thirdPlace], matchId, result)[0]
+          : b.thirdPlace,
     };
   }
   return { ...cycle, continental: { ...cycle.continental, brackets } };
@@ -226,8 +232,8 @@ function advanceContinental(cycle: Cycle): Cycle {
     else if (md === 2) brackets[r] = { ...b, roundOf16: generateContinentalRoundOf16(b.roundOf32) };
     else if (md === 3) brackets[r] = { ...b, quarterFinals: generateContinentalQuarterFinals(b.roundOf16) };
     else if (md === 4) brackets[r] = { ...b, semiFinals: generateContinentalSemiFinals(b.quarterFinals) };
-    else if (md === 5) brackets[r] = { ...b, final: generateContinentalFinal(b.semiFinals) };
-    else if (md === 6) brackets[r] = { ...b, championId: b.final?.winnerId, runnerUpId: b.final?.loserId };
+    else if (md === 5) brackets[r] = { ...b, final: generateContinentalFinal(b.semiFinals), thirdPlace: generateContinentalThirdPlace(b.semiFinals) };
+    else if (md === 6) brackets[r] = { ...b, championId: b.final?.winnerId, runnerUpId: b.final?.loserId, thirdPlaceId: b.thirdPlace?.winnerId };
   }
   const continental: ContinentalStage = { brackets, isComplete: md === 6 };
   const next: Cycle = { ...cycle, continental };

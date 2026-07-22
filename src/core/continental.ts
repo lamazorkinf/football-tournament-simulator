@@ -113,6 +113,7 @@ export function generateContinentalBracket(
     quarterFinals: [],
     semiFinals: [],
     final: null,
+    thirdPlace: null,
     byeTeamIds,
   };
 }
@@ -183,4 +184,17 @@ export function generateContinentalSemiFinals(quarterFinals: KnockoutMatch[]): K
 
 export function generateContinentalFinal(semiFinals: KnockoutMatch[]): KnockoutMatch | null {
   return advanceContinentalRound(semiFinals, 'final', 6)[0] ?? null;
+}
+
+/**
+ * Partido por el 3er puesto: empareja los perdedores de las 2 semifinales
+ * (ordenadas por `position`). Jornada 6 (misma que la final). Devuelve null si
+ * falta algún perdedor (semis no jugadas).
+ */
+export function generateContinentalThirdPlace(semiFinals: KnockoutMatch[]): KnockoutMatch | null {
+  const sorted = [...semiFinals].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  if (sorted.length < 2) return null;
+  const [a, b] = sorted;
+  if (!a?.loserId || !b?.loserId) return null;
+  return newKnockoutMatch(a.loserId, b.loserId, 'third-place', 6, 0);
 }
