@@ -85,6 +85,11 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
       return;
     }
 
+    if (stage === 'continental' || stage === 'confederations') {
+      toast.info('Los partidos de Continental/Confederaciones se simulan desde su propia vista');
+      return;
+    }
+
     // Don't allow simulation if another match is being saved
     if (isSavingMatch) {
       toast.warning('Espera a que se guarde el partido anterior');
