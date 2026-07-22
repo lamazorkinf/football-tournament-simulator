@@ -84,6 +84,12 @@ export function ContinentalView({ cycle, teams }: ContinentalViewProps) {
               Campeón: {getTeam(bracket.championId)?.name ?? bracket.championId}
             </div>
           )}
+          {bracket.thirdPlaceId && (
+            <div className="mb-4 flex items-center gap-2 text-grass-soft font-arcade text-xs">
+              <Trophy className="w-4 h-4" />
+              3º: {getTeam(bracket.thirdPlaceId)?.name ?? bracket.thirdPlaceId}
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <div className="flex gap-4 min-w-max pb-2">
@@ -101,6 +107,14 @@ export function ContinentalView({ cycle, teams }: ContinentalViewProps) {
               <RoundColumn
                 label="FINAL"
                 matches={bracket.final ? [bracket.final] : []}
+                cycle={cycle}
+                getTeam={getTeam}
+                onPlay={handlePlay}
+                isSaving={isSavingMatch}
+              />
+              <RoundColumn
+                label="3ER PUESTO"
+                matches={bracket.thirdPlace ? [bracket.thirdPlace] : []}
                 cycle={cycle}
                 getTeam={getTeam}
                 onPlay={handlePlay}

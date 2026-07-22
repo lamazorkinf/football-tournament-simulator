@@ -2098,6 +2098,7 @@ export const useTournamentStore = create<TournamentState>()(
         const all = Object.values(cycle.continental.brackets).flatMap((b): KnockoutMatch[] => [
           ...b.roundOf64, ...b.roundOf32, ...b.roundOf16, ...b.quarterFinals, ...b.semiFinals,
           ...(b.final ? [b.final] : []),
+          ...(b.thirdPlace ? [b.thirdPlace] : []),
         ]);
         const match = all.find((m) => m.id === matchId);
         if (!match || match.isPlayed) return;
