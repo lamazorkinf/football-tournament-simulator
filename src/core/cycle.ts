@@ -9,6 +9,7 @@ import type {
   Region,
   Team,
   Tournament,
+  WorldCup,
   WorldCupGroup,
 } from '../types';
 import {
@@ -100,11 +101,22 @@ export function ensureCycleFields(t: Tournament | Cycle): Cycle {
   };
 }
 
-/** Los 3 campos que un Cycle agrega sobre Tournament, serializables a JSONB. */
+/** El estado del ciclo que un Cycle agrega sobre Tournament, serializable a JSONB. */
 export interface CycleStatePayload {
   continental: ContinentalStage;
   confederationsCup: ConfederationsCup;
   calendar: CalendarState;
+  /**
+   * Snapshot completo del Mundial (grupos + eliminatoria + campeón). Se guarda
+   * en el MISMO documento JSONB que el resto del ciclo para que la persistencia
+   * sea ATÓMICA: o se guarda todo el estado o nada. Antes el Mundial vivía sólo
+   * en filas normalizadas escritas partido a partido en try/catch silenciosos;
+   * si una fallaba, la base quedaba con "campeón sí, pero faltan partidos de la
+   * llave" (el bug del 88% + "Completado"). Opcional para no romper la carga de
+   * documentos legacy escritos antes de incluir este campo: ahí se cae al
+   * `worldCup` de `base` (reconstruido de las filas normalizadas).
+   */
+  worldCup?: WorldCup | null;
 }
 
 /** Extrae el estado del ciclo (para persistir como documento JSONB). */
@@ -113,6 +125,7 @@ export function serializeCycleState(cycle: Cycle): CycleStatePayload {
     continental: cycle.continental,
     confederationsCup: cycle.confederationsCup,
     calendar: cycle.calendar,
+    worldCup: cycle.worldCup ?? null,
   };
 }
 
@@ -135,8 +148,14 @@ export function deriveLegacyCalendar(base: Tournament): CalendarState {
  */
 export function reconstructCycle(base: Tournament, state: CycleStatePayload | null): Cycle {
   if (state) {
+    // worldCup autoritativo desde el documento JSONB si el snapshot lo incluye
+    // (escrito por esta versión). Los documentos legacy no traen la clave → se
+    // conserva el worldCup de `base` (reconstruido de las filas normalizadas),
+    // preservando el comportamiento previo sin regresiones.
+    const worldCup = 'worldCup' in state ? state.worldCup ?? null : base.worldCup;
     return {
       ...base,
+      worldCup,
       continental: state.continental,
       confederationsCup: state.confederationsCup,
       calendar: state.calendar,

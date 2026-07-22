@@ -262,6 +262,12 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   const isComplete =
     knockoutProgress?.isComplete && currentTournament.worldCup?.champion;
 
+  // Con campeón coronado el torneo está terminado: la barra debe leer 100%
+  // aunque `getKnockoutProgress` calcule menos por huecos en la llave (p. ej.
+  // una copia legacy de la DB a la que le faltan filas de rondas intermedias).
+  // Sin esto se veía "88% + ¡Torneo Completado!" a la vez.
+  const knockoutPercentage = isComplete ? 100 : knockoutProgress?.percentage ?? 0;
+
   return (
     <div className="max-w-5xl mx-auto">
       <Card className="overflow-hidden">
@@ -484,17 +490,19 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                 ? 'complete'
                 : 'in-progress'
             }
-            progress={knockoutProgress?.percentage || 0}
+            progress={knockoutPercentage}
             stats={
               knockoutProgress
                 ? [
                     {
                       label: 'Ronda actual',
-                      value: getRoundLabel(knockoutProgress.currentRound),
+                      value: isComplete
+                        ? getRoundLabel('complete')
+                        : getRoundLabel(knockoutProgress.currentRound),
                     },
                     {
                       label: 'Progreso',
-                      value: `${knockoutProgress.percentage}%`,
+                      value: `${knockoutPercentage}%`,
                     },
                   ]
                 : []

@@ -312,13 +312,50 @@ describe('cycle: confederaciones', () => {
 });
 
 describe('serializeCycleState / reconstructCycle (persistencia)', () => {
-  it('serializeCycleState extrae exactamente los 3 campos del ciclo', () => {
+  it('serializeCycleState extrae los campos del ciclo, incluido el Mundial', () => {
     const cycle = toCycle(baseTournament());
     const payload = serializeCycleState(cycle);
-    expect(Object.keys(payload).sort()).toEqual(['calendar', 'confederationsCup', 'continental']);
+    expect(Object.keys(payload).sort()).toEqual([
+      'calendar',
+      'confederationsCup',
+      'continental',
+      'worldCup',
+    ]);
     expect(payload.calendar).toBe(cycle.calendar);
     expect(payload.continental).toBe(cycle.continental);
     expect(payload.confederationsCup).toBe(cycle.confederationsCup);
+    expect(payload.worldCup).toBeNull(); // baseTournament no tiene Mundial aún
+  });
+
+  it('serializeCycleState incluye el Mundial cuando existe', () => {
+    const wc = { champion: 'campeon', groups: [], knockout: {} } as unknown as WorldCup;
+    const cycle = toCycle({ ...baseTournament(), worldCup: wc });
+    expect(serializeCycleState(cycle).worldCup).toBe(wc);
+  });
+
+  it('reconstructCycle usa el worldCup del snapshot JSONB por sobre el de base (atómico)', () => {
+    // base trae una llave incompleta (simula filas normalizadas con huecos);
+    // el snapshot JSONB trae la llave completa → gana el snapshot.
+    const base: Tournament = {
+      ...baseTournament(),
+      worldCup: { champion: 'incompleto-de-filas' } as unknown as WorldCup,
+    };
+    const snapshotWC = { champion: 'completo-del-jsonb' } as unknown as WorldCup;
+    const payload: CycleStatePayload = {
+      ...serializeCycleState(toCycle(baseTournament())),
+      worldCup: snapshotWC,
+    };
+    expect(reconstructCycle(base, payload).worldCup).toBe(snapshotWC);
+  });
+
+  it('reconstructCycle cae al worldCup de base si el snapshot legacy no trae la clave', () => {
+    const wc = { champion: 'de-filas' } as unknown as WorldCup;
+    const base: Tournament = { ...baseTournament(), worldCup: wc };
+    // payload legacy: escrito antes de incluir worldCup en el JSONB.
+    const legacy = serializeCycleState(toCycle(baseTournament()));
+    delete (legacy as Partial<CycleStatePayload>).worldCup;
+    expect('worldCup' in legacy).toBe(false);
+    expect(reconstructCycle(base, legacy).worldCup).toBe(wc);
   });
 
   it('round-trip: reconstructCycle(base, serialize(cycle)) reproduce los campos de ciclo', () => {
