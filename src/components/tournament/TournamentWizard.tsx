@@ -61,7 +61,7 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
       Object.keys(currentTournament.originalSkills).length > 0;
 
     const message = hasOriginalSkills
-      ? '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.\n\n⚠️ Las habilidades de los equipos se restaurarán a sus valores originales del inicio del torneo.'
+      ? '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.\n\nℹ️ Las habilidades se ajustan a la línea de base de este Mundial (ya incluye lo acumulado en torneos anteriores). No se pierde la progresión histórica.'
       : '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.';
 
     if (confirm(message)) {
@@ -69,7 +69,7 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
       // sorteo aún no hubiera terminado (o hubiera fallado).
       await generateDrawAndFixtures();
       const successMsg = hasOriginalSkills
-        ? '✅ Sorteo generado y habilidades restauradas!'
+        ? '✅ Sorteo generado (habilidades en la base de este Mundial)'
         : '✅ Sorteo y fixtures generados correctamente';
       toast.success(successMsg);
     }
