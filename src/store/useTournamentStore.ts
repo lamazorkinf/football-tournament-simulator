@@ -134,6 +134,7 @@ export const useTournamentStore = create<TournamentState>()(
         currentTournament: null,
         isSavingMatch: false,
         isBatchProcessing: false,
+        syncMeta: {},
 
       loadTeamsFromDatabase: async () => {
         if (!isSupabaseConfigured()) {

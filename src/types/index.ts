@@ -110,6 +110,16 @@ export interface TournamentListItem {
   createdAt?: string;
 }
 
+/**
+ * Metadata de sincronización local por torneo (ver spec sync-multidispositivo).
+ * `syncedUpdatedAt`: el updated_at que la DB reportó la última vez que ESTE
+ * dispositivo guardó/cargó el torneo. `dirty`: hay cambios locales sin confirmar.
+ */
+export interface SyncMetaEntry {
+  syncedUpdatedAt: string | null;
+  dirty: boolean;
+}
+
 export interface TournamentState {
   teams: Team[];
   tournaments: Cycle[]; // All tournaments
@@ -117,6 +127,7 @@ export interface TournamentState {
   currentTournament: Cycle | null; // Computed from currentTournamentId
   isSavingMatch: boolean; // Track if a match is being saved to prevent race conditions
   isBatchProcessing: boolean; // Track if batch processing is active to skip individual saves
+  syncMeta: Record<string, SyncMetaEntry>; // sync local↔DB por tournamentId
 
   // Actions
   loadTeamsFromDatabase: () => Promise<void>;
