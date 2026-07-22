@@ -8,6 +8,7 @@ import { MatchDetailModal } from './MatchDetailModal';
 import { BracketLine } from './BracketLine';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamNameTooltip } from '../ui/TeamNameTooltip';
+import { WatchLiveButton } from './WatchLiveButton';
 import { useState, useRef } from 'react';
 import { useMobileAction } from '../../hooks/useMobileAction';
 import { toast } from 'sonner';
@@ -138,6 +139,16 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
             >
               {disabled ? 'Guardando...' : 'Simulate'}
             </Button>
+          )}
+          {!isPlayed && onSimulate && (
+            <WatchLiveButton
+              matchId={match.id}
+              homeTeamId={match.homeTeamId}
+              awayTeamId={match.awayTeamId}
+              kind="knockout"
+              disabled={disabled}
+              className="w-full"
+            />
           )}
           {isPlayed && onViewDetails && (
             <Button
