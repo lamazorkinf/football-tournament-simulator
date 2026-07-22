@@ -54,8 +54,11 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
   const currentJornada = useMemo(() => getCurrentJornada(jornadaGroups), [jornadaGroups]);
 
   // Default de la jornada mostrada = jornada actual. Se reajusta durante el
-  // render al cambiar de torneo o cuando avanza la jornada actual (patrón
-  // React de "derivar estado de props" sin efecto en cascada).
+  // render SOLO al cambiar de torneo (patrón React de "derivar estado de
+  // props" sin efecto en cascada). Dentro de un mismo torneo la selección no
+  // sigue el avance de la jornada actual: si simulás la jornada mostrada, la
+  // vista se queda en ella (los botones de simular apuntan siempre a la
+  // jornada actual GLOBAL, no a la mostrada).
   const currentJornadaIndex = useMemo(() => {
     if (!currentJornada) return jornadaGroups.length > 0 ? 0 : 'all';
     return jornadaGroups.findIndex(

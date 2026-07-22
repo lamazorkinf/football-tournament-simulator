@@ -24,8 +24,12 @@ export function LiveMatchdayOverlay() {
   const teams = useTournamentStore((s) => s.teams);
 
   const hasAnyPenalties = session?.entries.some((e) => e.timeline.penalties) ?? false;
-  // La clave de sesión resetea el reloj al abrir una jornada nueva.
-  const sessionKey = session ? session.title + session.entries.map((e) => e.matchId).join(',') : null;
+  // La clave de sesión resetea el reloj al abrir una jornada nueva. El espacio
+  // separa el título de la lista de ids: evita que un título terminado en
+  // dígitos colisione con el primer matchId al concatenar la clave.
+  const sessionKey = session
+    ? `${session.title} ${session.entries.map((e) => e.matchId).join(',')}`
+    : null;
   const playback = useLiveMatchdayPlayback(sessionKey, hasAnyPenalties);
 
   if (!session) return null;
@@ -40,11 +44,9 @@ export function LiveMatchdayOverlay() {
 
   // Con pocas tarjetas (semis, final) una grilla ancha se ve vacía.
   const gridCols =
-    session.entries.length <= 2
+    session.entries.length <= 4
       ? 'grid-cols-1 sm:grid-cols-2'
-      : session.entries.length <= 4
-        ? 'grid-cols-1 sm:grid-cols-2'
-        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 overflow-y-auto">

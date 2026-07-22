@@ -347,15 +347,21 @@ export const useTournamentStore = create<TournamentState>()(
               const known = new Set(get().tournaments.map((t) => t.id));
               const missingIds = summaries.map((s) => s.id).filter((id) => !known.has(id));
 
-              const loaded: Cycle[] = [];
-              for (const id of missingIds) {
-                const t = await adaptiveTournamentService.loadTournament(id);
-                if (!t) continue;
-                // Cada torneo con su cycle_state (continental/confed/calendar);
-                // sin row → legacy, reconstructCycle deriva la fase Mundial.
-                const cs = await cycleStateService.loadCycleState(id);
-                loaded.push(ensureCycleFields(reconstructCycle(t, cs)));
-              }
+              // Cada id faltante se carga en paralelo (torneo + cycle_state):
+              // son N round-trips independientes; en serie demoraban el arranque
+              // del selector linealmente con la cantidad de torneos.
+              const loaded = (
+                await Promise.all(
+                  missingIds.map(async (id) => {
+                    const t = await adaptiveTournamentService.loadTournament(id);
+                    if (!t) return null;
+                    // Cada torneo con su cycle_state (continental/confed/calendar);
+                    // sin row → legacy, reconstructCycle deriva la fase Mundial.
+                    const cs = await cycleStateService.loadCycleState(id);
+                    return ensureCycleFields(reconstructCycle(t, cs));
+                  }),
+                )
+              ).filter((c): c is Cycle => c !== null);
 
               if (loaded.length > 0) {
                 set((s: TournamentState) => {
@@ -1261,13 +1267,18 @@ export const useTournamentStore = create<TournamentState>()(
 
         // La final se juega última: el camino feliz del bracket del mundial
         // lee el resultado del 3er puesto al armar el podio de la final.
-        const ordered = [...items].sort((a, b) => {
-          const priority = (item: { matchId: string }) => {
+        // Prioridad pre-computada una vez (findMatch recorre 3 fases; no
+        // repetirlo dentro del comparador, que corre O(n log n) veces).
+        const priorityByMatchId = new Map(
+          items.map((item) => {
             const match = findMatch(item.matchId) as KnockoutMatch | undefined;
-            return match?.round === 'final' ? 1 : 0;
-          };
-          return priority(a) - priority(b);
-        });
+            return [item.matchId, match?.round === 'final' ? 1 : 0];
+          }),
+        );
+        const ordered = [...items].sort(
+          (a, b) =>
+            (priorityByMatchId.get(a.matchId) ?? 0) - (priorityByMatchId.get(b.matchId) ?? 0),
+        );
 
         set({ isBatchProcessing: true });
         const progress = useProgressStore.getState();
