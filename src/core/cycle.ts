@@ -98,6 +98,56 @@ export function ensureCycleFields(t: Tournament | Cycle): Cycle {
   };
 }
 
+/** Los 3 campos que un Cycle agrega sobre Tournament, serializables a JSONB. */
+export interface CycleStatePayload {
+  continental: ContinentalStage;
+  confederationsCup: ConfederationsCup;
+  calendar: CalendarState;
+}
+
+/** Extrae el estado del ciclo (para persistir como documento JSONB). */
+export function serializeCycleState(cycle: Cycle): CycleStatePayload {
+  return {
+    continental: cycle.continental,
+    confederationsCup: cycle.confederationsCup,
+    calendar: cycle.calendar,
+  };
+}
+
+/**
+ * Calendario de un torneo legacy (sin cycle_state persistido): salta a la fase
+ * Mundial que corresponde por su progreso real. NUNCA 'continental' — de otro
+ * modo el wizard ofrecería "Sortear Continental" a un torneo con Mundial jugado.
+ */
+export function deriveLegacyCalendar(base: Tournament): CalendarState {
+  if (base.worldCup?.champion) return { phase: 'completed', matchday: 0 };
+  if (base.worldCup) return { phase: 'wc-groups', matchday: 1 };
+  return { phase: 'wc-qualifiers', matchday: 1 };
+}
+
+/**
+ * Reconstruye un Cycle desde el Tournament base + el cycle_state cargado de la
+ * DB. Si `state` es null (torneo legacy, previo al ciclo), las fases continental
+ * y de confederaciones se marcan completas/vacías y el calendario salta a la
+ * fase Mundial correspondiente.
+ */
+export function reconstructCycle(base: Tournament, state: CycleStatePayload | null): Cycle {
+  if (state) {
+    return {
+      ...base,
+      continental: state.continental,
+      confederationsCup: state.confederationsCup,
+      calendar: state.calendar,
+    };
+  }
+  return {
+    ...base,
+    continental: { ...createEmptyContinentalStage(), isComplete: true },
+    confederationsCup: { ...createEmptyConfederationsCup(), isComplete: true },
+    calendar: deriveLegacyCalendar(base),
+  };
+}
+
 /** Resultado ya resuelto de un cruce de eliminación directa. */
 export interface KnockoutResult {
   homeScore: number;

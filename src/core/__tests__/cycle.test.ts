@@ -11,9 +11,14 @@ import {
   drawConfederationsStage,
   recordConfedGroupMatch,
   recordConfedKnockoutMatch,
+  serializeCycleState,
+  reconstructCycle,
   type KnockoutResult,
+  type CycleStatePayload,
 } from '../cycle';
-import type { Cycle, KnockoutMatch, Region, Team, Tournament } from '../../types';
+import type { Cycle, KnockoutMatch, Region, Team, Tournament, WorldCup } from '../../types';
+import { canDrawContinental } from '../../utils/cycleProgress';
+import { makeDrawnContinentalCycle } from '../../test/fixtures/cycle';
 
 const REGIONS: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
 
@@ -268,5 +273,48 @@ describe('cycle: confederaciones', () => {
     expect(c.confederationsCup.championId).toBe(final.homeTeamId);
     // Boundary: no salta solo a wc-qualifiers.
     expect(c.calendar).toEqual({ phase: 'confed', matchday: 5 });
+  });
+});
+
+describe('serializeCycleState / reconstructCycle (persistencia)', () => {
+  it('serializeCycleState extrae exactamente los 3 campos del ciclo', () => {
+    const cycle = toCycle(baseTournament());
+    const payload = serializeCycleState(cycle);
+    expect(Object.keys(payload).sort()).toEqual(['calendar', 'confederationsCup', 'continental']);
+    expect(payload.calendar).toBe(cycle.calendar);
+    expect(payload.continental).toBe(cycle.continental);
+    expect(payload.confederationsCup).toBe(cycle.confederationsCup);
+  });
+
+  it('round-trip: reconstructCycle(base, serialize(cycle)) reproduce los campos de ciclo', () => {
+    const { cycle: drawn } = makeDrawnContinentalCycle();
+    const payload = JSON.parse(JSON.stringify(serializeCycleState(drawn))) as CycleStatePayload;
+    const restored = reconstructCycle(baseTournament(), payload);
+    expect(restored.calendar).toEqual(drawn.calendar);
+    expect(restored.continental.brackets.Europe.roundOf64.length).toBe(
+      drawn.continental.brackets.Europe.roundOf64.length,
+    );
+    expect(restored.continental.brackets.Europe.roundOf64.length).toBeGreaterThan(0);
+  });
+
+  it('legacy (state=null) con Mundial completado → calendar.phase "completed", NO continental', () => {
+    const base: Tournament = { ...baseTournament(), worldCup: { champion: 'x' } as unknown as WorldCup };
+    const restored = reconstructCycle(base, null);
+    expect(restored.calendar.phase).toBe('completed');
+    expect(canDrawContinental(restored)).toBe(false);
+  });
+
+  it('legacy (state=null) con Mundial en curso → phase "wc-groups", NO continental', () => {
+    const base: Tournament = { ...baseTournament(), worldCup: {} as unknown as WorldCup };
+    const restored = reconstructCycle(base, null);
+    expect(restored.calendar.phase).toBe('wc-groups');
+    expect(canDrawContinental(restored)).toBe(false);
+  });
+
+  it('legacy (state=null) solo clasificatorias → phase "wc-qualifiers", NO continental', () => {
+    const base: Tournament = { ...baseTournament(), worldCup: null };
+    const restored = reconstructCycle(base, null);
+    expect(restored.calendar.phase).toBe('wc-qualifiers');
+    expect(canDrawContinental(restored)).toBe(false);
   });
 });
