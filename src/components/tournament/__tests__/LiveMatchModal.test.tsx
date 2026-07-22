@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { Team } from '../../../types';
 import { LiveMatchModal } from '../LiveMatchModal';
@@ -39,5 +39,29 @@ describe('LiveMatchModal', () => {
     act(() => skip.click());
     expect(screen.getByText('2 - 1')).toBeInTheDocument();
     expect(screen.getByText('FINAL')).toBeInTheDocument();
+  });
+
+  it('si la simulación no devuelve resultado, muestra el error', async () => {
+    useTournamentStore.setState({ simulateContinentalMatch: async () => null });
+    render(<LiveMatchModal />);
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({
+        matchId: 'm2', homeTeamId: 'h', awayTeamId: 'a', kind: 'continental',
+      });
+    });
+    expect(await screen.findByText('No se pudo simular el partido.')).toBeInTheDocument();
+  });
+
+  it('llama a la acción de simulación una sola vez', async () => {
+    const spy = vi.fn(async () => ({ homeScore: 1, awayScore: 0 }));
+    useTournamentStore.setState({ simulateContinentalMatch: spy });
+    render(<LiveMatchModal />);
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({
+        matchId: 'm3', homeTeamId: 'h', awayTeamId: 'a', kind: 'continental',
+      });
+    });
+    await screen.findByText('Saltar al final');
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

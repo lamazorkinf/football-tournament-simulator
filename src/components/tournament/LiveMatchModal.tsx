@@ -6,6 +6,7 @@ import { useLiveMatchPlayback, type LiveSpeed } from '../../hooks/useLiveMatchPl
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
 import { Radio, X } from 'lucide-react';
+import type { SimulatedMatchOutcome } from '../../types';
 
 const SPEEDS: LiveSpeed[] = [1, 2, 4];
 
@@ -24,22 +25,27 @@ export function LiveMatchModal() {
 
   const playback = useLiveMatchPlayback(timeline, 1);
 
+  // Reset durante el render al cambiar de partido: evita el frame donde el
+  // timeline del partido anterior se mostraría con los equipos del nuevo.
+  const [prevMatchId, setPrevMatchId] = useState<string | null>(activeMatch?.matchId ?? null);
+  const currentMatchId = activeMatch?.matchId ?? null;
+  if (currentMatchId !== prevMatchId) {
+    setPrevMatchId(currentMatchId);
+    setTimeline(null);
+    setFailed(false);
+  }
+
   useEffect(() => {
     if (!activeMatch) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset síncrono al cerrar el modal (sin partido activo), no reacciona a estado externo cambiante.
-      setTimeline(null);
-      setFailed(false);
       startedRef.current = null;
       return;
     }
     // Dispara la simulación una sola vez por partido (evita doble efecto).
     if (startedRef.current === activeMatch.matchId) return;
     startedRef.current = activeMatch.matchId;
-    setTimeline(null);
-    setFailed(false);
 
     const run = async () => {
-      let outcome;
+      let outcome: SimulatedMatchOutcome | null = null;
       switch (activeMatch.kind) {
         case 'qualifier':
         case 'world-cup':
