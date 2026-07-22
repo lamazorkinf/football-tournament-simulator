@@ -3,7 +3,7 @@ import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
 import { PixelBar } from '../ui/PixelBar';
-import { matchHistoryService } from '../../services/matchHistoryService';
+import { matchHistoryService, computeWinRate } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { Trophy, Award, BarChart3 } from 'lucide-react';
 import { calculateTier, getTierColor, getTierIcon, groupTeamsByTier } from '../../core/tiers';
@@ -48,96 +48,30 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
     }
 
     try {
-      console.log('🔄 [HistoricalStats] Fetching all matches...');
-      const allMatches = await matchHistoryService.getAllMatches(10000, 0); // Get more matches
+      const [teamRows, regionRows] = await Promise.all([
+        matchHistoryService.getTeamStats(),
+        matchHistoryService.getRegionStats(),
+      ]);
       if (signal.cancelled) return;
-      console.log(`✅ [HistoricalStats] Total matches fetched: ${allMatches.length}`);
 
-      // Calculate per-team statistics
-      const teamStatsMap = new Map<string, TeamStats>();
-
-      allMatches.forEach((match) => {
-        // Update home team stats
-        if (!teamStatsMap.has(match.homeTeamId)) {
-          teamStatsMap.set(match.homeTeamId, {
-            teamId: match.homeTeamId,
-            totalMatches: 0,
-            wins: 0,
-            draws: 0,
-            losses: 0,
-            goalsFor: 0,
-            goalsAgainst: 0,
-            winRate: 0,
-          });
-        }
-
-        // Update away team stats
-        if (!teamStatsMap.has(match.awayTeamId)) {
-          teamStatsMap.set(match.awayTeamId, {
-            teamId: match.awayTeamId,
-            totalMatches: 0,
-            wins: 0,
-            draws: 0,
-            losses: 0,
-            goalsFor: 0,
-            goalsAgainst: 0,
-            winRate: 0,
-          });
-        }
-
-        const homeStats = teamStatsMap.get(match.homeTeamId)!;
-        const awayStats = teamStatsMap.get(match.awayTeamId)!;
-
-        homeStats.totalMatches++;
-        awayStats.totalMatches++;
-
-        homeStats.goalsFor += match.homeScore;
-        homeStats.goalsAgainst += match.awayScore;
-        awayStats.goalsFor += match.awayScore;
-        awayStats.goalsAgainst += match.homeScore;
-
-        if (match.homeScore > match.awayScore) {
-          homeStats.wins++;
-          awayStats.losses++;
-        } else if (match.homeScore < match.awayScore) {
-          awayStats.wins++;
-          homeStats.losses++;
-        } else {
-          homeStats.draws++;
-          awayStats.draws++;
-        }
-      });
-
-      // Calculate win rates
-      teamStatsMap.forEach((stats) => {
-        stats.winRate = stats.totalMatches > 0
-          ? (stats.wins / stats.totalMatches) * 100
-          : 0;
-      });
-
-      const finalTeamStats = Array.from(teamStatsMap.values());
-
-      // Estadísticas regionales, sobre los MISMOS partidos ya traídos.
-      const regionMap = new Map<string, { totalGoals: number; matchesPlayed: number }>();
-      allMatches.forEach((match) => {
-        if (match.stage !== 'qualifier') return;
-        const homeTeam = teams.find((t) => t.id === match.homeTeamId);
-        const region = homeTeam?.region || 'Unknown';
-        if (!regionMap.has(region)) {
-          regionMap.set(region, { totalGoals: 0, matchesPlayed: 0 });
-        }
-        const stats = regionMap.get(region)!;
-        stats.totalGoals += match.homeScore + match.awayScore;
-        stats.matchesPlayed++;
-      });
-      const regionalData = Array.from(regionMap.entries()).map(([region, stats]) => ({
-        region,
-        totalGoals: stats.totalGoals,
-        matchesPlayed: stats.matchesPlayed,
-        avgGoals: stats.matchesPlayed > 0 ? stats.totalGoals / stats.matchesPlayed : 0,
+      const finalTeamStats: TeamStats[] = teamRows.map((r) => ({
+        teamId: r.teamId,
+        totalMatches: r.totalMatches,
+        wins: r.wins,
+        draws: r.draws,
+        losses: r.losses,
+        goalsFor: r.goalsFor,
+        goalsAgainst: r.goalsAgainst,
+        winRate: computeWinRate(r.wins, r.totalMatches),
       }));
 
-      if (signal.cancelled) return;
+      const regionalData = regionRows.map((r) => ({
+        region: r.region,
+        totalGoals: r.totalGoals,
+        matchesPlayed: r.matchesPlayed,
+        avgGoals: r.matchesPlayed > 0 ? r.totalGoals / r.matchesPlayed : 0,
+      }));
+
       setTeamStats(finalTeamStats);
       setRegionalStatsHistorical(regionalData);
       setLoading(false);
