@@ -182,6 +182,38 @@ export function getMatchesBetweenTeams(team1Id: string, team2Id: string): Match[
     allMatches.push(...knockoutFiltered);
   }
 
+  // Helper: partido jugado entre los dos equipos (cualquier orientación).
+  const isBetween = (match: Match) => {
+    const t1Home = match.homeTeamId === team1Id && match.awayTeamId === team2Id;
+    const t1Away = match.homeTeamId === team2Id && match.awayTeamId === team1Id;
+    return (t1Home || t1Away) && match.isPlayed;
+  };
+
+  // Continental
+  if (currentTournament.continental?.brackets) {
+    Object.values(currentTournament.continental.brackets).forEach((b) => {
+      allMatches.push(...[
+        ...b.roundOf64, ...b.roundOf32, ...b.roundOf16,
+        ...b.quarterFinals, ...b.semiFinals,
+        ...(b.final ? [b.final] : []),
+        ...(b.thirdPlace ? [b.thirdPlace] : []),
+      ].filter(isBetween));
+    });
+  }
+
+  // Confederaciones — grupos + knockout
+  if (currentTournament.confederationsCup) {
+    currentTournament.confederationsCup.groups.forEach((g) => {
+      allMatches.push(...g.matches.filter(isBetween));
+    });
+    const ck = currentTournament.confederationsCup.knockout;
+    allMatches.push(...[
+      ...ck.semiFinals,
+      ...(ck.final ? [ck.final] : []),
+      ...(ck.thirdPlace ? [ck.thirdPlace] : []),
+    ].filter(isBetween));
+  }
+
   return allMatches;
 }
 
