@@ -217,6 +217,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
           group={selectedGroup as Group}
           teams={teams}
           region="Copa del Mundo"
+          liveKind="world-cup"
           onClose={() => setSelectedGroup(null)}
           onSimulate={onSimulateMatch ? (matchId) => {
             onSimulateMatch(matchId, selectedGroup.id);

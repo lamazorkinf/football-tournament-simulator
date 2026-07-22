@@ -190,6 +190,7 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
           group={selectedGroup}
           teams={teams}
           region={region}
+          liveKind="qualifier"
           onClose={() => setSelectedGroup(null)}
           onSimulate={onSimulateMatch ? (matchId) => {
             onSimulateMatch(matchId, selectedGroup.id);

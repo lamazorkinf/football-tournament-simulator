@@ -5,6 +5,8 @@ import { StandingsTable } from '../ui/StandingsTable';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
 import { ScoreBug } from '../ui/ScoreBug';
+import { WatchLiveButton } from './WatchLiveButton';
+import type { LiveMatchKind } from '../../store/useLiveMatchStore';
 
 interface GroupDetailModalProps {
   group: Group;
@@ -12,6 +14,7 @@ interface GroupDetailModalProps {
   region: string;
   onClose: () => void;
   onSimulate?: (matchId: string) => void;
+  liveKind?: LiveMatchKind;
 }
 
 export function GroupDetailModal({
@@ -20,6 +23,7 @@ export function GroupDetailModal({
   region,
   onClose,
   onSimulate,
+  liveKind,
 }: GroupDetailModalProps) {
   // Group matches by matchday
   const matchesByMatchday = group.matches.reduce((acc, match) => {
@@ -121,6 +125,15 @@ export function GroupDetailModal({
                                   Simular
                                 </Button>
                               )}
+                              {!match.isPlayed && liveKind && (
+                                <WatchLiveButton
+                                  matchId={match.id}
+                                  homeTeamId={match.homeTeamId}
+                                  awayTeamId={match.awayTeamId}
+                                  kind={liveKind}
+                                  groupId={group.id}
+                                />
+                              )}
                             </div>
                             <div className="hidden sm:flex items-center justify-between">
                               {/* Home Team */}
@@ -175,6 +188,15 @@ export function GroupDetailModal({
                                 >
                                   Simular
                                 </Button>
+                              )}
+                              {!match.isPlayed && liveKind && (
+                                <WatchLiveButton
+                                  matchId={match.id}
+                                  homeTeamId={match.homeTeamId}
+                                  awayTeamId={match.awayTeamId}
+                                  kind={liveKind}
+                                  groupId={group.id}
+                                />
                               )}
                             </div>
                           </div>

@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
+import { WatchLiveButton } from './WatchLiveButton';
 import { ArrowLeft, Play, Info } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { toast } from 'sonner';
@@ -140,6 +141,7 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
                 key={match.id}
                 match={match}
                 getTeam={getTeam}
+                groupId={group.id}
                 onSimulate={() => handleSimulateMatch(match.id)}
                 onViewDetails={() => setSelectedMatch(match)}
               />
@@ -154,11 +156,12 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
 interface MatchCardProps {
   match: Match;
   getTeam: (teamId: string) => Team | undefined;
+  groupId: string;
   onSimulate: () => void;
   onViewDetails: () => void;
 }
 
-function MatchCard({ match, getTeam, onSimulate, onViewDetails }: MatchCardProps) {
+function MatchCard({ match, getTeam, groupId, onSimulate, onViewDetails }: MatchCardProps) {
   const homeTeam = getTeam(match.homeTeamId);
   const awayTeam = getTeam(match.awayTeamId);
   return (
@@ -213,6 +216,16 @@ function MatchCard({ match, getTeam, onSimulate, onViewDetails }: MatchCardProps
             <Play className="w-3 h-3" />
             <span className="hidden sm:inline">Play</span>
           </Button>
+        )}
+        {!match.isPlayed && (
+          <WatchLiveButton
+            matchId={match.id}
+            homeTeamId={match.homeTeamId}
+            awayTeamId={match.awayTeamId}
+            kind="qualifier"
+            groupId={groupId}
+            className="w-full"
+          />
         )}
       </div>
     </div>
