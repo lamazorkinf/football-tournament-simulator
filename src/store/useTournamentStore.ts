@@ -86,32 +86,84 @@ const applySeasonRegression = (teams: Team[]): Team[] =>
     return { ...team, skill };
   });
 
-// Helper function to update tournament in state and database
-const updateTournamentInState = (set: any, get: any, updatedTournament: Tournament, skipDbSave = false) => {
-  // Update in tournaments list
-  set((state: TournamentState) => {
-    const updatedTournaments = state.tournaments.map(t =>
-      t.id === updatedTournament.id ? updatedTournament : t
-    );
-    return {
-      tournaments: updatedTournaments,
-      currentTournament: state.currentTournamentId === updatedTournament.id
-        ? updatedTournament
-        : state.currentTournament
-    };
-  });
+/** Backoff fijo entre reintentos de guardado (ms). Longitud = nº de reintentos. */
+const SAVE_RETRY_DELAYS_MS = [300, 800];
 
-  // Save to database (skip if in batch mode or explicitly disabled).
-  // Encadenado: el header debe existir ANTES del upsert de cycle_state
-  // (FK tournament_cycle_state.tournament_id → tournaments_new). Si corrieran en
-  // paralelo, el upsert de cycle_state podría llegar primero, violar la FK y
-  // perderse → el torneo se reconstruiría como legacy en una carga sin localStorage.
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Guarda el torneo en Supabase (header + cycle_state, en ese orden por la FK) con
+ * reintento corto. En éxito marca syncMeta[id] = { syncedUpdatedAt, dirty:false }.
+ * En fallo definitivo deja dirty=true y avisa por toast (se re-empuja al recargar).
+ * No-op si Supabase no está configurado (queda dirty para un futuro push).
+ */
+export async function persistTournamentWithSync(
+  tournament: Cycle,
+  set: any,
+  get: any,
+): Promise<void> {
+  void get; // no se usa: se recibe por paridad con updateTournamentInState/el resto del store.
+  if (!isSupabaseConfigured()) return;
+
+  const attempts = SAVE_RETRY_DELAYS_MS.length + 1;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const updatedAt = await adaptiveTournamentService.saveTournament(tournament);
+      await cycleStateService.saveCycleState(ensureCycleFields(tournament));
+      set((s: TournamentState) => ({
+        syncMeta: {
+          ...s.syncMeta,
+          [tournament.id]: { syncedUpdatedAt: updatedAt, dirty: false },
+        },
+      }));
+      return;
+    } catch (error) {
+      console.error(`Error guardando torneo (intento ${i + 1}/${attempts}):`, error);
+      if (i < SAVE_RETRY_DELAYS_MS.length) {
+        await delay(SAVE_RETRY_DELAYS_MS[i]);
+      }
+    }
+  }
+
+  // Falló definitivamente: mantener dirty=true para re-empujar en la próxima carga.
+  set((s: TournamentState) => ({
+    syncMeta: {
+      ...s.syncMeta,
+      [tournament.id]: {
+        syncedUpdatedAt: s.syncMeta[tournament.id]?.syncedUpdatedAt ?? null,
+        dirty: true,
+      },
+    },
+  }));
+  useToastStore.getState().error('No se pudo sincronizar con la base. Reintentaré al recargar.');
+}
+
+const updateTournamentInState = (set: any, get: any, updatedTournament: Tournament, skipDbSave = false) => {
+  // Update in tournaments list + marcar dirty sincrónicamente para este torneo.
+  set((state: TournamentState) => ({
+    tournaments: state.tournaments.map(t =>
+      t.id === updatedTournament.id ? updatedTournament : t
+    ),
+    currentTournament: state.currentTournamentId === updatedTournament.id
+      ? updatedTournament
+      : state.currentTournament,
+    syncMeta: {
+      ...state.syncMeta,
+      [updatedTournament.id]: {
+        syncedUpdatedAt: state.syncMeta[updatedTournament.id]?.syncedUpdatedAt ?? null,
+        dirty: true,
+      },
+    },
+  }));
+
+  // Save to database (skip if in batch mode or explicitly disabled). persistTournamentWithSync
+  // encadena saveTournament → saveCycleState (orden requerido por la FK de cycle_state) y
+  // limpia dirty al confirmar; si falla, deja dirty=true + toast.
   const state = get();
   if (isSupabaseConfigured() && !skipDbSave && !state.isBatchProcessing) {
-    adaptiveTournamentService
-      .saveTournament(updatedTournament)
-      .then(() => cycleStateService.saveCycleState(ensureCycleFields(updatedTournament)))
-      .catch((error) => console.error('Error auto-saving tournament:', error));
+    void persistTournamentWithSync(updatedTournament as Cycle, set, get);
   }
 };
 
@@ -306,8 +358,14 @@ export const useTournamentStore = create<TournamentState>()(
           if (isSupabaseConfigured()) {
             try {
               progress.updateProgress('Guardando torneo en base de datos...', 4);
-              await adaptiveTournamentService.saveTournament(tournament);
+              const createdUpdatedAt = await adaptiveTournamentService.saveTournament(tournament);
               await cycleStateService.saveCycleState(tournament);
+              set((s: TournamentState) => ({
+                syncMeta: {
+                  ...s.syncMeta,
+                  [tournament.id]: { syncedUpdatedAt: createdUpdatedAt, dirty: false },
+                },
+              }));
               console.log(`Tournament ${year} created and saved to database`);
 
               // Save empty qualifier groups to database
@@ -420,6 +478,12 @@ export const useTournamentStore = create<TournamentState>()(
           currentTournamentId: newCurrentId,
           currentTournament: newCurrentTournament
         }));
+
+        set((s: TournamentState) => {
+          const nextSyncMeta = { ...s.syncMeta };
+          delete nextSyncMeta[id];
+          return { syncMeta: nextSyncMeta };
+        });
       },
 
       recalculateTournamentPerformances: async (tournamentId: string) => {
@@ -2268,7 +2332,7 @@ export const useTournamentStore = create<TournamentState>()(
     },
     {
       name: 'football-tournament-storage',
-      version: 10, // v10: descarta el cache legacy reconstruido (torneos pre-cycle_state) que quedó en localStorage durante el desarrollo del ciclo.
+      version: 11, // v11: agrega syncMeta (reconciliación local↔DB por recencia).
       // Storage que tolera errores: setItem puede lanzar QuotaExceededError
       // (cuota de ~5MB) al acumular temporadas, o fallar en modo privado. Sin
       // este try/catch, la excepción rompía la acción que disparó el guardado.
@@ -2296,26 +2360,23 @@ export const useTournamentStore = create<TournamentState>()(
         },
       })),
       partialize: (state) => ({
-        // Persist tournament list and selected ID in localStorage
-        // Full tournament state also saved to Supabase for real persistence
-        // Teams will always be loaded fresh from database
         tournaments: state.tournaments,
         currentTournamentId: state.currentTournamentId,
+        syncMeta: state.syncMeta,
       }),
-      // v10: descarta los saves locales previos (torneos reconstruidos como
-      // legacy y cacheados durante el desarrollo del ciclo). Con versión >= 10,
-      // migrate preserva el shape como antes.
       migrate: (persistedState, version) => {
         if (version < 10) {
-          return { tournaments: [], currentTournamentId: null };
+          return { tournaments: [], currentTournamentId: null, syncMeta: {} };
         }
         const previous = (persistedState ?? {}) as {
-          tournaments?: Tournament[];
+          tournaments?: Cycle[];
           currentTournamentId?: string | null;
+          syncMeta?: Record<string, import('../types').SyncMetaEntry>;
         };
         return {
           tournaments: previous.tournaments ?? [],
           currentTournamentId: previous.currentTournamentId ?? null,
+          syncMeta: previous.syncMeta ?? {},
         };
       },
       onRehydrateStorage: () => (state) => {
