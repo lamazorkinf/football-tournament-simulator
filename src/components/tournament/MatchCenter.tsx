@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Cycle, Team, Match, Region } from '../../types';
+import type { Cycle, Team, Region } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
@@ -13,21 +13,13 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getCyclePhaseBanner } from '../../utils/cycleProgress';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { collectAllMatches, type MatchStage, type MatchWithContext } from './matchCenterCollector';
 
 interface MatchCenterProps {
   tournament: Cycle;
   teams: Team[];
   onNavigate?: (view: string, options?: { region?: Region; groupId?: string }) => void;
 }
-
-type MatchStage = 'qualifier' | 'world-cup' | 'knockout';
-type MatchWithContext = {
-  match: Match;
-  stage: MatchStage;
-  groupId: string;
-  groupName: string;
-  region?: Region;
-};
 
 export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps) {
   const { simulateMatch, simulateMatchdayBatch, resetCurrentTournamentMatches, generateDrawAndFixtures, isSavingMatch, isBatchProcessing } = useTournamentStore();
@@ -42,61 +34,8 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
   const [mobilePreviewMatch, setMobilePreviewMatch] = useState<MatchWithContext | null>(null);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 
-  // Collect all matches from all sources
-  const allMatches = useMemo(() => {
-    const matches: MatchWithContext[] = [];
-
-    // Qualifier matches
-    Object.entries(tournament.qualifiers).forEach(([region, groups]) => {
-      groups.forEach((group) => {
-        group.matches.forEach((match) => {
-          matches.push({
-            match,
-            stage: 'qualifier',
-            groupId: group.id,
-            groupName: group.name,
-            region: region as Region,
-          });
-        });
-      });
-    });
-
-    // World Cup group matches
-    if (tournament.worldCup) {
-      tournament.worldCup.groups.forEach((group) => {
-        group.matches.forEach((match) => {
-          matches.push({
-            match,
-            stage: 'world-cup',
-            groupId: group.id,
-            groupName: group.name,
-          });
-        });
-      });
-
-      // Knockout matches (incluye roundOf32: se omitía y los dieciseisavos no
-      // aparecían en Match Center ni contaban en los totales).
-      const knockoutMatches = [
-        ...tournament.worldCup.knockout.roundOf32,
-        ...tournament.worldCup.knockout.roundOf16,
-        ...tournament.worldCup.knockout.quarterFinals,
-        ...tournament.worldCup.knockout.semiFinals,
-        ...(tournament.worldCup.knockout.thirdPlace ? [tournament.worldCup.knockout.thirdPlace] : []),
-        ...(tournament.worldCup.knockout.final ? [tournament.worldCup.knockout.final] : []),
-      ];
-
-      knockoutMatches.forEach((match) => {
-        matches.push({
-          match,
-          stage: 'knockout',
-          groupId: 'knockout',
-          groupName: match.round || 'Knockout',
-        });
-      });
-    }
-
-    return matches;
-  }, [tournament]);
+  // Collect all matches from all sources (qualifiers, world cup, continental, confed)
+  const allMatches = useMemo(() => collectAllMatches(tournament), [tournament]);
 
   // Get all available matchdays
   const availableMatchdays = useMemo(() => {
@@ -458,6 +397,8 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 <option value="qualifier">Qualifiers</option>
                 <option value="world-cup">World Cup</option>
                 <option value="knockout">Knockout</option>
+                <option value="continental">Continental</option>
+                <option value="confederations">Confederaciones</option>
               </select>
 
               {/* Matchday Pagination */}
@@ -720,15 +661,24 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
   const awayTeam = teams.find((t) => t.id === match.awayTeamId);
 
   const getStageBadge = () => {
-    const colors = {
+    const colors: Record<MatchStage, string> = {
       qualifier: 'bg-black/40 text-grass-soft border border-grass',
       'world-cup': 'bg-black/40 text-gold border border-gold',
       knockout: 'bg-black/40 text-loss border border-loss',
+      continental: 'bg-black/40 text-grass-soft border border-grass',
+      confederations: 'bg-black/40 text-gold border border-gold',
+    };
+    const labels: Record<MatchStage, string> = {
+      qualifier: 'Qualifier',
+      'world-cup': 'World Cup',
+      knockout: 'Knockout',
+      continental: 'Continental',
+      confederations: 'Confederaciones',
     };
 
     return (
       <span className={`px-2 py-1 font-arcade text-[10px] uppercase ${colors[stage]}`}>
-        {stage === 'qualifier' ? 'Qualifier' : stage === 'world-cup' ? 'World Cup' : 'Knockout'}
+        {labels[stage]}
       </span>
     );
   };
