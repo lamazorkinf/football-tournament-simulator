@@ -495,20 +495,19 @@ export const normalizedTournamentService = {
   /**
    * Get the most recent tournament
    */
-  async getLatestTournament(): Promise<Tournament | null> {
+  async getLatestTournament(): Promise<{ tournament: Tournament; updatedAt: string | null } | null> {
     if (!isSupabaseConfigured()) {
       console.log('Supabase not configured, cannot load tournament');
       return null;
     }
 
     try {
-      // Sin `.single()`: con la DB vacía (0 filas) PostgREST responde 406
-      // (Not Acceptable) y ensucia la consola. Pedimos un array de a lo sumo
-      // una fila y tomamos la primera; 0 filas → array vacío (200), sin ruido.
+      // Ordenar por updated_at (última jugada), no created_at: así "el último"
+      // es el torneo tocado más recientemente en cualquier dispositivo.
       const { data, error } = await db
         .tournaments_new()
-        .select('id')
-        .order('created_at', { ascending: false })
+        .select('id, updated_at')
+        .order('updated_at', { ascending: false })
         .limit(1);
 
       if (error) throw error;
@@ -516,7 +515,9 @@ export const normalizedTournamentService = {
         return null;
       }
 
-      return loadTournamentFromNormalizedSchema(data[0].id);
+      const tournament = await loadTournamentFromNormalizedSchema(data[0].id);
+      if (!tournament) return null;
+      return { tournament, updatedAt: (data[0].updated_at as string | undefined) ?? null };
     } catch (error) {
       console.error('Error loading latest tournament:', error);
       return null;
