@@ -45,7 +45,7 @@ export interface Database {
           away_team_id: string
           home_score: number
           away_score: number
-          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout'
+          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout'
           group_name: string | null
           region: string | null
           tournament_id: string | null
@@ -64,7 +64,7 @@ export interface Database {
           away_team_id: string
           home_score: number
           away_score: number
-          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout'
+          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout'
           group_name?: string | null
           region?: string | null
           tournament_id?: string | null
@@ -83,7 +83,7 @@ export interface Database {
           away_team_id?: string
           home_score?: number
           away_score?: number
-          stage?: 'qualifier' | 'world-cup-group' | 'world-cup-knockout'
+          stage?: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout'
           group_name?: string | null
           region?: string | null
           tournament_id?: string | null

@@ -25,7 +25,7 @@ CREATE TABLE match_history (
   away_team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   home_score INTEGER NOT NULL,
   away_score INTEGER NOT NULL,
-  stage TEXT NOT NULL CHECK (stage IN ('qualifier', 'world-cup-group', 'world-cup-knockout')),
+  stage TEXT NOT NULL CHECK (stage IN ('qualifier', 'world-cup-group', 'world-cup-knockout', 'continental', 'confed-group', 'confed-knockout')),
   group_name TEXT,
   region TEXT,
   tournament_id TEXT,
