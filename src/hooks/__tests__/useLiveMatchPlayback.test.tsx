@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, render } from '@testing-library/react';
 import { useLiveMatchPlayback } from '../useLiveMatchPlayback';
 import type { LiveTimeline } from '../../core/liveMatch';
 
@@ -74,18 +75,45 @@ describe('useLiveMatchPlayback', () => {
     expect(result.current.penalties).toEqual({ homeScore: 5, awayScore: 4 });
   });
 
-  it('al cambiar de timeline (sin desmontar) reinicia sin spoiler', () => {
-    const first: LiveTimeline = { goals: [{ minute: 10, side: 'home', homeScore: 1, awayScore: 0 }], finalHomeScore: 1, finalAwayScore: 0 };
-    const { result, rerender } = renderHook(({ tl }) => useLiveMatchPlayback(tl, 1), { initialProps: { tl: first } });
-    act(() => vi.advanceTimersByTime(90 * 1000));
-    expect(result.current.phase).toBe('finished');
-    const next: LiveTimeline = { goals: [{ minute: 80, side: 'away', homeScore: 0, awayScore: 1 }], finalHomeScore: 0, finalAwayScore: 1 };
-    rerender({ tl: next });
-    expect(result.current.minute).toBe(0);
-    expect(result.current.revealedGoals).toHaveLength(0);
-    expect(result.current.displayHomeScore).toBe(0);
-    expect(result.current.displayAwayScore).toBe(0);
-    expect(result.current.phase).toBe('playing');
+  it('al cambiar de timeline (sin desmontar) no pinta un frame con spoiler', () => {
+    const first: LiveTimeline = {
+      goals: [{ minute: 10, side: 'home', homeScore: 1, awayScore: 0 }],
+      finalHomeScore: 1,
+      finalAwayScore: 0,
+    };
+    const next: LiveTimeline = {
+      goals: [{ minute: 80, side: 'away', homeScore: 0, awayScore: 1 }],
+      finalHomeScore: 0,
+      finalAwayScore: 1,
+    };
+
+    // Registra el estado en CADA commit pintado (efecto sin deps), no solo el
+    // asentado: es el frame intermedio donde vivía el bug.
+    const commits: { minute: number; revealed: number; home: number; away: number; tlIsNext: boolean }[] = [];
+    function Harness({ tl }: { tl: LiveTimeline }) {
+      const pb = useLiveMatchPlayback(tl, 1);
+      useEffect(() => {
+        commits.push({
+          minute: pb.minute,
+          revealed: pb.revealedGoals.length,
+          home: pb.displayHomeScore,
+          away: pb.displayAwayScore,
+          tlIsNext: tl === next,
+        });
+      });
+      return null;
+    }
+
+    const { rerender } = render(<Harness tl={first} />);
+    act(() => vi.advanceTimersByTime(90 * 1000)); // el primer partido termina
+    commits.length = 0; // solo nos interesan los commits del cambio de timeline
+    rerender(<Harness tl={next} />);
+
+    // Ningún commit con el timeline NUEVO puede llevar estado (minuto/goles/marcador) del viejo.
+    const spoiler = commits.find(
+      (c) => c.tlIsNext && (c.minute > 0 || c.revealed > 0 || c.home > 0 || c.away > 0),
+    );
+    expect(spoiler).toBeUndefined();
   });
 
   it('limpia timers al desmontar (no lanza tras unmount)', () => {
