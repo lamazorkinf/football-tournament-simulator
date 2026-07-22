@@ -28,15 +28,16 @@ export function useLiveMatchPlayback(
   const [penaltiesShown, setPenaltiesShown] = useState(false);
   const [speed, setSpeed] = useState<LiveSpeed>(initialSpeed);
 
-  // Reset al recibir un timeline nuevo (o null). Se sincroniza con una prop
-  // externa (no es estado derivable en el render), por eso el setState
-  // síncrono acá es intencional.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Reset durante el render al recibir un timeline nuevo (patrón React
+  // "adjusting state when a prop changes"): evita el frame intermedio donde
+  // el minuto viejo revelaría goles del partido nuevo.
+  const [prevTimeline, setPrevTimeline] = useState<LiveTimeline | null>(timeline);
+  if (timeline !== prevTimeline) {
+    setPrevTimeline(timeline);
     setMinute(0);
     setPhase('playing');
     setPenaltiesShown(false);
-  }, [timeline]);
+  }
 
   // Reloj: incrementa el minuto mientras se juega.
   useEffect(() => {

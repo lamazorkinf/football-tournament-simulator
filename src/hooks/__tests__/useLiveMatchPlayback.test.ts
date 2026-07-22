@@ -73,4 +73,24 @@ describe('useLiveMatchPlayback', () => {
     expect(result.current.displayAwayScore).toBe(1);
     expect(result.current.penalties).toEqual({ homeScore: 5, awayScore: 4 });
   });
+
+  it('al cambiar de timeline (sin desmontar) reinicia sin spoiler', () => {
+    const first: LiveTimeline = { goals: [{ minute: 10, side: 'home', homeScore: 1, awayScore: 0 }], finalHomeScore: 1, finalAwayScore: 0 };
+    const { result, rerender } = renderHook(({ tl }) => useLiveMatchPlayback(tl, 1), { initialProps: { tl: first } });
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    expect(result.current.phase).toBe('finished');
+    const next: LiveTimeline = { goals: [{ minute: 80, side: 'away', homeScore: 0, awayScore: 1 }], finalHomeScore: 0, finalAwayScore: 1 };
+    rerender({ tl: next });
+    expect(result.current.minute).toBe(0);
+    expect(result.current.revealedGoals).toHaveLength(0);
+    expect(result.current.displayHomeScore).toBe(0);
+    expect(result.current.displayAwayScore).toBe(0);
+    expect(result.current.phase).toBe('playing');
+  });
+
+  it('limpia timers al desmontar (no lanza tras unmount)', () => {
+    const { unmount } = renderHook(() => useLiveMatchPlayback(timeline, 1));
+    unmount();
+    expect(() => vi.advanceTimersByTime(90 * 1000)).not.toThrow();
+  });
 });
