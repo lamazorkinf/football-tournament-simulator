@@ -14,6 +14,7 @@ import { TournamentHistory } from './components/tournament/TournamentHistory';
 import { ChampionsHistory } from './components/tournament/ChampionsHistory';
 import { ContinentalView } from './components/tournament/ContinentalView';
 import { ConfederationsCupView } from './components/tournament/ConfederationsCupView';
+import { LiveMatchModal } from './components/tournament/LiveMatchModal';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
 import { ProgressModal } from './components/ui/ProgressModal';
@@ -94,6 +95,9 @@ function App() {
 
         {/* Match Results Modal */}
         <MatchResultsModal />
+
+        {/* Live Match Modal */}
+        <LiveMatchModal />
 
       {/* Desktop Sidebar */}
       <Sidebar

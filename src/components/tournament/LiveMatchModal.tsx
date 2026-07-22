@@ -1,0 +1,165 @@
+import { useEffect, useRef, useState } from 'react';
+import { useLiveMatchStore } from '../../store/useLiveMatchStore';
+import { useTournamentStore } from '../../store/useTournamentStore';
+import { buildMatchTimeline, hashSeed, type LiveTimeline } from '../../core/liveMatch';
+import { useLiveMatchPlayback, type LiveSpeed } from '../../hooks/useLiveMatchPlayback';
+import { Button } from '../ui/Button';
+import { TeamFlag } from '../ui/TeamFlag';
+import { Radio, X } from 'lucide-react';
+
+const SPEEDS: LiveSpeed[] = [1, 2, 4];
+
+export function LiveMatchModal() {
+  const activeMatch = useLiveMatchStore((s) => s.activeMatch);
+  const closeLiveMatch = useLiveMatchStore((s) => s.closeLiveMatch);
+  const teams = useTournamentStore((s) => s.teams);
+  const simulateMatch = useTournamentStore((s) => s.simulateMatch);
+  const simulateKnockoutMatch = useTournamentStore((s) => s.simulateKnockoutMatch);
+  const simulateContinentalMatch = useTournamentStore((s) => s.simulateContinentalMatch);
+  const simulateConfederationsMatch = useTournamentStore((s) => s.simulateConfederationsMatch);
+
+  const [timeline, setTimeline] = useState<LiveTimeline | null>(null);
+  const [failed, setFailed] = useState(false);
+  const startedRef = useRef<string | null>(null);
+
+  const playback = useLiveMatchPlayback(timeline, 1);
+
+  useEffect(() => {
+    if (!activeMatch) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset síncrono al cerrar el modal (sin partido activo), no reacciona a estado externo cambiante.
+      setTimeline(null);
+      setFailed(false);
+      startedRef.current = null;
+      return;
+    }
+    // Dispara la simulación una sola vez por partido (evita doble efecto).
+    if (startedRef.current === activeMatch.matchId) return;
+    startedRef.current = activeMatch.matchId;
+    setTimeline(null);
+    setFailed(false);
+
+    const run = async () => {
+      let outcome;
+      switch (activeMatch.kind) {
+        case 'qualifier':
+        case 'world-cup':
+          outcome = await simulateMatch(activeMatch.matchId, activeMatch.groupId ?? '', activeMatch.kind);
+          break;
+        case 'knockout':
+          outcome = await simulateKnockoutMatch(activeMatch.matchId);
+          break;
+        case 'continental':
+          outcome = await simulateContinentalMatch(activeMatch.matchId);
+          break;
+        case 'confederations':
+          outcome = await simulateConfederationsMatch(activeMatch.matchId);
+          break;
+      }
+      if (!outcome) {
+        setFailed(true);
+        return;
+      }
+      setTimeline(
+        buildMatchTimeline(outcome.homeScore, outcome.awayScore, hashSeed(activeMatch.matchId), outcome.penalties),
+      );
+    };
+    void run();
+  }, [activeMatch, simulateMatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch]);
+
+  if (!activeMatch) return null;
+
+  const home = teams.find((t) => t.id === activeMatch.homeTeamId);
+  const away = teams.find((t) => t.id === activeMatch.awayTeamId);
+  const clockLabel =
+    playback.phase === 'finished' ? 'FINAL' : playback.phase === 'penalties' ? 'PENALES' : `${playback.minute}'`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+      <div className="w-full max-w-lg bg-grass-dark border-4 border-line shadow-hard-panel p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-gold font-arcade text-xs uppercase">
+            <Radio className="w-4 h-4" /> En vivo
+          </span>
+          <button onClick={closeLiveMatch} aria-label="Cerrar" className="text-grass-soft hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {failed ? (
+          <p className="text-center text-grass-soft py-8">No se pudo simular el partido.</p>
+        ) : !timeline ? (
+          <p className="text-center text-grass-soft py-8 font-arcade text-xs">Simulando…</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-4">
+              <div className="flex flex-col items-center gap-1 w-24">
+                {home && <TeamFlag teamId={home.id} teamName={home.name} flagUrl={home.flag} size={32} />}
+                <span className="font-arcade text-[10px] text-white text-center uppercase truncate w-full">
+                  {home?.name ?? activeMatch.homeTeamId}
+                </span>
+              </div>
+              <div className="font-terminal text-4xl text-led tabular-nums whitespace-nowrap">
+                {`${playback.displayHomeScore} - ${playback.displayAwayScore}`}
+              </div>
+              <div className="flex flex-col items-center gap-1 w-24">
+                {away && <TeamFlag teamId={away.id} teamName={away.name} flagUrl={away.flag} size={32} />}
+                <span className="font-arcade text-[10px] text-white text-center uppercase truncate w-full">
+                  {away?.name ?? activeMatch.awayTeamId}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-center font-arcade text-xs text-gold">{clockLabel}</div>
+
+            {playback.penalties && (
+              <p className="text-center text-grass-soft text-sm">
+                Penales {playback.penalties.homeScore}-{playback.penalties.awayScore}
+              </p>
+            )}
+
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {playback.revealedGoals.length === 0 ? (
+                <p className="text-center text-grass-soft text-xs">Sin goles aún</p>
+              ) : (
+                playback.revealedGoals.map((g, i) => {
+                  const scorer = g.side === 'home' ? home : away;
+                  return (
+                    <div key={i} className="flex items-center gap-2 text-sm text-white">
+                      <span className="font-terminal text-gold tabular-nums w-8">{g.minute}'</span>
+                      <span>⚽ {scorer?.name ?? (g.side === 'home' ? activeMatch.homeTeamId : activeMatch.awayTeamId)}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1">
+                {SPEEDS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => playback.setSpeed(s)}
+                    className={`px-2 py-1 min-h-9 font-arcade text-[10px] border-2 transition-colors ${
+                      playback.speed === s ? 'bg-grass text-white border-line' : 'text-grass-soft border-grass'
+                    }`}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+              {playback.phase === 'finished' ? (
+                <Button variant="primary" size="sm" onClick={closeLiveMatch}>
+                  Cerrar
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={playback.skipToEnd}>
+                  Saltar al final
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
