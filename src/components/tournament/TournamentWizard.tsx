@@ -111,7 +111,12 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
       return { label: '▶ JUGAR CONFED', onPress: () => onNavigate?.('confederations') };
     }
     if (canAdvanceToQualifiers(c)) return { label: '▶ IR A CLASIFICATORIAS', onPress: handleAdvanceToQualifiers };
-    if (canDrawQualifiers(c)) return { label: '▶ PRESS START', onPress: handleGenerateDraw };
+    // Igual que en el StepCard: PRESS START solo si los fixtures aún no existen.
+    const qualFixturesExist = Object.values(c.qualifiers).some((groups) => groups.some((g) => g.matches.length > 0));
+    if (canDrawQualifiers(c) && !qualFixturesExist) return { label: '▶ PRESS START', onPress: handleGenerateDraw };
+    if (qualFixturesExist && c.calendar.phase === 'wc-qualifiers' && !getQualifierProgress(c).isComplete) {
+      return { label: '▶ JUGAR CLASIFICATORIAS', onPress: () => onNavigate?.('qualifiers') };
+    }
     return null;
   })();
   useMobileAction(mobileAction);
@@ -372,11 +377,15 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                 <Button variant="primary" size="lg" onClick={handleAdvanceToQualifiers} className="gap-2">
                   ⚽ Ir a Clasificatorias
                 </Button>
-              ) : canGenerateDraw ? (
+              ) : canGenerateDraw && qualifierProgress.totalMatches === 0 ? (
+                // PRESS START solo para la GENERACIÓN inicial: sin fixtures aún
+                // (totalMatches === 0). Si ya se generaron, este botón
+                // re-sortearía todo (el guard del store solo frena con partidos
+                // jugados), así que se reemplaza por "Ver / Jugar".
                 <Button size="lg" onClick={handleGenerateDraw} className="hidden lg:inline-flex">
                   ▶ PRESS START
                 </Button>
-              ) : qualifierProgress.playedMatches > 0 && !qualifierProgress.isComplete ? (
+              ) : qualifierProgress.totalMatches > 0 && !qualifierProgress.isComplete ? (
                 <Button variant="secondary" size="sm" onClick={() => onNavigate?.('qualifiers')} className="gap-2">
                   <Globe2 className="w-4 h-4" />
                   Ver / Jugar
