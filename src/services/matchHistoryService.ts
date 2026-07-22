@@ -42,6 +42,37 @@ export interface CreateMatchHistoryParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface MatchCursor {
+  playedAt: string;
+  id: string;
+}
+
+export interface MatchPage {
+  matches: MatchHistoryEntry[];
+  nextCursor: MatchCursor | null;
+  hasMore: boolean;
+}
+
+// Ensambla una página keyset a partir de las filas ya convertidas.
+// hasMore es true sólo si la página vino llena (== pageSize); en ese caso el
+// cursor apunta al último partido para pedir la siguiente.
+export const assembleMatchPage = (
+  entries: MatchHistoryEntry[],
+  pageSize: number,
+): MatchPage => {
+  const hasMore = entries.length === pageSize;
+  const last = entries[entries.length - 1];
+  return {
+    matches: entries,
+    hasMore,
+    nextCursor: hasMore && last ? { playedAt: last.playedAt, id: last.id } : null,
+  };
+};
+
+// Porcentaje de victorias, con guard de división por cero.
+export const computeWinRate = (wins: number, totalMatches: number): number =>
+  totalMatches > 0 ? (wins / totalMatches) * 100 : 0;
+
 // Convert database row to app type
 const dbMatchToMatch = (dbMatch: MatchHistoryRow): MatchHistoryEntry => ({
   id: dbMatch.id,
