@@ -53,6 +53,12 @@ export interface MatchPage {
   hasMore: boolean;
 }
 
+export interface GetMatchesPageParams {
+  cursor?: MatchCursor | null;
+  pageSize?: number;
+  stage?: MatchHistoryEntry['stage'];
+}
+
 // Ensambla una página keyset a partir de las filas ya convertidas.
 // hasMore es true sólo si la página vino llena (== pageSize); en ese caso el
 // cursor apunta al último partido para pedir la siguiente.
@@ -179,6 +185,27 @@ export const matchHistoryService = {
 
     if (error) throw error;
     return data.map(dbMatchToMatch);
+  },
+
+  // Página keyset del historial (cursor sobre played_at DESC, id DESC).
+  async getMatchesPage(
+    { cursor, pageSize = 30, stage }: GetMatchesPageParams = {},
+  ): Promise<MatchPage> {
+    if (!isSupabaseConfigured()) {
+      return { matches: [], nextCursor: null, hasMore: false };
+    }
+
+    const { data, error } = await (supabase as any).rpc('get_matches_page', {
+      p_cursor_played_at: cursor?.playedAt ?? null,
+      p_cursor_id: cursor?.id ?? null,
+      p_page_size: pageSize,
+      p_stage: stage ?? null,
+    });
+
+    if (error) throw error;
+
+    const entries = ((data ?? []) as MatchHistoryRow[]).map(dbMatchToMatch);
+    return assembleMatchPage(entries, pageSize);
   },
 
   // Get matches for a specific team
