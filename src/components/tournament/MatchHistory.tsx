@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ScoreBug } from '../ui/ScoreBug';
@@ -25,9 +25,19 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
 
   const PAGE_SIZE = 30;
 
+  // Ref con la "época" de carga activa: loadMore (disparado por click, no por
+  // efecto) la lee para poder descartar su resultado si el filtro cambió
+  // mientras la request estaba en vuelo.
+  const loadEpochRef = useRef({ cancelled: false });
+
   useEffect(() => {
-    loadFirstPage();
+    const epoch = { cancelled: false };
+    loadEpochRef.current = epoch;
+    loadFirstPage(epoch);
     loadStatistics();
+    return () => {
+      epoch.cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
@@ -46,28 +56,31 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  const loadFirstPage = async () => {
+  const loadFirstPage = async (epoch: { cancelled: boolean }) => {
     try {
       setLoading(true);
       const page = await matchHistoryService.getMatchesPage({
         pageSize: PAGE_SIZE,
         stage: filter === 'all' ? undefined : filter,
       });
+      if (epoch.cancelled) return;
       setMatches(page.matches);
       setNextCursor(page.nextCursor);
       setHasMore(page.hasMore);
     } catch (error) {
+      if (epoch.cancelled) return;
       console.error('Error loading matches:', error);
       setMatches([]);
       setNextCursor(null);
       setHasMore(false);
     } finally {
-      setLoading(false);
+      if (!epoch.cancelled) setLoading(false);
     }
   };
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
+    const epoch = loadEpochRef.current;
     try {
       setLoadingMore(true);
       const page = await matchHistoryService.getMatchesPage({
@@ -75,13 +88,15 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         pageSize: PAGE_SIZE,
         stage: filter === 'all' ? undefined : filter,
       });
+      if (epoch.cancelled) return;
       setMatches((prev) => [...prev, ...page.matches]);
       setNextCursor(page.nextCursor);
       setHasMore(page.hasMore);
     } catch (error) {
+      if (epoch.cancelled) return;
       console.error('Error loading more matches:', error);
     } finally {
-      setLoadingMore(false);
+      if (!epoch.cancelled) setLoadingMore(false);
     }
   };
 
