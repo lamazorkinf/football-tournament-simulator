@@ -14,6 +14,7 @@ import { TournamentHistory } from './components/tournament/TournamentHistory';
 import { ChampionsHistory } from './components/tournament/ChampionsHistory';
 import { ContinentalView } from './components/tournament/ContinentalView';
 import { ConfederationsCupView } from './components/tournament/ConfederationsCupView';
+import { FavoritesView } from './components/favorites/FavoritesView';
 import { LiveMatchModal } from './components/tournament/LiveMatchModal';
 import { Sidebar } from './components/ui/Sidebar';
 import { TournamentSelector } from './components/ui/TournamentSelector';
@@ -26,7 +27,7 @@ import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { MobileActionProvider } from './hooks/useMobileAction';
 
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations';
+type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
 
 function App() {
   const {
@@ -152,6 +153,8 @@ function App() {
           <ContinentalView cycle={currentTournament} teams={teams} />
         ) : currentView === 'confederations' ? (
           <ConfederationsCupView cycle={currentTournament} teams={teams} />
+        ) : currentView === 'favorites' ? (
+          <FavoritesView />
         ) : null}
         </main>
       </div>

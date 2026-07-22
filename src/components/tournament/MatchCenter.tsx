@@ -6,8 +6,9 @@ import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
 import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Play, Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useFavoritesStore } from '../../store/useFavoritesStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
@@ -647,6 +648,9 @@ interface MatchRowProps {
 
 function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = false, disabled = false }: MatchRowProps) {
   const { match, stage, groupName, region } = matchCtx;
+  const favoriteTeamIds = useFavoritesStore((s) => s.favoriteTeamIds);
+  const involvesFavorite =
+    favoriteTeamIds.includes(match.homeTeamId) || favoriteTeamIds.includes(match.awayTeamId);
   const homeTeam = teams.find((t) => t.id === match.homeTeamId);
   const awayTeam = teams.find((t) => t.id === match.awayTeamId);
   // Knockout/continental/confed pueden tener equipos aún sin resolver: sin
@@ -693,6 +697,9 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
         {/* Stage & Group Info */}
         <div className="flex items-center gap-2 mb-2 overflow-hidden">
           {getStageBadge()}
+          {involvesFavorite && (
+            <Star className="w-4 h-4 text-gold fill-gold flex-shrink-0" aria-label="Equipo favorito" />
+          )}
           {match.matchday && (
             <span className="px-2 py-1 font-arcade text-[10px] text-gold uppercase bg-grass/30 flex-shrink-0">
               J{match.matchday}
