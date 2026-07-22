@@ -40,6 +40,7 @@ import { matchHistoryService } from '../services/matchHistoryService';
 import { teamsService } from '../services/teamsService';
 import { adaptiveTournamentService } from '../services/adaptiveTournamentService';
 import { cycleStateService } from '../services/cycleStateService';
+import { buildMatchParams } from '../services/cycleMatchHistory';
 import { normalizedQualifiersService } from '../services/normalizedQualifiersService';
 import { normalizedWorldCupService } from '../services/normalizedWorldCupService';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -2134,6 +2135,17 @@ export const useTournamentStore = create<TournamentState>()(
               { id: away.id, skill: newAway },
             ])
             .catch((error) => console.error('❌ Error actualizando skills (continental):', error));
+
+          matchHistoryService
+            .createMatch(buildMatchParams({
+              homeTeamId: home.id, awayTeamId: away.id,
+              homeScore: result.homeScore, awayScore: result.awayScore,
+              stage: 'continental', region: home.region, groupName: match.round,
+              cycleMatchId: matchId, tournamentId: cycle.id,
+              homeSkillBefore: home.skill, awaySkillBefore: away.skill,
+              homeSkillAfter: newHome, awaySkillAfter: newAway,
+            }))
+            .catch((error) => console.error('❌ Error persistiendo partido continental:', error));
         }
 
         const ko: KnockoutResult = {
@@ -2197,6 +2209,18 @@ export const useTournamentStore = create<TournamentState>()(
               { id: away.id, skill: newAway },
             ])
             .catch((error) => console.error('❌ Error actualizando skills (confed):', error));
+
+          matchHistoryService
+            .createMatch(buildMatchParams({
+              homeTeamId: home.id, awayTeamId: away.id,
+              homeScore: result.homeScore, awayScore: result.awayScore,
+              stage: isKo ? 'confed-knockout' : 'confed-group',
+              groupName: isKo ? (match as KnockoutMatch).round : undefined,
+              cycleMatchId: matchId, tournamentId: cycle.id,
+              homeSkillBefore: home.skill, awaySkillBefore: away.skill,
+              homeSkillAfter: newHome, awaySkillAfter: newAway,
+            }))
+            .catch((error) => console.error('❌ Error persistiendo partido confed:', error));
         }
 
         let updated: Cycle;
