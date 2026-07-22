@@ -397,6 +397,26 @@ export interface Database {
           created_at?: string
         }
       }
+      tournament_cycle_state: {
+        Row: {
+          tournament_id: string
+          state: Json
+          schema_version: number
+          updated_at: string
+        }
+        Insert: {
+          tournament_id: string
+          state: Json
+          schema_version?: number
+          updated_at?: string
+        }
+        Update: {
+          tournament_id?: string
+          state?: Json
+          schema_version?: number
+          updated_at?: string
+        }
+      }
       team_tournament_performance: {
         Row: {
           id: string

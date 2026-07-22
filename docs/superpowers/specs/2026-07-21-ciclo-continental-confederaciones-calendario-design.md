@@ -204,13 +204,12 @@ Se agrega un **multiplicador de importancia** que escala el K: `K_efectivo = kFa
 
 ## 10. Persistencia (Supabase + local)
 
-- **Migración nueva** (`008_cycle_continental_confed.sql`):
-  - Extender `tournaments_new` (o tabla `cycles`) con columnas de calendario: `phase`, `matchday`, `status` ampliado.
-  - `matches_new.match_type` suma `'continental' | 'confed-group' | 'confed-knockout'`, con contexto de bracket/grupo y campos de penales ya existentes.
-  - Tablas para brackets continentales (posiciones, ronda, byes) y grupos de confederaciones.
-- **Modo local:** todo funciona igual vía `persist` de Zustand cuando Supabase no está configurado (`isSupabaseConfigured() === false`).
-- **Borrado de datos viejos:** limpiar torneos legacy (localStorage + Supabase) como parte del release.
-- Servicios en `src/services/` siguen el patrón normalizado existente; se agregan `continentalService` y `confederationsService`.
+- **Decisión (Plan 6):** el estado del ciclo (continental + confederaciones + calendario) se persiste como **documento JSONB** en una tabla lateral 1:1 `tournament_cycle_state`, NO en tablas normalizadas. Es un value-object propiedad del torneo: se lee/escribe como unidad, no se consulta relacionalmente, y el detalle por-partido queryable ya vive normalizado en `match_history`. Normalizarlo agregaría acoplamiento y reconstrucción del shape anidado sin beneficio práctico para este simulador single-player.
+- **Migración `008_cycle_state.sql`:** crea `tournament_cycle_state(tournament_id PK FK→tournaments_new ON DELETE CASCADE, state JSONB, schema_version, updated_at)` con RLS abierto.
+- **Carga:** si un torneo tiene row de cycle_state → parse directo. Si no (legacy, previo al ciclo) → calendario derivado del `status` real (nunca `'continental'`), etapas previas marcadas completas → el wizard no ofrece "Sortear Continental".
+- **Modo local:** todo funciona igual vía `persist` de Zustand cuando Supabase no está configurado (`isSupabaseConfigured() === false`); el `tournaments` array (Cycle[]) ya se persiste entero en localStorage.
+- **Borrado de datos viejos:** `009_wipe_legacy_data.sql` (TRUNCATE, aplicado con confirmación) + bump de versión del `persist` que descarta el localStorage legacy una vez.
+- Servicio nuevo `cycleStateService` (`saveCycleState`/`loadCycleState`) siguiendo el patrón de wrapper fino existente.
 
 ## 11. Supuestos
 

@@ -27,6 +27,7 @@ export const db = {
   world_cup_group_teams: () => (supabase.from('world_cup_group_teams') as any),
   matches_new: () => (supabase.from('matches_new') as any),
   team_tournament_skills: () => (supabase.from('team_tournament_skills') as any),
+  tournament_cycle_state: () => (supabase.from('tournament_cycle_state') as any),
 
   // Views
   qualifier_standings: () => (supabase.from('qualifier_standings') as any),
