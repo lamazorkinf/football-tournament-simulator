@@ -58,6 +58,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
 
   const loadFirstPage = async (epoch: { cancelled: boolean }) => {
     try {
+      // Sincrónico, antes de cualquier await: no hace falta gatear por época.
       setLoading(true);
       const page = await matchHistoryService.getMatchesPage({
         pageSize: PAGE_SIZE,
@@ -82,6 +83,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
     if (!nextCursor || loadingMore) return;
     const epoch = loadEpochRef.current;
     try {
+      // Sincrónico, antes de cualquier await: no hace falta gatear por época.
       setLoadingMore(true);
       const page = await matchHistoryService.getMatchesPage({
         cursor: nextCursor,
@@ -96,7 +98,12 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
       if (epoch.cancelled) return;
       console.error('Error loading more matches:', error);
     } finally {
-      if (!epoch.cancelled) setLoadingMore(false);
+      // loadingMore es un flag de "ocupado", no data por-etapa: resetearlo
+      // siempre es seguro (nunca hay dos loadMore en vuelo por el guard de
+      // arriba, y un cambio de filtro no dispara otro loadMore). Si se
+      // gateara por época, un cambio de filtro mientras esta request está
+      // en vuelo lo dejaría en true para siempre y el botón quedaría pegado.
+      setLoadingMore(false);
     }
   };
 

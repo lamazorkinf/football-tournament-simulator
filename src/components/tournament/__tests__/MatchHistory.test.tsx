@@ -120,3 +120,66 @@ describe('MatchHistory — guard de época evita contaminación entre filtros', 
     expect(screen.queryByRole('button', { name: /cargar más/i })).toBeNull();
   });
 });
+
+describe('MatchHistory — loadingMore no queda pegado si el filtro cambia con un loadMore en vuelo', () => {
+  it('resetea "Cargar más" (habilitado, sin "Cargando…") aunque el loadMore viejo resuelva después del cambio de filtro', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(matchHistoryService, 'subscribeToMatches').mockReturnValue(() => {});
+    vi.spyOn(matchHistoryService, 'getMatchStatistics').mockResolvedValue({
+      totalMatches: 0, totalGoals: 0, averageGoalsPerMatch: 0,
+    });
+
+    // Promesa diferida: representa el loadMore que queda en vuelo cuando el
+    // usuario cambia de filtro antes de que la respuesta llegue.
+    let resolveLoadMore!: (value: MatchPage) => void;
+    const loadMoreDeferred = new Promise<MatchPage>((resolve) => {
+      resolveLoadMore = resolve;
+    });
+
+    vi.spyOn(matchHistoryService, 'getMatchesPage')
+      // 1) carga inicial (filter='all'): hasMore true -> botón "Cargar más" visible
+      .mockResolvedValueOnce({
+        matches: [q('a', '2026-01-03T00:00:00Z')],
+        nextCursor: { playedAt: '2026-01-03T00:00:00Z', id: 'a' },
+        hasMore: true,
+      })
+      // 2) click en "Cargar más": queda en vuelo (diferida, no resuelta aún)
+      .mockImplementationOnce(() => loadMoreDeferred)
+      // 3) carga disparada por el cambio de filtro (nuevo loadFirstPage)
+      .mockResolvedValueOnce({
+        matches: [q('fresh', '2026-02-01T00:00:00Z')],
+        nextCursor: { playedAt: '2026-02-01T00:00:00Z', id: 'fresh' },
+        hasMore: true,
+      });
+
+    render(<MatchHistory teams={teams} />);
+
+    const loadMore = await screen.findByRole('button', { name: /cargar más/i });
+    fireEvent.click(loadMore);
+
+    // El botón pasa a "Cargando…" (loadingMore=true) mientras la request está en vuelo.
+    await waitFor(() => expect(screen.getByRole('button', { name: /cargando/i })).toBeDisabled());
+
+    // El usuario cambia de filtro antes de que el loadMore resuelva: esto
+    // cancela la época de la carga en vuelo y dispara un loadFirstPage nuevo.
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'qualifier' } });
+
+    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(1));
+
+    // Ahora resuelve la promesa vieja del loadMore cancelado.
+    resolveLoadMore({
+      matches: [q('stale', '2026-01-01T00:00:00Z')],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    // loadingMore debe resetearse siempre: el botón "Cargar más" reaparece
+    // habilitado, sin quedar pegado en "Cargando…"/disabled.
+    await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /cargar más/i });
+      expect(btn).not.toBeDisabled();
+      expect(btn.textContent).toMatch(/cargar más/i);
+    });
+  });
+});
