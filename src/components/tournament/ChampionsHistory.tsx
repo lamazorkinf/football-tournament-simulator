@@ -97,11 +97,13 @@ export function ChampionsHistory() {
           addId(bracket.championId);
           addId(bracket.runnerUpId);
           addId(bracket.thirdPlaceId);
+          addId(bracket.thirdPlace?.loserId); // 4° puesto = perdedor del partido por el 3°
         });
         const confed = state.confederationsCup;
         addId(confed?.championId);
         addId(confed?.knockout?.final?.loserId);
         addId(confed?.knockout?.thirdPlace?.winnerId);
+        addId(confed?.knockout?.thirdPlace?.loserId); // 4° puesto
       });
 
       // 4. Traer los equipos de una sola vez.
@@ -163,7 +165,7 @@ export function ChampionsHistory() {
             champion: teamOf(bracket.championId),
             runnerUp: teamOf(bracket.runnerUpId),
             thirdPlace: teamOf(bracket.thirdPlaceId),
-            fourthPlace: null,
+            fourthPlace: teamOf(bracket.thirdPlace?.loserId),
           });
         });
 
@@ -179,7 +181,7 @@ export function ChampionsHistory() {
             champion: teamOf(confed.championId),
             runnerUp: teamOf(confed.knockout?.final?.loserId),
             thirdPlace: teamOf(confed.knockout?.thirdPlace?.winnerId),
-            fourthPlace: null,
+            fourthPlace: teamOf(confed.knockout?.thirdPlace?.loserId),
           });
         }
       });
