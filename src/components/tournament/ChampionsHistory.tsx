@@ -34,6 +34,31 @@ interface ChampionRow {
   fourthPlace: Team | null;
 }
 
+// Filas crudas de Supabase. El helper `db` devuelve `any` (ver
+// supabaseNormalized.ts), así que se castea cada consulta a estas formas.
+interface TournamentRow {
+  id: string;
+  year: number;
+  status: string;
+  champion_team_id: string | null;
+  runner_up_team_id: string | null;
+  third_place_team_id: string | null;
+  fourth_place_team_id: string | null;
+}
+
+interface CycleStateRow {
+  tournament_id: string;
+  state: CycleStatePayload | null;
+}
+
+interface TeamRow {
+  id: string;
+  name: string;
+  flag: string;
+  region: Region;
+  skill: number;
+}
+
 export function ChampionsHistory() {
   const [rows, setRows] = useState<ChampionRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,13 +76,15 @@ export function ChampionsHistory() {
 
     try {
       // 1. Torneos (ciclos) completados: aportan el campeón del Mundial.
-      const { data: tournaments, error: tournamentsError } = await db
+      const { data: tournamentsRaw, error: tournamentsError } = await db
         .tournaments_new()
         .select('*')
         .eq('status', 'completed')
         .order('year', { ascending: false });
 
       if (tournamentsError) throw tournamentsError;
+
+      const tournaments = tournamentsRaw as TournamentRow[] | null;
 
       if (!tournaments || tournaments.length === 0) {
         setRows([]);
@@ -66,16 +93,17 @@ export function ChampionsHistory() {
       }
 
       // 2. Estado del ciclo (continental + confederaciones) de esos torneos.
-      const tournamentIds = tournaments.map((t: any) => t.id);
-      const { data: cycleStates, error: cycleStatesError } = await db
+      const tournamentIds = tournaments.map((t) => t.id);
+      const { data: cycleStatesRaw, error: cycleStatesError } = await db
         .tournament_cycle_state()
         .select('tournament_id, state')
         .in('tournament_id', tournamentIds);
 
       if (cycleStatesError) throw cycleStatesError;
 
+      const cycleStates = cycleStatesRaw as CycleStateRow[] | null;
       const stateByTournament = new Map<string, CycleStatePayload>();
-      cycleStates?.forEach((row: any) => {
+      cycleStates?.forEach((row) => {
         if (row.state) stateByTournament.set(row.tournament_id, row.state);
       });
 
@@ -85,7 +113,7 @@ export function ChampionsHistory() {
         if (id) teamIds.add(id);
       };
 
-      tournaments.forEach((t: any) => {
+      tournaments.forEach((t) => {
         addId(t.champion_team_id);
         addId(t.runner_up_team_id);
         addId(t.third_place_team_id);
@@ -109,14 +137,15 @@ export function ChampionsHistory() {
       // 4. Traer los equipos de una sola vez.
       const teamsMap = new Map<string, Team>();
       if (teamIds.size > 0) {
-        const { data: teams, error: teamsError } = await db
+        const { data: teamsRaw, error: teamsError } = await db
           .teams()
           .select('*')
           .in('id', Array.from(teamIds));
 
         if (teamsError) throw teamsError;
 
-        teams?.forEach((team: any) => {
+        const teams = teamsRaw as TeamRow[] | null;
+        teams?.forEach((team) => {
           teamsMap.set(team.id, {
             id: team.id,
             name: team.name,
@@ -133,7 +162,7 @@ export function ChampionsHistory() {
       // 5. Construir una fila por competición con campeón definido.
       const allRows: ChampionRow[] = [];
 
-      tournaments.forEach((t: any) => {
+      tournaments.forEach((t) => {
         // Mundial
         if (t.champion_team_id) {
           allRows.push({
