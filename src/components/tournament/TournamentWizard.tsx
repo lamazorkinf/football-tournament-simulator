@@ -164,8 +164,13 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
     !currentTournament.worldCup.knockout.semiFinals.some(m => m.isPlayed) &&
     !currentTournament.worldCup.knockout.thirdPlace?.isPlayed &&
     !currentTournament.worldCup.knockout.final?.isPlayed;
+  // Solo mientras los dieciseisavos NO estén generados: sin este guard el
+  // botón "Generar Dieciseisavos" queda visible para siempre (incluso con el
+  // torneo terminado) y permite re-generar la ronda. Una vez generado, el
+  // fallback "Ver / Jugar" toma el relevo; con el torneo completo, ninguno.
   const canStartKnockout =
     currentTournament.worldCup &&
+    currentTournament.worldCup.knockout.roundOf32.length === 0 &&
     canAdvanceToKnockout(currentTournament.worldCup.groups);
 
   const handleAdvanceToWorldCup = () => {
