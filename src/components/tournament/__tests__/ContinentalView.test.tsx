@@ -21,4 +21,14 @@ describe('ContinentalView', () => {
     await userEvent.click(playButtons[0]);
     expect(simulateContinentalMatch).toHaveBeenCalledTimes(1);
   });
+
+  it('muestra el botón "Ver en vivo" junto a cada partido jugable del bracket', () => {
+    const { cycle, teams } = makeDrawnContinentalCycle();
+    const simulateContinentalMatch = vi.fn(async () => null);
+    useTournamentStore.setState({ simulateContinentalMatch, isSavingMatch: false });
+
+    render(<ContinentalView cycle={cycle} teams={teams} />);
+
+    expect(screen.getAllByRole('button', { name: /ver en vivo/i }).length).toBeGreaterThan(0);
+  });
 });

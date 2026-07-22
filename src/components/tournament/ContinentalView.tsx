@@ -7,6 +7,7 @@ import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
+import { WatchLiveButton } from './WatchLiveButton';
 import { Play, Trophy, Globe2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -192,9 +193,19 @@ function BracketMatch({ match, cycle, getTeam, onPlay, isSaving }: BracketMatchP
         </p>
       )}
       {!match.isPlayed && playable && (
-        <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
-          <Play className="w-3 h-3" /> Play
-        </Button>
+        <div className="space-y-1">
+          <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
+            <Play className="w-3 h-3" /> Play
+          </Button>
+          <WatchLiveButton
+            matchId={match.id}
+            homeTeamId={match.homeTeamId}
+            awayTeamId={match.awayTeamId}
+            kind="continental"
+            disabled={isSaving}
+            className="w-full"
+          />
+        </div>
       )}
     </div>
   );

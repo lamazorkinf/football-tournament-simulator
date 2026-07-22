@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { ScoreBug } from '../ui/ScoreBug';
+import { WatchLiveButton } from './WatchLiveButton';
 import { Play, Trophy, Award } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -162,9 +163,19 @@ function ConfedMatch({ match, cycle, getTeam, onPlay, isSaving }: ConfedMatchPro
         </p>
       )}
       {!match.isPlayed && playable && (
-        <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
-          <Play className="w-3 h-3" /> Play
-        </Button>
+        <div className="space-y-1">
+          <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
+            <Play className="w-3 h-3" /> Play
+          </Button>
+          <WatchLiveButton
+            matchId={match.id}
+            homeTeamId={match.homeTeamId}
+            awayTeamId={match.awayTeamId}
+            kind="confederations"
+            disabled={isSaving}
+            className="w-full"
+          />
+        </div>
       )}
     </div>
   );
