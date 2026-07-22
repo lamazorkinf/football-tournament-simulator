@@ -6,7 +6,7 @@ import { PixelBar } from '../ui/PixelBar';
 import { matchHistoryService } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { Trophy, Award, BarChart3 } from 'lucide-react';
-import { calculateTier, getTierColor, getTierIcon, groupTeamsByTier } from '../../core/tiers';
+import { getTierColor, getTierIcon, groupTeamsByTier } from '../../core/tiers';
 
 interface HistoricalStatsProps {
   teams: Team[];
@@ -378,8 +378,6 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                 const team = teams.find((t) => t.id === teamStat.teamId);
                 if (!team) return null;
 
-                const tier = team.tier || calculateTier(team.skill);
-
                 return (
                   <div
                     key={teamStat.teamId}
@@ -395,13 +393,6 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-white">
                               {team.name}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 text-xs border ${getTierColor(
-                                tier
-                              )}`}
-                            >
-                              {getTierIcon(tier)} {tier}
                             </span>
                           </div>
                           <div className="text-sm text-grass-soft mt-1">
