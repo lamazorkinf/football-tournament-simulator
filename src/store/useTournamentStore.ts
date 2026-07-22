@@ -2130,9 +2130,11 @@ export const useTournamentStore = create<TournamentState>()(
           t.id === home.id ? { ...t, skill: newHome } : t.id === away.id ? { ...t, skill: newAway } : t,
         );
 
-        // Persistencia de skills best-effort: no bloquear el estado local con
-        // await de red. La persistencia normalizada de continental (bracket)
-        // queda para Plan 6; hoy solo se persiste vía el `persist` local.
+        // Persistencia best-effort: no bloquear el estado local con await de
+        // red. Skills y el partido (match_history) se persisten en paralelo;
+        // el bracket normalizado en sí sigue viviendo solo en `cycle_state`
+        // (JSONB, Plan 6) + el `persist` local — no hay tabla normalizada de
+        // brackets.
         if (isSupabaseConfigured()) {
           teamsService
             .batchUpdateTeams([

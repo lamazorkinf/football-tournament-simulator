@@ -14,6 +14,7 @@ import { getCyclePhaseBanner } from '../../utils/cycleProgress';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collectAllMatches, type MatchStage, type MatchWithContext } from './matchCenterCollector';
+import { isBatchSimulableStage } from './matchBatchSimulable';
 
 interface MatchCenterProps {
   tournament: Cycle;
@@ -75,6 +76,15 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
   // Separate played and unplayed for display
   const unplayedMatches = filteredMatches.filter((m) => !m.match.isPlayed);
 
+  // Subset de unplayedMatches que el batch "Simular Jornada" puede realmente
+  // procesar (qualifier/world-cup). Knockout/Continental/Confederaciones se
+  // simulan desde su propia vista, así que no cuentan para habilitar el botón
+  // ni para elegir la jornada actual del batch — ver matchBatchSimulable.ts.
+  const batchSimulableUnplayed = useMemo(
+    () => unplayedMatches.filter((m) => isBatchSimulableStage(m.stage)),
+    [unplayedMatches]
+  );
+
   const totalPlayed = allMatches.filter((m) => m.match.isPlayed).length;
 
   const handleSimulateMatch = async (matchWithContext: MatchWithContext) => {
@@ -130,8 +140,9 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
   };
 
   const handleSimulateMatchday = async () => {
-    // Determine current matchday (first unplayed matchday)
-    const currentMatchday = unplayedMatches.length > 0 ? unplayedMatches[0].match.matchday : null;
+    // Determine current matchday (first unplayed matchday among matches the
+    // batch can actually simulate — no knockout/continental/confederations).
+    const currentMatchday = batchSimulableUnplayed.length > 0 ? batchSimulableUnplayed[0].match.matchday : null;
 
     if (!currentMatchday) {
       toast.info('No hay partidos pendientes para simular');
@@ -139,7 +150,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     }
 
     // Filter matches for current matchday that are not played
-    const matchdayMatches = unplayedMatches.filter(m => m.match.matchday === currentMatchday);
+    const matchdayMatches = batchSimulableUnplayed.filter(m => m.match.matchday === currentMatchday);
 
     if (matchdayMatches.length === 0) {
       toast.info('No hay partidos pendientes en esta jornada');
@@ -168,9 +179,13 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     if (!confirmed) return;
 
     try {
-      // Prepare batch data
+      // Prepare batch data. Whitelist (not blacklist): matchdayMatches ya
+      // viene filtrado a stages batch-simulables arriba, pero se repite el
+      // filtro explícito acá como defensa en profundidad — ver
+      // matchBatchSimulable.ts para el porqué (knockout/continental/confed
+      // se simulan desde su propia vista, nunca desde este batch).
       const batchMatches = matchdayMatches
-        .filter(m => m.stage !== 'knockout')
+        .filter(m => isBatchSimulableStage(m.stage))
         .map(m => ({
           matchId: m.match.id,
           groupId: m.groupId,
@@ -189,32 +204,34 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
       // Collect results for modal
       const results: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; stage: string; groupName?: string }[] = [];
 
-      matchdayMatches.forEach((matchWithContext) => {
-        const { match, stage, groupId, groupName } = matchWithContext;
-        const homeTeam = getTeam(match.homeTeamId);
-        const awayTeam = getTeam(match.awayTeamId);
+      matchdayMatches
+        .filter((m) => isBatchSimulableStage(m.stage))
+        .forEach((matchWithContext) => {
+          const { match, stage, groupId, groupName } = matchWithContext;
+          const homeTeam = getTeam(match.homeTeamId);
+          const awayTeam = getTeam(match.awayTeamId);
 
-        // Find updated match
-        let updatedMatch = match;
-        if (stage === 'qualifier' && matchWithContext.region) {
-          const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
-          updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-        } else if (stage === 'world-cup') {
-          const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
-          updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-        }
+          // Find updated match
+          let updatedMatch = match;
+          if (stage === 'qualifier' && matchWithContext.region) {
+            const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
+            updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+          } else if (stage === 'world-cup') {
+            const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
+            updatedMatch = group?.matches.find(m => m.id === match.id) || match;
+          }
 
-        if (homeTeam && awayTeam) {
-          results.push({
-            homeTeam: homeTeam.name,
-            awayTeam: awayTeam.name,
-            homeScore: updatedMatch.homeScore ?? 0,
-            awayScore: updatedMatch.awayScore ?? 0,
-            stage: stage === 'qualifier' ? 'Eliminatorias' : 'Copa Mundial',
-            groupName: groupName,
-          });
-        }
-      });
+          if (homeTeam && awayTeam) {
+            results.push({
+              homeTeam: homeTeam.name,
+              awayTeam: awayTeam.name,
+              homeScore: updatedMatch.homeScore ?? 0,
+              awayScore: updatedMatch.awayScore ?? 0,
+              stage: stage === 'qualifier' ? 'Eliminatorias' : 'Copa Mundial',
+              groupName: groupName,
+            });
+          }
+        });
 
       // Show results modal
       showResults(results, `Jornada ${currentMatchday} - Resultados`);
@@ -230,7 +247,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
   useMobileAction({
     label: isBatchProcessing ? 'SIMULANDO…' : '▶ SIMULAR JORNADA',
     onPress: handleSimulateMatchday,
-    disabled: unplayedMatches.length === 0 || isSavingMatch || isBatchProcessing,
+    disabled: batchSimulableUnplayed.length === 0 || isSavingMatch || isBatchProcessing,
   });
 
   const handleMatchClick = (matchCtx: MatchWithContext) => {
@@ -437,7 +454,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
               <Button
                 variant="primary"
                 onClick={handleSimulateMatchday}
-                disabled={unplayedMatches.length === 0 || isSavingMatch || isBatchProcessing}
+                disabled={batchSimulableUnplayed.length === 0 || isSavingMatch || isBatchProcessing}
                 className="gap-2 hidden lg:inline-flex"
                 title="Simular toda la jornada actual"
               >
