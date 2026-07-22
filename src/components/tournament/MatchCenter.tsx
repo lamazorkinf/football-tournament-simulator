@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
-import type { Cycle, Team, Region } from '../../types';
+import type { Cycle, Team, Region, MatchdayOutcome } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
 import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
+import { Play, Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Star, Radio } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
+import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiveMatchdayStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getCyclePhaseBanner } from '../../utils/cycleProgress';
@@ -17,6 +18,10 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collectAllMatches, type MatchStage, type MatchWithContext } from './matchCenterCollector';
 import { isBatchSimulableStage } from './matchBatchSimulable';
+import { groupIntoJornadas, getCurrentJornada, type JornadaGroup } from '../../core/jornada';
+import { selectLiveMatches } from '../../core/liveSelection';
+import { buildMatchTimeline, hashSeed } from '../../core/liveMatch';
+import type { MatchResult } from '../../store/useMatchResultsStore';
 
 interface MatchCenterProps {
   tournament: Cycle;
@@ -25,12 +30,15 @@ interface MatchCenterProps {
 }
 
 export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps) {
-  const { simulateMatch, simulateMatchdayBatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch, isSavingMatch, isBatchProcessing } = useTournamentStore();
+  const { simulateMatch, simulateMatchdayBatch, simulateRoundBatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch, isSavingMatch, isBatchProcessing } = useTournamentStore();
   const { showResults } = useMatchResultsStore();
+  const openLiveSession = useLiveMatchdayStore((s) => s.openSession);
+  const favoriteTeamIds = useFavoritesStore((s) => s.favoriteTeamIds);
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
   const [selectedStage, setSelectedStage] = useState<MatchStage | 'all'>('all');
   const [selectedMatch, setSelectedMatch] = useState<MatchWithContext | null>(null);
-  const [selectedMatchday, setSelectedMatchday] = useState<number | 'all'>('all');
+  // Índice de la jornada elegida en jornadaGroups, o 'all' para ver todo.
+  const [selectedJornadaIndex, setSelectedJornadaIndex] = useState<number | 'all'>(0);
   // Partido concreto que se muestra en el preview móvil. Antes el modal usaba
   // siempre unplayedMatches[0], así que tocar cualquier fila abría el preview
   // del primer partido, no el tocado.
@@ -40,52 +48,60 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
   // Collect all matches from all sources (qualifiers, world cup, continental, confed)
   const allMatches = useMemo(() => collectAllMatches(tournament), [tournament]);
 
-  // Get all available matchdays
-  const availableMatchdays = useMemo(() => {
-    const matchdays = new Set<number>();
-    allMatches.forEach((m) => {
-      if (m.match.matchday) {
-        matchdays.add(m.match.matchday);
-      }
-    });
-    return Array.from(matchdays).sort((a, b) => a - b);
-  }, [allMatches]);
+  // Jornadas del ciclo (fase, número) en orden. La "jornada actual" es la
+  // primera con partido sin jugar — es GLOBAL: ignora los filtros visuales.
+  const jornadaGroups = useMemo(() => groupIntoJornadas(allMatches), [allMatches]);
+  const currentJornada = useMemo(() => getCurrentJornada(jornadaGroups), [jornadaGroups]);
 
-  // Filter and sort matches by matchday for global interleaved ordering
+  // Default de la jornada mostrada = jornada actual. Se reajusta durante el
+  // render al cambiar de torneo o cuando avanza la jornada actual (patrón
+  // React de "derivar estado de props" sin efecto en cascada).
+  const currentJornadaIndex = useMemo(() => {
+    if (!currentJornada) return jornadaGroups.length > 0 ? 0 : 'all';
+    return jornadaGroups.findIndex(
+      (g) => g.phase === currentJornada.phase && g.jornada === currentJornada.jornada,
+    );
+  }, [jornadaGroups, currentJornada]);
+
+  // Centinela null → la derivación corre también en el primer montaje, así el
+  // default es la jornada actual (y no el índice 0 fijo del useState).
+  const [prevTournamentId, setPrevTournamentId] = useState<string | null>(null);
+  if (tournament.id !== prevTournamentId) {
+    setPrevTournamentId(tournament.id);
+    setSelectedJornadaIndex(currentJornadaIndex);
+    setSelectedRegion('all');
+    setSelectedStage('all');
+  }
+
+  const selectedJornada: JornadaGroup | null =
+    selectedJornadaIndex === 'all' ? null : jornadaGroups[selectedJornadaIndex] ?? null;
+
+  // Lista mostrada: los partidos de la jornada elegida (o todos si 'all'),
+  // con los filtros de región/etapa aplicados SOLO como filtro visual.
   const filteredMatches = useMemo(() => {
-    const filtered = allMatches.filter((m) => {
+    const source = selectedJornada ? selectedJornada.matches : allMatches;
+    const filtered = source.filter((m) => {
       const regionMatch = selectedRegion === 'all' || m.region === selectedRegion;
       const stageMatch = selectedStage === 'all' || m.stage === selectedStage;
-      const matchdayMatch = selectedMatchday === 'all' || m.match.matchday === selectedMatchday;
-      return regionMatch && stageMatch && matchdayMatch;
+      return regionMatch && stageMatch;
     });
-
-    // Sort by matchday to create interleaved ordering across all groups
-    // Primary: matchday (1-20), Secondary: group name for consistency
     return filtered.sort((a, b) => {
-      const matchdayA = a.match.matchday ?? 999;
-      const matchdayB = b.match.matchday ?? 999;
-
-      if (matchdayA !== matchdayB) {
-        return matchdayA - matchdayB;
-      }
-
-      // If same matchday, sort by group name
-      return a.groupName.localeCompare(b.groupName);
+      const mdA = a.match.matchday ?? 999;
+      const mdB = b.match.matchday ?? 999;
+      return mdA !== mdB ? mdA - mdB : a.groupName.localeCompare(b.groupName);
     });
-  }, [allMatches, selectedRegion, selectedStage, selectedMatchday]);
+  }, [allMatches, selectedJornada, selectedRegion, selectedStage]);
 
   // Separate played and unplayed for display
   const unplayedMatches = filteredMatches.filter((m) => !m.match.isPlayed);
 
-  // Subset de unplayedMatches que el batch "Simular Jornada" puede realmente
-  // procesar (qualifier/world-cup). Knockout/Continental/Confederaciones se
-  // simulan desde su propia vista, así que no cuentan para habilitar el botón
-  // ni para elegir la jornada actual del batch — ver matchBatchSimulable.ts.
-  const batchSimulableUnplayed = useMemo(
-    () => unplayedMatches.filter((m) => isBatchSimulableStage(m.stage)),
-    [unplayedMatches]
+  // Objetivo de simulación: la jornada ACTUAL global (no la mostrada ni la
+  // filtrada), con ambos equipos definidos y sin jugar.
+  const jornadaUnplayed = useMemo(
+    () => (currentJornada ? currentJornada.matches.filter((m) => !m.match.isPlayed) : []),
+    [currentJornada],
   );
+  const canSimulateJornada = jornadaUnplayed.length > 0 && !isSavingMatch && !isBatchProcessing;
 
   const handleSimulateMatch = async (matchWithContext: MatchWithContext) => {
     const { match, stage, groupId } = matchWithContext;
@@ -158,115 +174,189 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     );
   };
 
-  const handleSimulateMatchday = async () => {
-    // Determine current matchday (first unplayed matchday among matches the
-    // batch can actually simulate — no knockout/continental/confederations).
-    const currentMatchday = batchSimulableUnplayed.length > 0 ? batchSimulableUnplayed[0].match.matchday : null;
+  // Rótulo de etapa para el modal de resultados.
+  const stageResultLabel: Record<MatchStage, string> = {
+    qualifier: 'Eliminatorias',
+    'world-cup': 'Copa Mundial',
+    knockout: 'Mundial',
+    continental: 'Continental',
+    confederations: 'Confederaciones',
+  };
 
-    if (!currentMatchday) {
+  // Título de la jornada actual (fase · ronda/jornada).
+  const jornadaTitle = currentJornada ? `${currentJornada.phaseLabel} · ${currentJornada.label}` : '';
+
+  // Simula la jornada ACTUAL (global) ruteando por familia: grupos →
+  // simulateMatchdayBatch, eliminatorias/confed → simulateRoundBatch. Una
+  // jornada es de una sola fase, así que nunca mezcla ambas familias.
+  const runJornadaSimulation = async (
+    toSimulate: MatchWithContext[],
+  ): Promise<MatchdayOutcome[]> => {
+    const groupItems = toSimulate.filter((m) => isBatchSimulableStage(m.stage));
+    const roundItems = toSimulate.filter((m) => !isBatchSimulableStage(m.stage));
+    const outcomes: MatchdayOutcome[] = [];
+
+    if (groupItems.length > 0) {
+      const res = await simulateMatchdayBatch(
+        groupItems.map((m) => ({
+          matchId: m.match.id,
+          groupId: m.groupId,
+          stage: m.stage === 'qualifier' ? ('qualifier' as const) : ('world-cup' as const),
+          groupName: m.groupName,
+          region: m.region,
+        })),
+      );
+      outcomes.push(...res);
+    }
+    if (roundItems.length > 0) {
+      const res = await simulateRoundBatch(
+        roundItems.map((m) => ({
+          matchId: m.match.id,
+          kind: m.stage as 'knockout' | 'continental' | 'confederations',
+        })),
+      );
+      outcomes.push(...res);
+    }
+    return outcomes;
+  };
+
+  // Construye el resumen COMPLETO de la jornada: outcomes recién simulados +
+  // los partidos ya jugados de la jornada (para no perderlos en el resumen).
+  const buildJornadaResults = (
+    jornada: JornadaGroup,
+    outcomes: MatchdayOutcome[],
+  ): MatchResult[] => {
+    const byId = new Map(outcomes.map((o) => [o.matchId, o]));
+    const results: MatchResult[] = [];
+    for (const ctx of jornada.matches) {
+      const outcome = byId.get(ctx.match.id);
+      const played = ctx.match.isPlayed;
+      if (!outcome && !played) continue; // no jugado y no simulado ahora
+      const homeTeam = getTeam(ctx.match.homeTeamId);
+      const awayTeam = getTeam(ctx.match.awayTeamId);
+      if (!homeTeam || !awayTeam) continue;
+      results.push({
+        homeTeam: homeTeam.name,
+        awayTeam: awayTeam.name,
+        homeScore: outcome ? outcome.homeScore : ctx.match.homeScore ?? 0,
+        awayScore: outcome ? outcome.awayScore : ctx.match.awayScore ?? 0,
+        stage: stageResultLabel[ctx.stage],
+        groupName: ctx.groupName,
+      });
+    }
+    return results;
+  };
+
+  const handleSimulateMatchday = async () => {
+    const jornada = currentJornada;
+    if (!jornada || jornadaUnplayed.length === 0) {
       toast.info('No hay partidos pendientes para simular');
       return;
     }
-
-    // Filter matches for current matchday that are not played
-    const matchdayMatches = batchSimulableUnplayed.filter(m => m.match.matchday === currentMatchday);
-
-    if (matchdayMatches.length === 0) {
-      toast.info('No hay partidos pendientes en esta jornada');
+    // Solo partidos con ambos equipos definidos (defensivo para eliminatorias).
+    const toSimulate = jornadaUnplayed.filter(
+      (m) => getTeam(m.match.homeTeamId) && getTeam(m.match.awayTeamId),
+    );
+    if (toSimulate.length === 0) {
+      toast.info('Los partidos de esta jornada todavía no tienen equipos definidos');
       return;
     }
 
-    // Avisar si hay filtros activos: "Simular Jornada" opera sobre la lista
-    // FILTRADA (región/etapa), no sobre todos los partidos de la jornada, y el
-    // toast posterior dice "Jornada completada" sin más.
-    const activeFilters: string[] = [];
-    if (selectedRegion !== 'all') activeFilters.push(`región ${selectedRegion}`);
-    if (selectedStage !== 'all') activeFilters.push(`etapa ${selectedStage}`);
-    const filterNote =
-      activeFilters.length > 0
-        ? `\n\n⚠️ Filtro activo (${activeFilters.join(', ')}): solo se simularán los partidos que coinciden con el filtro.`
-        : '';
-
-    // Show confirmation dialog
     const confirmed = confirm(
       `⚽ Simular Jornada Completa\n\n` +
-      `Jornada: ${currentMatchday}\n` +
-      `Partidos a simular: ${matchdayMatches.length}${filterNote}\n\n` +
-      `¿Deseas simular todos los partidos de esta jornada?`
+      `${jornada.phaseLabel} · ${jornada.label}\n` +
+      `Partidos a simular: ${toSimulate.length}\n\n` +
+      `Se simulan todos los partidos de la jornada (todas las regiones), sin importar los filtros.`
     );
-
     if (!confirmed) return;
 
     try {
-      // Prepare batch data. Whitelist (not blacklist): matchdayMatches ya
-      // viene filtrado a stages batch-simulables arriba, pero se repite el
-      // filtro explícito acá como defensa en profundidad — ver
-      // matchBatchSimulable.ts para el porqué (knockout/continental/confed
-      // se simulan desde su propia vista, nunca desde este batch).
-      const batchMatches = matchdayMatches
-        .filter(m => isBatchSimulableStage(m.stage))
-        .map(m => ({
-          matchId: m.match.id,
-          groupId: m.groupId,
-          stage: m.stage === 'qualifier' ? 'qualifier' as const : 'world-cup' as const,
-          groupName: m.groupName,
-          region: m.region,
-        }));
-
-      // Simulate all matches in batch
-      await simulateMatchdayBatch(batchMatches);
-
-      // Get updated state after all simulations complete
-      const currentTournament = useTournamentStore.getState().currentTournament;
-      if (!currentTournament) return;
-
-      // Collect results for modal
-      const results: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; stage: string; groupName?: string }[] = [];
-
-      matchdayMatches
-        .filter((m) => isBatchSimulableStage(m.stage))
-        .forEach((matchWithContext) => {
-          const { match, stage, groupId, groupName } = matchWithContext;
-          const homeTeam = getTeam(match.homeTeamId);
-          const awayTeam = getTeam(match.awayTeamId);
-
-          // Find updated match
-          let updatedMatch = match;
-          if (stage === 'qualifier' && matchWithContext.region) {
-            const group = currentTournament.qualifiers[matchWithContext.region]?.find(g => g.id === groupId);
-            updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-          } else if (stage === 'world-cup') {
-            const group = currentTournament.worldCup?.groups.find(g => g.id === groupId);
-            updatedMatch = group?.matches.find(m => m.id === match.id) || match;
-          }
-
-          if (homeTeam && awayTeam) {
-            results.push({
-              homeTeam: homeTeam.name,
-              awayTeam: awayTeam.name,
-              homeScore: updatedMatch.homeScore ?? 0,
-              awayScore: updatedMatch.awayScore ?? 0,
-              stage: stage === 'qualifier' ? 'Eliminatorias' : 'Copa Mundial',
-              groupName: groupName,
-            });
-          }
-        });
-
-      // Show results modal
-      showResults(results, `Jornada ${currentMatchday} - Resultados`);
-
-      // Show success toast
-      toast.success(`✅ Jornada ${currentMatchday} completada - ${results.length} partidos simulados`);
+      const outcomes = await runJornadaSimulation(toSimulate);
+      const results = buildJornadaResults(jornada, outcomes);
+      showResults(results, `${jornadaTitle} — Resultados`);
+      toast.success(`✅ ${jornada.label} completada — ${outcomes.length} partidos simulados`);
     } catch (error) {
       console.error('Error simulating matchday:', error);
       toast.error('Error al simular la jornada');
     }
   };
 
+  const handleSimulateMatchdayLive = async () => {
+    const jornada = currentJornada;
+    if (!jornada || jornadaUnplayed.length === 0) {
+      toast.info('No hay partidos pendientes para simular');
+      return;
+    }
+    const toSimulate = jornadaUnplayed.filter(
+      (m) => getTeam(m.match.homeTeamId) && getTeam(m.match.awayTeamId),
+    );
+    if (toSimulate.length === 0) {
+      toast.info('Los partidos de esta jornada todavía no tienen equipos definidos');
+      return;
+    }
+
+    // Selección de los ≤12 que se ven en vivo, con skills PRE-simulación.
+    const skillMap = new Map(teams.map((t) => [t.id, t.skill]));
+    const favorites = new Set(favoriteTeamIds);
+    const selectable = toSimulate.map((m) => ({
+      matchId: m.match.id,
+      homeTeamId: m.match.homeTeamId,
+      awayTeamId: m.match.awayTeamId,
+    }));
+    const chosenIds = new Set(
+      selectLiveMatches(selectable, skillMap, favorites).map((s) => s.matchId),
+    );
+
+    try {
+      // Commit-then-replay: se comprometen TODOS los resultados primero.
+      const outcomes = await runJornadaSimulation(toSimulate);
+      const byId = new Map(outcomes.map((o) => [o.matchId, o]));
+      const ctxById = new Map(jornada.matches.map((m) => [m.match.id, m]));
+
+      const entries: LiveMatchdayEntry[] = [];
+      for (const matchId of chosenIds) {
+        const outcome = byId.get(matchId);
+        const ctx = ctxById.get(matchId);
+        if (!outcome || !ctx) continue; // fue salteado en la simulación
+        entries.push({
+          matchId,
+          homeTeamId: outcome.homeTeamId,
+          awayTeamId: outcome.awayTeamId,
+          timeline: buildMatchTimeline(
+            outcome.homeScore,
+            outcome.awayScore,
+            hashSeed(matchId),
+            outcome.penalties,
+          ),
+          groupName: ctx.groupName,
+          region: ctx.region,
+          isFavorite: favorites.has(outcome.homeTeamId) || favorites.has(outcome.awayTeamId),
+        });
+      }
+
+      if (entries.length === 0) {
+        // No se pudo simular nada (fuera de jornada, etc.): mostrar el resumen.
+        const results = buildJornadaResults(jornada, outcomes);
+        showResults(results, `${jornadaTitle} — Resultados`);
+        return;
+      }
+
+      openLiveSession({
+        title: jornadaTitle,
+        entries,
+        allResults: buildJornadaResults(jornada, outcomes),
+        hiddenCount: outcomes.length - entries.length,
+      });
+    } catch (error) {
+      console.error('Error simulating matchday live:', error);
+      toast.error('Error al simular la jornada en vivo');
+    }
+  };
+
   useMobileAction({
     label: isBatchProcessing ? 'SIMULANDO…' : '▶ SIMULAR JORNADA',
     onPress: handleSimulateMatchday,
-    disabled: batchSimulableUnplayed.length === 0 || isSavingMatch || isBatchProcessing,
+    disabled: !canSimulateJornada,
   });
 
   const handleMatchClick = (matchCtx: MatchWithContext) => {
@@ -277,46 +367,43 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     }
   };
 
+  // Índice efectivo de la jornada mostrada (para el paginador).
+  const effectiveIndex = selectedJornadaIndex === 'all' ? jornadaGroups.length : selectedJornadaIndex;
+  const atFirstJornada = effectiveIndex <= 0;
+  const atLastJornada = selectedJornadaIndex === 'all';
+
   const handlePrevMatchday = () => {
-    if (selectedMatchday === 'all') {
-      if (availableMatchdays.length > 0) {
-        setSelectedMatchday(availableMatchdays[availableMatchdays.length - 1]);
-      }
-    } else {
-      const currentIndex = availableMatchdays.indexOf(selectedMatchday);
-      if (currentIndex > 0) {
-        setSelectedMatchday(availableMatchdays[currentIndex - 1]);
-      }
+    if (selectedJornadaIndex === 'all') {
+      if (jornadaGroups.length > 0) setSelectedJornadaIndex(jornadaGroups.length - 1);
+    } else if (selectedJornadaIndex > 0) {
+      setSelectedJornadaIndex(selectedJornadaIndex - 1);
     }
   };
 
   const handleNextMatchday = () => {
-    if (selectedMatchday === 'all') {
-      if (availableMatchdays.length > 0) {
-        setSelectedMatchday(availableMatchdays[0]);
-      }
+    if (selectedJornadaIndex === 'all') return;
+    if (selectedJornadaIndex < jornadaGroups.length - 1) {
+      setSelectedJornadaIndex(selectedJornadaIndex + 1);
     } else {
-      const currentIndex = availableMatchdays.indexOf(selectedMatchday);
-      if (currentIndex < availableMatchdays.length - 1) {
-        setSelectedMatchday(availableMatchdays[currentIndex + 1]);
-      } else {
-        setSelectedMatchday('all');
-      }
+      setSelectedJornadaIndex('all');
     }
   };
 
   const swipeHandlers = useSwipeNavigation(
     () => {
-      if (selectedMatchday !== 'all' && selectedMatchday !== availableMatchdays[0]) {
-        handlePrevMatchday();
-      }
+      if (!atFirstJornada) handlePrevMatchday();
     },
     () => {
-      if (selectedMatchday !== availableMatchdays[availableMatchdays.length - 1]) {
-        handleNextMatchday();
-      }
+      if (!atLastJornada) handleNextMatchday();
     }
   );
+
+  const jornadaLabelText =
+    selectedJornadaIndex === 'all'
+      ? 'Todas'
+      : selectedJornada
+        ? `${selectedJornada.phaseLabel} · ${selectedJornada.label}`
+        : '—';
 
   const getTeam = (teamId: string) => teams.find((t) => t.id === teamId);
 
@@ -391,25 +478,25 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 <option value="confederations">Confederaciones</option>
               </select>
 
-              {/* Matchday Pagination */}
-              {availableMatchdays.length > 0 && (
+              {/* Jornada Pagination */}
+              {jornadaGroups.length > 0 && (
                 <div className="hidden sm:flex items-center gap-2 border-2 border-grass px-2 py-1">
                   <button
                     onClick={handlePrevMatchday}
-                    disabled={selectedMatchday === 'all' || selectedMatchday === availableMatchdays[0]}
+                    disabled={atFirstJornada}
                     className="p-2.5 lg:p-1 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Previous Matchday"
+                    title="Jornada anterior"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="font-arcade text-[10px] text-gold uppercase min-w-[80px] text-center">
-                    {selectedMatchday === 'all' ? 'All J.' : `Jornada ${selectedMatchday}`}
+                  <span className="font-arcade text-[10px] text-gold uppercase min-w-[140px] text-center truncate">
+                    {jornadaLabelText}
                   </span>
                   <button
                     onClick={handleNextMatchday}
-                    disabled={selectedMatchday === availableMatchdays[availableMatchdays.length - 1]}
+                    disabled={atLastJornada}
                     className="p-2.5 lg:p-1 text-grass-soft hover:bg-grass/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Next Matchday"
+                    title="Jornada siguiente"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -418,59 +505,84 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="primary"
                 onClick={handleSimulateMatchday}
-                disabled={batchSimulableUnplayed.length === 0 || isSavingMatch || isBatchProcessing}
+                disabled={!canSimulateJornada}
                 className="gap-2 hidden lg:inline-flex"
-                title="Simular toda la jornada actual"
+                title="Simular toda la jornada actual (resultado directo)"
               >
                 <Play className="w-4 h-4" />
-                <span className="hidden sm:inline">{isBatchProcessing ? 'Simulando...' : 'Simular Jornada'}</span>
-                <span className="sm:hidden">{isBatchProcessing ? '...' : 'Jornada'}</span>
+                <span>{isBatchProcessing ? 'Simulando...' : 'Simular Jornada'}</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSimulateMatchdayLive}
+                disabled={!canSimulateJornada}
+                className="gap-2 hidden lg:inline-flex"
+                title="Ver la jornada en vivo (hasta 12 partidos simultáneos)"
+              >
+                <Radio className="w-4 h-4" />
+                <span>Jornada en vivo</span>
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Matchday indicator: mobile only */}
-      {availableMatchdays.length > 0 && (
-        <div className="sm:hidden flex items-center justify-center gap-4">
-          <button
-            onClick={handlePrevMatchday}
-            disabled={selectedMatchday === 'all' || selectedMatchday === availableMatchdays[0]}
-            className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
-            aria-label="Jornada anterior"
+      {/* Matchday indicator + live action: mobile only */}
+      {jornadaGroups.length > 0 && (
+        <div className="sm:hidden space-y-3">
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={handlePrevMatchday}
+              disabled={atFirstJornada}
+              className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
+              aria-label="Jornada anterior"
+            >
+              ◀
+            </button>
+            <span className="font-arcade text-[10px] text-gold uppercase min-w-[140px] text-center truncate">
+              {jornadaLabelText}
+            </span>
+            <button
+              onClick={handleNextMatchday}
+              disabled={atLastJornada}
+              className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
+              aria-label="Jornada siguiente"
+            >
+              ▶
+            </button>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleSimulateMatchdayLive}
+            disabled={!canSimulateJornada}
+            className="gap-2 w-full"
           >
-            ◀
-          </button>
-          <span className="font-arcade text-[10px] text-gold uppercase min-w-[100px] text-center">
-            {selectedMatchday === 'all' ? 'Todas' : `Jornada ${selectedMatchday}`}
-          </span>
-          <button
-            onClick={handleNextMatchday}
-            disabled={selectedMatchday === availableMatchdays[availableMatchdays.length - 1]}
-            className="min-h-11 min-w-11 flex items-center justify-center text-gold disabled:opacity-30 font-arcade text-sm"
-            aria-label="Jornada siguiente"
-          >
-            ▶
-          </button>
+            <Radio className="w-4 h-4" />
+            <span>Jornada en vivo</span>
+          </Button>
         </div>
       )}
 
       {/* Two Column Layout: Upcoming vs Preview (60%-40%) */}
       <div className="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-6" {...swipeHandlers}>
         {/* Left Column: Upcoming Matches (60%) */}
-        <Card className="flex flex-col animate-slide-in lg:animate-none" key={String(selectedMatchday)}>
+        <Card className="flex flex-col animate-slide-in lg:animate-none" key={String(selectedJornadaIndex)}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 flex-wrap min-w-0">
               <Clock className="w-5 h-5 text-gold flex-shrink-0" />
               <span className="truncate">Próximos Partidos ({unplayedMatches.length})</span>
-              {selectedMatchday !== 'all' && (
+              {selectedJornada && (
                 <span className="px-2 py-1 font-arcade text-[10px] text-gold uppercase bg-grass/30 flex-shrink-0">
-                  J{selectedMatchday}
+                  {selectedJornada.phaseLabel} · {selectedJornada.label}
+                </span>
+              )}
+              {selectedJornada && (
+                <span className="px-2 py-1 font-arcade text-[10px] text-grass-soft uppercase flex-shrink-0">
+                  {selectedJornada.matches.filter((m) => m.match.isPlayed).length}/{selectedJornada.matches.length} jugados
                 </span>
               )}
             </CardTitle>
@@ -700,11 +812,9 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
           {involvesFavorite && (
             <Star className="w-4 h-4 text-gold fill-gold flex-shrink-0" aria-label="Equipo favorito" />
           )}
-          {match.matchday && (
-            <span className="px-2 py-1 font-arcade text-[10px] text-gold uppercase bg-grass/30 flex-shrink-0">
-              J{match.matchday}
-            </span>
-          )}
+          <span className="px-2 py-1 font-arcade text-[10px] text-gold uppercase bg-grass/30 flex-shrink-0">
+            J{matchCtx.displayJornada}
+          </span>
           <span className="text-xs text-grass-soft truncate">
             {region && `${region} • `}{groupName}
           </span>
