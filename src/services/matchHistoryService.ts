@@ -156,53 +156,6 @@ export const matchHistoryService = {
     return dbMatchToMatch(data);
   },
 
-  // Get all match history
-  async getAllMatches(limit = 100, offset = 0): Promise<MatchHistoryEntry[]> {
-    if (!isSupabaseConfigured()) {
-      return [];
-    }
-
-    // Para traer "todo", paginar con .range(): PostgREST recorta cualquier
-    // .limit() contra db-max-rows (1000 por defecto), así que pedir 100000 no
-    // desbloqueaba nada y las estadísticas se truncaban desde el segundo torneo
-    // (~900 partidos por torneo).
-    if (limit >= 10000) {
-      console.log('🔍 [matchHistoryService] Fetching ALL matches (paginated)...');
-      const pageSize = 1000;
-      const all: MatchHistoryEntry[] = [];
-
-      for (let page = 0; ; page++) {
-        const from = page * pageSize;
-        const { data, error } = await supabase
-          .from('match_history')
-          .select('*')
-          .order('played_at', { ascending: false })
-          .range(from, from + pageSize - 1);
-
-        if (error) {
-          console.error('❌ [matchHistoryService] Error fetching matches:', error);
-          throw error;
-        }
-
-        if (!data || data.length === 0) break;
-        all.push(...data.map(dbMatchToMatch));
-        if (data.length < pageSize) break;
-      }
-
-      console.log(`✅ [matchHistoryService] Fetched ${all.length} matches from database`);
-      return all;
-    }
-
-    const { data, error } = await supabase
-      .from('match_history')
-      .select('*')
-      .order('played_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) throw error;
-    return data.map(dbMatchToMatch);
-  },
-
   // Página keyset del historial (cursor sobre played_at DESC, id DESC).
   async getMatchesPage(
     { cursor, pageSize = 30, stage }: GetMatchesPageParams = {},
@@ -267,25 +220,6 @@ export const matchHistoryService = {
       .select('*')
       .eq('tournament_id', tournamentId)
       .order('played_at', { ascending: false });
-
-    if (error) throw error;
-    return data.map(dbMatchToMatch);
-  },
-
-  // Get matches by stage
-  async getMatchesByStage(
-    stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout'
-  ): Promise<MatchHistoryEntry[]> {
-    if (!isSupabaseConfigured()) {
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from('match_history')
-      .select('*')
-      .eq('stage', stage)
-      .order('played_at', { ascending: false })
-      .limit(100);
 
     if (error) throw error;
     return data.map(dbMatchToMatch);
