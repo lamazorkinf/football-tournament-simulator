@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import type { Team } from '../../../types';
+import type { Team, SimulatedMatchOutcome } from '../../../types';
 import { LiveMatchModal } from '../LiveMatchModal';
 import { useLiveMatchStore } from '../../../store/useLiveMatchStore';
 import { useTournamentStore } from '../../../store/useTournamentStore';
@@ -63,5 +63,29 @@ describe('LiveMatchModal', () => {
     });
     await screen.findByText('Saltar al final');
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('descarta el resultado de un partido si se abrió otro antes de resolver', async () => {
+    let resolveA!: (v: SimulatedMatchOutcome | null) => void;
+    const pendingA = new Promise<SimulatedMatchOutcome | null>((r) => { resolveA = r; });
+    useTournamentStore.setState({
+      simulateContinentalMatch: () => pendingA,
+      simulateKnockoutMatch: async () => ({ homeScore: 0, awayScore: 0, penalties: { homeScore: 4, awayScore: 2 } }),
+    });
+    render(<LiveMatchModal />);
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({ matchId: 'A', homeTeamId: 'h', awayTeamId: 'a', kind: 'continental' });
+    });
+    // se abre B (knockout) antes de que A resuelva
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({ matchId: 'B', homeTeamId: 'h', awayTeamId: 'a', kind: 'knockout' });
+    });
+    await screen.findByText('Saltar al final'); // B ya armó su timeline
+    // A resuelve tarde
+    await act(async () => { resolveA({ homeScore: 3, awayScore: 0 }); await pendingA; });
+    // debe seguir mostrándose B (0-0 con penales), NO A (3-0)
+    act(() => screen.getByText('Saltar al final').click());
+    expect(screen.getByText('0 - 0')).toBeInTheDocument();
+    expect(screen.queryByText('3 - 0')).not.toBeInTheDocument();
   });
 });

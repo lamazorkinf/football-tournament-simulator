@@ -45,6 +45,7 @@ export function LiveMatchModal() {
     startedRef.current = activeMatch.matchId;
 
     const run = async () => {
+      const matchId = activeMatch.matchId;
       let outcome: SimulatedMatchOutcome | null = null;
       switch (activeMatch.kind) {
         case 'qualifier':
@@ -61,12 +62,16 @@ export function LiveMatchModal() {
           outcome = await simulateConfederationsMatch(activeMatch.matchId);
           break;
       }
+      // Si mientras la simulación estaba en vuelo se cerró/abrió otro partido,
+      // descartamos el resultado: pintar acá pisaría el timeline del partido
+      // que ahora está activo (o mostraría datos de un modal ya cerrado).
+      if (startedRef.current !== matchId) return;
       if (!outcome) {
         setFailed(true);
         return;
       }
       setTimeline(
-        buildMatchTimeline(outcome.homeScore, outcome.awayScore, hashSeed(activeMatch.matchId), outcome.penalties),
+        buildMatchTimeline(outcome.homeScore, outcome.awayScore, hashSeed(matchId), outcome.penalties),
       );
     };
     void run();
