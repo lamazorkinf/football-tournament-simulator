@@ -495,33 +495,40 @@ export const normalizedTournamentService = {
   /**
    * Get the most recent tournament
    */
+  /**
+   * Torneo más reciente, o null SOLO si la base está realmente vacía.
+   *
+   * Los errores se propagan a propósito: desde que la app dejó de guardar en
+   * localStorage, `null` significa "primer arranque, hay que crear el torneo
+   * inicial". Si un fallo de red también devolviera null, cada arranque sin
+   * conexión crearía un torneo fantasma en vez de mostrar el error.
+   */
   async getLatestTournament(): Promise<{ tournament: Tournament; updatedAt: string | null } | null> {
     if (!isSupabaseConfigured()) {
       console.log('Supabase not configured, cannot load tournament');
       return null;
     }
 
-    try {
-      // Ordenar por updated_at (última jugada), no created_at: así "el último"
-      // es el torneo tocado más recientemente en cualquier dispositivo.
-      const { data, error } = await db
-        .tournaments_new()
-        .select('id, updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1);
+    // Ordenar por updated_at (última jugada), no created_at: así "el último"
+    // es el torneo tocado más recientemente en cualquier dispositivo.
+    const { data, error } = await db
+      .tournaments_new()
+      .select('id, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        return null;
-      }
-
-      const tournament = await loadTournamentFromNormalizedSchema(data[0].id);
-      if (!tournament) return null;
-      return { tournament, updatedAt: (data[0].updated_at as string | undefined) ?? null };
-    } catch (error) {
-      console.error('Error loading latest tournament:', error);
+    if (error) throw error;
+    if (!data || data.length === 0) {
       return null;
     }
+
+    const tournament = await loadTournamentFromNormalizedSchema(data[0].id);
+    // La fila existe pero su detalle no se pudo armar: es un fallo de carga,
+    // no una base vacía. Crear un torneo nuevo acá sería perder el existente.
+    if (!tournament) {
+      throw new Error(`No se pudo cargar el torneo ${data[0].id} desde la base.`);
+    }
+    return { tournament, updatedAt: (data[0].updated_at as string | undefined) ?? null };
   },
 
   /**

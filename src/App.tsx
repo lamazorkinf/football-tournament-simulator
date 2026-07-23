@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
+import { useLiveMatchStore } from './store/useLiveMatchStore';
+import { useLiveMatchdayStore } from './store/useLiveMatchdayStore';
+import { hydrateSettings } from './lib/hydrateSettings';
 import { useSidebarCollapse } from './hooks/useSidebarCollapse';
 import { TeamProfileProvider } from './hooks/useTeamProfile';
 import { StatsDashboard } from './components/tournament/StatsDashboard';
@@ -26,6 +29,7 @@ import { MatchResultsModal } from './components/ui/MatchResultsModal';
 import { GameTabBar } from './components/ui/GameTabBar';
 import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
+import { ConnectionError } from './components/ui/ConnectionError';
 import { MobileActionProvider } from './hooks/useMobileAction';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
@@ -34,8 +38,10 @@ function App() {
   const {
     teams,
     currentTournament,
+    initStatus,
     loadTeamsFromDatabase,
     initializeTournament,
+    refreshFromDatabase,
   } = useTournamentStore();
 
   const { isCollapsed } = useSidebarCollapse();
@@ -64,14 +70,41 @@ function App() {
     loadTeamsFromDatabase();
   }, [loadTeamsFromDatabase]);
 
-  // Reconcile local ↔ DB on mount: initializeTournament ahora reconcilia por
-  // recencia (no crea a ciegas) y es idempotente vía initializationInFlight,
-  // así que se llama incondicionalmente. Con currentTournament ya rehidratado
-  // desde localStorage, esta llamada es la que trae el estado más reciente de
-  // la DB (p. ej. lo jugado en otro dispositivo) y actualiza la vista.
+  // Preferencias (config del motor, favoritos, CRT): también viven en la DB.
+  useEffect(() => {
+    hydrateSettings();
+  }, []);
+
+  // Carga inicial desde la DB, la única fuente de verdad. Es idempotente vía
+  // initializationInFlight, así que se llama incondicionalmente.
   useEffect(() => {
     initializeTournament();
   }, [initializeTournament]);
+
+  // Al volver a la pestaña, recargar el torneo: pudo jugarse en otro
+  // dispositivo mientras esta pestaña quedaba con la copia en memoria vieja.
+  // Se saltea si hay una simulación en vivo abierta, para no pisar lo que se
+  // está jugando (refreshFromDatabase ya cubre los flags de batch/guardado).
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (useLiveMatchStore.getState().activeMatch) return;
+      if (useLiveMatchdayStore.getState().session) return;
+      refreshFromDatabase();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refreshFromDatabase]);
+
+  if (initStatus === 'error' || initStatus === 'unconfigured') {
+    return (
+      <>
+        <Scanlines />
+        <ConnectionError variant={initStatus} onRetry={initializeTournament} />
+      </>
+    );
+  }
 
   if (!currentTournament) {
     return (

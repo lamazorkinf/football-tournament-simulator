@@ -111,14 +111,11 @@ export interface TournamentListItem {
 }
 
 /**
- * Metadata de sincronización local por torneo (ver spec sync-multidispositivo).
- * `syncedUpdatedAt`: el updated_at que la DB reportó la última vez que ESTE
- * dispositivo guardó/cargó el torneo. `dirty`: hay cambios locales sin confirmar.
+ * Estado de la carga inicial contra la DB. La app no tiene copia local de
+ * respaldo: sin conexión no hay nada que mostrar, así que el arranque es un
+ * estado explícito y no un `currentTournament === null`.
  */
-export interface SyncMetaEntry {
-  syncedUpdatedAt: string | null;
-  dirty: boolean;
-}
+export type InitStatus = 'loading' | 'ready' | 'error' | 'unconfigured';
 
 export interface TournamentState {
   teams: Team[];
@@ -127,13 +124,15 @@ export interface TournamentState {
   currentTournament: Cycle | null; // Computed from currentTournamentId
   isSavingMatch: boolean; // Track if a match is being saved to prevent race conditions
   isBatchProcessing: boolean; // Track if batch processing is active to skip individual saves
-  syncMeta: Record<string, SyncMetaEntry>; // sync local↔DB por tournamentId
+  initStatus: InitStatus; // Carga inicial desde la DB (única fuente de verdad)
 
   // Actions
   loadTeamsFromDatabase: () => Promise<void>;
-  initializeTournament: () => void;
+  initializeTournament: () => Promise<void>;
+  refreshFromDatabase: () => Promise<void>;
   createNewTournament: (year: number) => Promise<void>;
-  selectTournament: (id: string) => void;
+  selectTournament: (id: string) => Promise<void>;
+  importTournament: (tournament: Cycle) => Promise<void>;
   deleteTournament: (id: string) => Promise<void>;
   recalculateTournamentPerformances: (tournamentId: string) => Promise<void>;
   resetCurrentTournamentMatches: () => Promise<void>;

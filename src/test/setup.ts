@@ -3,11 +3,13 @@ import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 /**
- * Los stores usan el middleware `persist` de Zustand, que necesita
- * localStorage. jsdom normalmente lo provee, pero en esta combinación
- * (jsdom 29 sobre Node >=24) delega en el `localStorage` nativo de Node, que
- * sin el flag `--localstorage-file` queda como un objeto presente pero sin
- * `setItem`/`getItem` reales. Por eso la guarda no puede limitarse a
+ * La app ya no persiste estado en localStorage (Supabase es la única fuente de
+ * verdad), pero sigue tocándolo para purgar y migrar lo que dejó el `persist`
+ * viejo, y los tests de esa migración lo necesitan funcionando. jsdom
+ * normalmente lo provee, pero en esta combinación (jsdom 29 sobre Node >=24)
+ * delega en el `localStorage` nativo de Node, que sin el flag
+ * `--localstorage-file` queda como un objeto presente pero sin `setItem`/
+ * `getItem` reales. Por eso la guarda no puede limitarse a
  * `typeof === 'undefined'`: hay que comprobar que el storage disponible sea
  * realmente funcional antes de confiar en él (y si no, instalar el stub en
  * memoria).

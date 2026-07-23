@@ -4,6 +4,12 @@ import { MotionConfig } from 'framer-motion'
 import './index.css'
 import App from './App.tsx'
 import { Toaster } from 'sonner'
+import { clearLegacyTournamentStorage } from './lib/hydrateSettings'
+
+// La app ya no persiste torneos en localStorage: Supabase es la única fuente de
+// verdad. Se borra la copia que dejó el `persist` viejo (las preferencias se
+// migran aparte, en hydrateSettings, antes de borrarse).
+clearLegacyTournamentStorage()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

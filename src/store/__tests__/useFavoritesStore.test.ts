@@ -1,11 +1,18 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useFavoritesStore } from '../useFavoritesStore';
+import { queueSettingsSave } from '../../lib/persistSettings';
+
+vi.mock('../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
 
 const favorites = () => useFavoritesStore.getState().favoriteTeamIds;
 
 describe('useFavoritesStore', () => {
   beforeEach(() => {
     useFavoritesStore.getState().clearFavorites();
+    vi.mocked(queueSettingsSave).mockClear();
   });
 
   it('arranca sin favoritos', () => {
@@ -30,12 +37,25 @@ describe('useFavoritesStore', () => {
     expect(favorites()).toEqual([]);
   });
 
-  it('persiste bajo la clave football-favorites', () => {
+  it('guarda los favoritos en la DB, no en localStorage', () => {
     useFavoritesStore.getState().toggleFavorite('arg');
-    const raw = localStorage.getItem('football-favorites');
-    expect(raw).toBeTruthy();
-    const parsed = JSON.parse(raw!);
-    expect(parsed.state.favoriteTeamIds).toEqual(['arg']);
-    expect(parsed.version).toBe(1);
+
+    expect(queueSettingsSave).toHaveBeenCalledWith({ favoriteTeamIds: ['arg'] });
+    expect(localStorage.getItem('football-favorites')).toBeNull();
+  });
+
+  it('clearFavorites también se propaga a la DB', () => {
+    useFavoritesStore.getState().toggleFavorite('arg');
+    vi.mocked(queueSettingsSave).mockClear();
+
+    useFavoritesStore.getState().clearFavorites();
+    expect(queueSettingsSave).toHaveBeenCalledWith({ favoriteTeamIds: [] });
+  });
+
+  it('applyFavorites escribe sin re-guardar (los datos vienen de la DB)', () => {
+    useFavoritesStore.getState().applyFavorites(['bra', 'ita']);
+
+    expect(favorites()).toEqual(['bra', 'ita']);
+    expect(queueSettingsSave).not.toHaveBeenCalled();
   });
 });

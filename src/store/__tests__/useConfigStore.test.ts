@@ -1,5 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useConfigStore } from '../useConfigStore';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { useConfigStore, DEFAULT_CONFIG } from '../useConfigStore';
+import { queueSettingsSave } from '../../lib/persistSettings';
+
+vi.mock('../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
 
 const config = () => useConfigStore.getState().config;
 
@@ -84,5 +90,43 @@ describe('importanceByStage', () => {
   it('updateImportance ignora valores no numéricos', () => {
     useConfigStore.getState().updateImportance('wcGroup', Number.NaN);
     expect(config().importanceByStage.wcGroup).toBe(1.25);
+  });
+});
+
+describe('persistencia en la DB', () => {
+  beforeEach(() => {
+    useConfigStore.getState().resetToDefaults();
+    useConfigStore.getState().applySettings({ scanlines: true });
+    vi.mocked(queueSettingsSave).mockClear();
+  });
+
+  it('cada cambio de config se encola para la DB, no para localStorage', () => {
+    useConfigStore.getState().updateKFactor(3);
+
+    expect(queueSettingsSave).toHaveBeenCalledWith({ engineConfig: config() });
+    expect(config().kFactor).toBe(3);
+    expect(localStorage.getItem('football-engine-config')).toBeNull();
+  });
+
+  it('un cambio rechazado no se encola', () => {
+    // Rango invertido: updateSkillLimits descarta el cambio.
+    useConfigStore.getState().updateSkillLimits(80, 20);
+
+    expect(queueSettingsSave).not.toHaveBeenCalled();
+  });
+
+  it('toggleScanlines encola sólo la preferencia visual', () => {
+    useConfigStore.getState().toggleScanlines();
+
+    expect(queueSettingsSave).toHaveBeenCalledWith({ scanlines: false });
+  });
+
+  it('applySettings escribe sin re-guardar (los datos vienen de la DB)', () => {
+    const stored = { ...DEFAULT_CONFIG, kFactor: 7 };
+    useConfigStore.getState().applySettings({ engineConfig: stored, scanlines: false });
+
+    expect(config().kFactor).toBe(7);
+    expect(useConfigStore.getState().scanlines).toBe(false);
+    expect(queueSettingsSave).not.toHaveBeenCalled();
   });
 });

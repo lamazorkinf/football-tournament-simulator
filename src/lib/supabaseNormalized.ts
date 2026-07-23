@@ -28,6 +28,7 @@ export const db = {
   matches_new: () => (supabase.from('matches_new') as any),
   team_tournament_skills: () => (supabase.from('team_tournament_skills') as any),
   tournament_cycle_state: () => (supabase.from('tournament_cycle_state') as any),
+  app_settings: () => (supabase.from('app_settings') as any),
 
   // Views
   qualifier_standings: () => (supabase.from('qualifier_standings') as any),

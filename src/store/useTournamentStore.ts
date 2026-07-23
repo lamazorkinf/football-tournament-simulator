@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import type { TournamentState, Team, Region, Tournament, Cycle, Group, Match, KnockoutMatch, WorldCupGroup, MatchdayOutcome } from '../types';
 import teamsData from '../data/teams.json';
 import { nanoid } from 'nanoid';
@@ -25,6 +24,7 @@ import {
   type GroupResult,
 } from '../core/cycle';
 import { isMatchPlayable, getPhaseMatches } from '../core/calendar';
+import { remapImportedCycleIds } from '../core/importCycle';
 import {
   initializeKnockoutBracket,
   areGroupsComplete,
@@ -49,7 +49,6 @@ import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
 import { supabase } from '../lib/supabase';
 import { getEngineConfig } from './useConfigStore';
-import { reconcile } from './syncReconcile';
 
 // Regresión hacia el skill base entre temporadas: evita que la caminata
 // aleatoria del Elo disperse los ratings indefinidamente tras muchas
@@ -97,30 +96,21 @@ function delay(ms: number): Promise<void> {
 
 /**
  * Guarda el torneo en Supabase (header + cycle_state, en ese orden por la FK) con
- * reintento corto. En éxito marca syncMeta[id] = { syncedUpdatedAt, dirty:false }.
- * En fallo definitivo deja dirty=true y avisa por toast (se re-empuja al recargar).
- * No-op si Supabase no está configurado (queda dirty para un futuro push).
+ * reintento corto. Devuelve true si se confirmó el guardado.
+ *
+ * No hay cola local de reintento: la DB es la única fuente de verdad, así que un
+ * fallo definitivo se avisa por toast y el cambio queda sólo en memoria hasta la
+ * próxima acción exitosa. Recargar la app descarta lo no guardado.
  */
-export async function persistTournamentWithSync(
-  tournament: Cycle,
-  set: any,
-  get: any,
-): Promise<void> {
-  void get; // no se usa: se recibe por paridad con updateTournamentInState/el resto del store.
-  if (!isSupabaseConfigured()) return;
+export async function persistTournament(tournament: Cycle): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
 
   const attempts = SAVE_RETRY_DELAYS_MS.length + 1;
   for (let i = 0; i < attempts; i++) {
     try {
-      const updatedAt = await adaptiveTournamentService.saveTournament(tournament);
+      await adaptiveTournamentService.saveTournament(tournament);
       await cycleStateService.saveCycleState(ensureCycleFields(tournament));
-      set((s: TournamentState) => ({
-        syncMeta: {
-          ...s.syncMeta,
-          [tournament.id]: { syncedUpdatedAt: updatedAt, dirty: false },
-        },
-      }));
-      return;
+      return true;
     } catch (error) {
       console.error(`Error guardando torneo (intento ${i + 1}/${attempts}):`, error);
       if (i < SAVE_RETRY_DELAYS_MS.length) {
@@ -129,22 +119,25 @@ export async function persistTournamentWithSync(
     }
   }
 
-  // Falló definitivamente: mantener dirty=true para re-empujar en la próxima carga.
-  set((s: TournamentState) => ({
-    syncMeta: {
-      ...s.syncMeta,
-      [tournament.id]: {
-        syncedUpdatedAt: s.syncMeta[tournament.id]?.syncedUpdatedAt ?? null,
-        dirty: true,
-      },
-    },
-  }));
-  useToastStore.getState().error('No se pudo sincronizar con la base. Reintentaré al recargar.');
+  useToastStore
+    .getState()
+    .error('No se pudo guardar en la base. Revisá la conexión: los cambios no persistirán.');
+  return false;
 }
 
 /**
- * Crea el torneo inicial (World Cup 2026) cuando no hay nada ni en la DB ni en
- * localStorage. Setea el estado y persiste con seed de syncMeta.
+ * Carga un torneo completo desde la DB: header + estado del ciclo. Sin row de
+ * cycle_state el torneo es legacy y reconstructCycle deriva la fase Mundial.
+ */
+async function loadCycleFromDatabase(id: string): Promise<Cycle | null> {
+  const tournament = await adaptiveTournamentService.loadTournament(id);
+  if (!tournament) return null;
+  const cycleState = await cycleStateService.loadCycleState(id);
+  return ensureCycleFields(reconstructCycle(tournament, cycleState));
+}
+
+/**
+ * Crea el torneo inicial (World Cup 2026) cuando la DB está vacía.
  */
 async function createFirstTournament(set: any, get: any): Promise<void> {
   const teamsWithTiers = updateTeamsTiers(get().teams);
@@ -179,11 +172,11 @@ async function createFirstTournament(set: any, get: any): Promise<void> {
     currentTournament: tournament,
   }));
 
-  await persistTournamentWithSync(tournament, set, get);
+  await persistTournament(tournament);
 }
 
 const updateTournamentInState = (set: any, get: any, updatedTournament: Tournament, skipDbSave = false) => {
-  // Update in tournaments list + marcar dirty sincrónicamente para este torneo.
+  // Update in tournaments list
   set((state: TournamentState) => ({
     tournaments: state.tournaments.map(t =>
       t.id === updatedTournament.id ? updatedTournament : t
@@ -191,21 +184,14 @@ const updateTournamentInState = (set: any, get: any, updatedTournament: Tourname
     currentTournament: state.currentTournamentId === updatedTournament.id
       ? updatedTournament
       : state.currentTournament,
-    syncMeta: {
-      ...state.syncMeta,
-      [updatedTournament.id]: {
-        syncedUpdatedAt: state.syncMeta[updatedTournament.id]?.syncedUpdatedAt ?? null,
-        dirty: true,
-      },
-    },
   }));
 
-  // Save to database (skip if in batch mode or explicitly disabled). persistTournamentWithSync
-  // encadena saveTournament → saveCycleState (orden requerido por la FK de cycle_state) y
-  // limpia dirty al confirmar; si falla, deja dirty=true + toast.
+  // Save to database (skip if in batch mode or explicitly disabled). persistTournament
+  // encadena saveTournament → saveCycleState (orden requerido por la FK de cycle_state)
+  // y avisa por toast si falla definitivamente.
   const state = get();
   if (isSupabaseConfigured() && !skipDbSave && !state.isBatchProcessing) {
-    void persistTournamentWithSync(updatedTournament as Cycle, set, get);
+    void persistTournament(updatedTournament as Cycle);
   }
 };
 
@@ -219,7 +205,6 @@ function importanceFor(stage: string | undefined, round: KnockoutMatch['round'] 
 }
 
 export const useTournamentStore = create<TournamentState>()(
-  persist(
     (set, get) => {
       return {
         teams: teamsData as Team[],
@@ -228,7 +213,7 @@ export const useTournamentStore = create<TournamentState>()(
         currentTournament: null,
         isSavingMatch: false,
         isBatchProcessing: false,
-        syncMeta: {},
+        initStatus: 'loading' as const,
 
       loadTeamsFromDatabase: async () => {
         if (!isSupabaseConfigured()) {
@@ -255,134 +240,79 @@ export const useTournamentStore = create<TournamentState>()(
         if (initializationInFlight) return initializationInFlight;
 
         initializationInFlight = (async () => {
-          const configured = isSupabaseConfigured();
-
-          // 1. Traer el torneo más reciente de la DB (por updated_at), si se puede.
-          //    db=null cubre tanto "DB vacía" como "offline/error" (getLatestTournament
-          //    atrapa el error y devuelve null): en ambos casos caemos a lo local.
-          let db: Cycle | null = null;
-          let dbUpdatedAt: string | null = null;
-          if (configured) {
-            try {
-              const latest = await adaptiveTournamentService.getLatestTournament();
-              if (latest) {
-                console.log(`Loaded latest tournament: ${latest.tournament.name}`);
-                // cycle_state persistido; sin row → torneo legacy (reconstructCycle
-                // deriva calendario de fase Mundial en vez de ofrecer "Sortear Continental").
-                const cycleState = await cycleStateService.loadCycleState(latest.tournament.id);
-                db = reconstructCycle(latest.tournament, cycleState);
-                dbUpdatedAt = latest.updatedAt;
-              }
-            } catch (error) {
-              console.error('Error loading tournament from database:', error);
-            }
-          }
-
-          // 2. Resolver la copia local candidata. Con db, la de la misma id; sin db,
-          //    la seleccionada (o la primera) rehidratada de localStorage.
-          const state = get();
-          const local = db
-            ? state.tournaments.find((t) => t.id === db!.id) ?? null
-            : state.tournaments.find((t) => t.id === state.currentTournamentId) ??
-              state.tournaments[0] ??
-              null;
-          const localMeta = local ? state.syncMeta[local.id] ?? null : null;
-
-          // 3. Reconciliar por recencia.
-          const result = reconcile({ local, localMeta, db, dbUpdatedAt });
-
-          if (result.action === 'create-new') {
-            await createFirstTournament(set, get);
+          if (!isSupabaseConfigured()) {
+            set({ initStatus: 'unconfigured' });
             return;
           }
 
-          const winner = ensureCycleFields(result.winner!);
-          // dirty: 'push-local' → true (a punto de reintentar el push, ver abajo).
-          // 'use-local-offline' → preservar el dirty previo: seguimos sin poder
-          // confirmar contra la DB, así que si ya había cambios sin subir deben
-          // seguir marcados (si no, una futura carga "en sync" los pisaría en
-          // silencio creyendo que la DB ya los tiene). 'use-db' → false: el
-          // ganador es la copia canónica del servidor.
-          const dirty =
-            result.action === 'push-local'
-              ? true
-              : result.action === 'use-local-offline'
-                ? localMeta?.dirty ?? false
-                : false;
-          set((s: TournamentState) => ({
-            tournaments: mergeTournament(s.tournaments, winner),
-            currentTournamentId: winner.id,
-            currentTournament: winner,
-            syncMeta: {
-              ...s.syncMeta,
-              [winner.id]: {
-                syncedUpdatedAt: result.syncedUpdatedAt,
-                dirty,
-              },
-            },
-          }));
+          set({ initStatus: 'loading' });
 
-          if (result.action === 'use-db') {
+          try {
+            // 1. Torneo activo: el más reciente por updated_at.
+            const latest = await adaptiveTournamentService.getLatestTournament();
+
+            // DB alcanzable pero vacía → primer arranque de la app.
+            if (!latest) {
+              await createFirstTournament(set, get);
+              set({ initStatus: 'ready' });
+              return;
+            }
+
+            console.log(`Loaded latest tournament: ${latest.tournament.name}`);
+            // cycle_state persistido; sin row → torneo legacy (reconstructCycle
+            // deriva calendario de fase Mundial en vez de ofrecer "Sortear Continental").
+            const cycleState = await cycleStateService.loadCycleState(latest.tournament.id);
+            const current = ensureCycleFields(reconstructCycle(latest.tournament, cycleState));
+
+            set((s: TournamentState) => ({
+              tournaments: mergeTournament(s.tournaments, current),
+              currentTournamentId: current.id,
+              currentTournament: current,
+              initStatus: 'ready' as const,
+            }));
+
             // Backfill best-effort: exponer en H2H los partidos continental/confed
             // ya jugados (antes de que se normalizaran a match_history).
-            backfillCycleMatchHistory(winner, get().teams)
+            backfillCycleMatchHistory(current, get().teams)
               .then((n) => { if (n > 0) console.log(`🔁 Backfill continental/confed: +${n} partidos`); })
               .catch((error) => console.error('Backfill continental/confed falló:', error));
+          } catch (error) {
+            // Sin copia local de respaldo: la DB es la única fuente de verdad, así
+            // que un fallo de red es un estado de error visible, no un fallback
+            // silencioso a datos viejos.
+            console.error('Error cargando el torneo desde la base de datos:', error);
+            set({ initStatus: 'error' });
+            return;
           }
 
-          if (result.action === 'push-local') {
-            // Este dispositivo tenía cambios sin subir (save fallido/offline) → re-empujar.
-            await persistTournamentWithSync(winner, set, get);
-          }
+          // 2. Poblar el selector con TODOS los torneos de la DB. El paso 1 sólo
+          //    trae el más reciente (el activo). Este paso es best-effort: si
+          //    falla, la app ya es usable con el torneo activo.
+          try {
+            const summaries = await adaptiveTournamentService.getTournamentsList();
+            const known = new Set(get().tournaments.map((t) => t.id));
+            const missingIds = summaries.map((s) => s.id).filter((id) => !known.has(id));
 
-          // 4. Poblar el selector con TODOS los torneos de la DB. Los pasos 1-3
-          //    sólo reconcilian el más reciente (para currentTournament), así
-          //    que un navegador nuevo (localStorage vacío) se quedaba con ese
-          //    único torneo. Acá traemos el resto y los agregamos a la lista.
-          //    Los torneos ya presentes en el store NO se pisan: preservan el
-          //    ganador recién reconciliado y cualquier cambio local sin subir.
-          if (configured) {
-            try {
-              const summaries = await adaptiveTournamentService.getTournamentsList();
-              const known = new Set(get().tournaments.map((t) => t.id));
-              const missingIds = summaries.map((s) => s.id).filter((id) => !known.has(id));
+            // Cada id faltante se carga en paralelo (torneo + cycle_state):
+            // son N round-trips independientes; en serie demoraban el arranque
+            // del selector linealmente con la cantidad de torneos.
+            const loaded = (await Promise.all(missingIds.map(loadCycleFromDatabase))).filter(
+              (c): c is Cycle => c !== null,
+            );
 
-              // Cada id faltante se carga en paralelo (torneo + cycle_state):
-              // son N round-trips independientes; en serie demoraban el arranque
-              // del selector linealmente con la cantidad de torneos.
-              const loaded = (
-                await Promise.all(
-                  missingIds.map(async (id) => {
-                    const t = await adaptiveTournamentService.loadTournament(id);
-                    if (!t) return null;
-                    // Cada torneo con su cycle_state (continental/confed/calendar);
-                    // sin row → legacy, reconstructCycle deriva la fase Mundial.
-                    const cs = await cycleStateService.loadCycleState(id);
-                    return ensureCycleFields(reconstructCycle(t, cs));
-                  }),
-                )
-              ).filter((c): c is Cycle => c !== null);
-
-              if (loaded.length > 0) {
-                set((s: TournamentState) => {
-                  const have = new Set(s.tournaments.map((t) => t.id));
-                  const toAdd = loaded.filter((t) => !have.has(t.id));
-                  if (toAdd.length === 0) return {};
-                  return {
-                    tournaments: [...s.tournaments, ...toAdd].sort((a, b) => b.year - a.year),
-                    syncMeta: {
-                      ...s.syncMeta,
-                      ...Object.fromEntries(
-                        toAdd.map((t) => [t.id, { syncedUpdatedAt: null, dirty: false }]),
-                      ),
-                    },
-                  };
-                });
-                console.log(`📋 Selector: +${loaded.length} torneos cargados de la DB`);
-              }
-            } catch (error) {
-              console.error('Error cargando la lista completa de torneos:', error);
+            if (loaded.length > 0) {
+              set((s: TournamentState) => {
+                const have = new Set(s.tournaments.map((t) => t.id));
+                const toAdd = loaded.filter((t) => !have.has(t.id));
+                if (toAdd.length === 0) return {};
+                return {
+                  tournaments: [...s.tournaments, ...toAdd].sort((a, b) => b.year - a.year),
+                };
+              });
+              console.log(`📋 Selector: +${loaded.length} torneos cargados de la DB`);
             }
+          } catch (error) {
+            console.error('Error cargando la lista completa de torneos:', error);
           }
         })();
 
@@ -390,6 +320,36 @@ export const useTournamentStore = create<TournamentState>()(
           await initializationInFlight;
         } finally {
           initializationInFlight = null;
+        }
+      },
+
+      /**
+       * Recarga desde la DB el torneo seleccionado. Se usa al volver a la
+       * pestaña: sin caché local, la copia en memoria es lo único que puede
+       * quedar viejo si se jugó en otro dispositivo.
+       *
+       * Es no-op mientras hay una simulación en curso: pisar el estado a mitad
+       * de una jornada perdería los partidos que se están jugando.
+       */
+      refreshFromDatabase: async () => {
+        const state = get();
+        if (state.isBatchProcessing || state.isSavingMatch) return;
+        if (!isSupabaseConfigured() || state.initStatus !== 'ready') return;
+        if (!state.currentTournamentId) return;
+
+        try {
+          const fresh = await loadCycleFromDatabase(state.currentTournamentId);
+          if (!fresh) return;
+          set((s: TournamentState) => {
+            // El torneo pudo cambiar mientras viajaba la respuesta.
+            if (s.currentTournamentId !== fresh.id) return {};
+            return {
+              tournaments: mergeTournament(s.tournaments, fresh),
+              currentTournament: fresh,
+            };
+          });
+        } catch (error) {
+          console.error('No se pudo refrescar el torneo desde la base:', error);
         }
       },
 
@@ -442,14 +402,8 @@ export const useTournamentStore = create<TournamentState>()(
           if (isSupabaseConfigured()) {
             try {
               progress.updateProgress('Guardando torneo en base de datos...', 4);
-              const createdUpdatedAt = await adaptiveTournamentService.saveTournament(tournament);
+              await adaptiveTournamentService.saveTournament(tournament);
               await cycleStateService.saveCycleState(tournament);
-              set((s: TournamentState) => ({
-                syncMeta: {
-                  ...s.syncMeta,
-                  [tournament.id]: { syncedUpdatedAt: createdUpdatedAt, dirty: false },
-                },
-              }));
               console.log(`Tournament ${year} created and saved to database`);
 
               // Save empty qualifier groups to database
@@ -506,16 +460,89 @@ export const useTournamentStore = create<TournamentState>()(
         }
       },
 
-      selectTournament: (id: string) => {
-        const state = get();
-        const tournament = state.tournaments.find(t => t.id === id);
-        if (tournament) {
-          set({
-            currentTournamentId: id,
-            currentTournament: tournament
+      /**
+       * Cambia de torneo recargándolo desde la DB. La copia en memoria puede
+       * ser vieja (se jugó ese torneo en otro dispositivo), así que se refresca
+       * antes de mostrarlo; si la carga falla se usa la copia que ya teníamos
+       * para no dejar la app sin torneo.
+       */
+      selectTournament: async (id: string) => {
+        const cached = get().tournaments.find((t) => t.id === id);
+        if (!cached) return;
+
+        // Cambio inmediato para que la UI responda; el refresco lo pisa al llegar.
+        set({ currentTournamentId: id, currentTournament: cached });
+        console.log(`Switched to tournament: ${cached.name}`);
+
+        if (!isSupabaseConfigured()) return;
+        try {
+          const fresh = await loadCycleFromDatabase(id);
+          if (!fresh) return;
+          set((s: TournamentState) => {
+            if (s.currentTournamentId !== id) return {}; // ya cambió de torneo otra vez
+            return {
+              tournaments: mergeTournament(s.tournaments, fresh),
+              currentTournament: fresh,
+            };
           });
-          console.log(`Switched to tournament: ${tournament.name}`);
+        } catch (error) {
+          console.error('No se pudo recargar el torneo seleccionado:', error);
         }
+      },
+
+      /**
+       * Alta de un torneo importado desde un archivo. Todos los ids se
+       * renuevan (ver remapImportedCycleIds) para que un export hecho desde
+       * esta misma base cree un torneo aparte en vez de robarle los grupos y
+       * partidos al original.
+       */
+      importTournament: async (tournament: Cycle) => {
+        if (!isSupabaseConfigured()) {
+          throw new Error('Supabase no está configurado: no se puede importar.');
+        }
+
+        const imported = ensureCycleFields(remapImportedCycleIds(tournament));
+
+        const saved = await persistTournament(imported);
+        if (!saved) {
+          throw new Error('No se pudo guardar el torneo importado en la base de datos.');
+        }
+
+        // Las clasificatorias viven en tablas normalizadas, no en el JSONB del
+        // ciclo: sin este paso el torneo importado se recargaría sin grupos.
+        // Los partidos ya jugados entran con su resultado y el trigger de
+        // matches_new reconstruye las posiciones.
+        //
+        // Si esta parte falla, el header ya está insertado: se borra (el CASCADE
+        // limpia lo que hubiera quedado a medio escribir) para no dejar en la
+        // base un torneo fantasma sin grupos mientras la UI informa el fallo.
+        const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
+        try {
+          await Promise.all(
+            regions.map((region) =>
+              normalizedQualifiersService.createQualifierGroups(
+                imported.id,
+                region,
+                imported.qualifiers[region],
+              ),
+            ),
+          );
+        } catch (error) {
+          console.error('Falló la importación de las clasificatorias, revirtiendo:', error);
+          await adaptiveTournamentService
+            .deleteTournament(imported.id)
+            .catch((cleanupError) =>
+              console.error('No se pudo revertir el torneo importado:', cleanupError),
+            );
+          throw new Error('No se pudieron guardar las clasificatorias del torneo importado.');
+        }
+
+        set((s: TournamentState) => ({
+          tournaments: [imported, ...s.tournaments].sort((a, b) => b.year - a.year),
+          currentTournamentId: imported.id,
+          currentTournament: imported,
+        }));
+        console.log(`Torneo importado: ${imported.name} (${imported.id})`);
       },
 
       deleteTournament: async (id: string) => {
@@ -562,12 +589,6 @@ export const useTournamentStore = create<TournamentState>()(
           currentTournamentId: newCurrentId,
           currentTournament: newCurrentTournament
         }));
-
-        set((s: TournamentState) => {
-          const nextSyncMeta = { ...s.syncMeta };
-          delete nextSyncMeta[id];
-          return { syncMeta: nextSyncMeta };
-        });
       },
 
       recalculateTournamentPerformances: async (tournamentId: string) => {
@@ -1851,9 +1872,9 @@ export const useTournamentStore = create<TournamentState>()(
               }
 
               // Asegurar que el torneo existe en la base ANTES de los grupos:
-              // si el torneo viene del localStorage (p.ej. tras cambiar de
-              // proyecto Supabase) su id no está en tournaments_new y el insert
-              // de grupos violaba la FK (23503). saveTournament hace upsert.
+              // si su id no está en tournaments_new (p.ej. sólo en memoria, o
+              // tras cambiar de proyecto Supabase) el insert de grupos violaba
+              // la FK (23503). saveTournament hace upsert.
               await adaptiveTournamentService.saveTournament(updatedTournament);
 
               await Promise.all(
@@ -2518,78 +2539,5 @@ export const useTournamentStore = create<TournamentState>()(
         updateTournamentInState(set, get, updated);
       },
       };
-    },
-    {
-      name: 'football-tournament-storage',
-      version: 11, // v11: agrega syncMeta (reconciliación local↔DB por recencia).
-      // Storage que tolera errores: setItem puede lanzar QuotaExceededError
-      // (cuota de ~5MB) al acumular temporadas, o fallar en modo privado. Sin
-      // este try/catch, la excepción rompía la acción que disparó el guardado.
-      storage: createJSONStorage(() => ({
-        getItem: (name) => {
-          try {
-            return localStorage.getItem(name);
-          } catch {
-            return null;
-          }
-        },
-        setItem: (name, value) => {
-          try {
-            localStorage.setItem(name, value);
-          } catch (error) {
-            console.warn('⚠️ No se pudo persistir el estado en localStorage:', error);
-          }
-        },
-        removeItem: (name) => {
-          try {
-            localStorage.removeItem(name);
-          } catch {
-            /* noop */
-          }
-        },
-      })),
-      partialize: (state) => ({
-        tournaments: state.tournaments,
-        currentTournamentId: state.currentTournamentId,
-        syncMeta: state.syncMeta,
-      }),
-      migrate: (persistedState, version) => {
-        if (version < 10) {
-          return { tournaments: [], currentTournamentId: null, syncMeta: {} };
-        }
-        const previous = (persistedState ?? {}) as {
-          tournaments?: Cycle[];
-          currentTournamentId?: string | null;
-          syncMeta?: Record<string, import('../types').SyncMetaEntry>;
-        };
-        return {
-          tournaments: previous.tournaments ?? [],
-          currentTournamentId: previous.currentTournamentId ?? null,
-          syncMeta: previous.syncMeta ?? {},
-        };
-      },
-      onRehydrateStorage: () => (state) => {
-        // currentTournament no se persiste (es derivado), así que hay que
-        // reconstruirlo desde currentTournamentId. Sin esto la app arrancaba
-        // siempre sin torneo activo y volvía a inicializar desde cero.
-        if (!state) return;
-
-        // Backfill defensivo: torneos persistidos antes del ciclo continental
-        // no tienen continental/confederationsCup/calendar.
-        state.tournaments = state.tournaments.map(ensureCycleFields);
-
-        if (state.currentTournament) return;
-
-        const found =
-          state.tournaments.find((t) => t.id === state.currentTournamentId) ??
-          state.tournaments[0];
-
-        if (found) {
-          const restored = ensureCycleFields(found);
-          state.currentTournament = restored;
-          state.currentTournamentId = restored.id;
-        }
-      },
     }
-  )
 );

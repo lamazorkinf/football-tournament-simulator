@@ -3,18 +3,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Download, Upload, FileJson, AlertCircle } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
-
-// Debe coincidir con la version del middleware persist en useTournamentStore.
-const STORAGE_KEY = 'football-tournament-storage';
-const STORAGE_VERSION = 8;
+import type { Cycle } from '../../types';
 
 const REGIONS = ['Europe', 'America', 'Africa', 'Asia'] as const;
 
 /**
  * Valida la FORMA del JSON importado, no solo la presencia de campos. Antes
  * bastaba con que existieran `version`, `teams` y `tournament`: un JSON con
- * `teams: "hola"` pasaba, se escribía en localStorage y el store crasheaba al
- * arrancar en un bucle de recarga, sin estado válido al que volver.
+ * `teams: "hola"` pasaba, se guardaba y el store crasheaba al arrancar en un
+ * bucle de recarga, sin estado válido al que volver.
  */
 function validateImportData(data: unknown): string | null {
   if (!data || typeof data !== 'object') return 'El archivo no es un objeto JSON válido.';
@@ -48,9 +45,10 @@ function validateImportData(data: unknown): string | null {
 }
 
 export function ExportImport() {
-  const { teams, currentTournament } = useTournamentStore();
+  const { teams, tournaments, currentTournament, importTournament } = useTournamentStore();
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleExport = () => {
     const data = {
@@ -81,40 +79,29 @@ export function ExportImport() {
     setImportSuccess(false);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
+      setIsImporting(true);
       try {
         const content = e.target?.result as string;
         const data = JSON.parse(content);
 
-        // Validar la forma completa antes de tocar localStorage.
+        // Validar la forma completa antes de escribir en la base.
         const validationError = validateImportData(data);
         if (validationError) {
           throw new Error(validationError);
         }
 
-        // Escribir en el formato que el store persiste HOY: partialize guarda
-        // { tournaments, currentTournamentId } bajo la version actual. El
-        // formato viejo ({ teams, currentTournament }, version 1) ya no era
-        // compatible y migrate lo habría descartado.
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({
-            state: {
-              tournaments: [data.tournament],
-              currentTournamentId: data.tournament.id,
-            },
-            version: STORAGE_VERSION,
-          })
-        );
-
+        // El torneo se da de alta en la base (con id nuevo) y queda
+        // seleccionado. No hace falta recargar la página: la DB es la única
+        // fuente de verdad y el store ya refleja el alta.
+        await importTournament(data.tournament as Cycle);
         setImportSuccess(true);
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
       } catch (error) {
         setImportError(
           error instanceof Error ? error.message : 'Failed to import tournament'
         );
+      } finally {
+        setIsImporting(false);
       }
     };
 
@@ -196,8 +183,8 @@ export function ExportImport() {
           <div>
             <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Load Tournament Data</h3>
             <p className="text-sm text-grass-soft mb-4">
-              Import a previously exported tournament file. This will replace all current
-              data.
+              Import a previously exported tournament file. It is added to the database as a new
+              tournament and selected right away.
             </p>
 
             <div className="border-2 border-dashed border-grass p-8 text-center hover:border-gold transition-colors">
@@ -205,6 +192,7 @@ export function ExportImport() {
                 type="file"
                 accept=".json"
                 onChange={handleImport}
+                disabled={isImporting}
                 className="hidden"
                 id="import-file"
               />
@@ -214,7 +202,7 @@ export function ExportImport() {
               >
                 <Upload className="w-12 h-12 text-grass-soft" />
                 <span className="text-sm font-medium text-white">
-                  Click to select a file
+                  {isImporting ? 'Importing…' : 'Click to select a file'}
                 </span>
                 <span className="text-xs text-grass-soft">JSON files only</span>
               </label>
@@ -238,7 +226,7 @@ export function ExportImport() {
                 <div>
                   <p className="font-medium text-led">Import Successful!</p>
                   <p className="text-sm text-grass-soft">
-                    Tournament loaded. Page will reload...
+                    Tournament saved to the database and selected.
                   </p>
                 </div>
               </div>
@@ -248,8 +236,8 @@ export function ExportImport() {
           <div className="bg-black/40 border-2 border-gold p-4 text-sm">
             <p className="text-gold font-medium mb-1">⚠️ Warning:</p>
             <ul className="text-grass-soft space-y-1">
-              <li>• Importing will replace ALL current tournament data</li>
-              <li>• Make sure to export current progress before importing</li>
+              <li>• The imported tournament is added alongside your existing ones</li>
+              <li>• It gets a fresh id, so it never overwrites a tournament you already have</li>
               <li>• Only import files from trusted sources</li>
             </ul>
           </div>
@@ -279,8 +267,10 @@ export function ExportImport() {
               </p>
             </div>
             <div>
-              <p className="text-grass-soft mb-1">Storage Version</p>
-              <p className="font-semibold text-lg text-led font-terminal tabular-nums">1.0</p>
+              <p className="text-grass-soft mb-1">Stored Tournaments</p>
+              <p className="font-semibold text-lg text-led font-terminal tabular-nums">
+                {tournaments.length}
+              </p>
             </div>
           </div>
         </CardContent>
