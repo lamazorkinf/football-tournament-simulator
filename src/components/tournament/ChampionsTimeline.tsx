@@ -31,6 +31,17 @@ function competitionLabel(row: ChampionHistoryRow): string {
   return KIND_LABELS[row.kind];
 }
 
+// Nombre del equipo filtrado según el puesto real en que aparece (no siempre es campeón).
+function teamNameFor(rows: ChampionHistoryRow[], teamId: string): string {
+  for (const r of rows) {
+    if (r.championId === teamId) return r.championName ?? teamId.toUpperCase();
+    if (r.runnerUpId === teamId) return r.runnerUpName ?? teamId.toUpperCase();
+    if (r.thirdId === teamId) return r.thirdName ?? teamId.toUpperCase();
+    if (r.fourthId === teamId) return r.fourthName ?? teamId.toUpperCase();
+  }
+  return teamId.toUpperCase();
+}
+
 interface ChampionsTimelineProps {
   rows: ChampionHistoryRow[];
   teamFilter: string | null;
@@ -61,12 +72,6 @@ export function ChampionsTimeline({
   };
   const visible = filterTimeline(rows, filters);
 
-  const teamName = teamFilter
-    ? rows.find((r) =>
-        [r.championId, r.runnerUpId, r.thirdId, r.fourthId].includes(teamFilter),
-      )
-    : null;
-
   return (
     <div className="space-y-4">
       {/* Filtros */}
@@ -94,7 +99,7 @@ export function ChampionsTimeline({
           onClick={onClearTeamFilter}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 border-2 border-gold text-gold font-arcade text-[9px] uppercase"
         >
-          Equipo: {teamName?.championName ?? teamName?.runnerUpName ?? teamFilter.toUpperCase()}
+          Equipo: {teamNameFor(rows, teamFilter)}
           <X className="w-3 h-3" />
         </button>
       )}
@@ -135,13 +140,13 @@ function TimelineRow({
   onOpenTournament: () => void;
 }) {
   const score = formatFinalScore(row);
-  const teamOf = (id: string | null, name: string | null): Team | null =>
-    id ? { id, name: name ?? id, flag: '', region: 'Europe', skill: 0 } : null;
+  const teamOf = (id: string | null, name: string | null, region: string | null): Team | null =>
+    id ? { id, name: name ?? id, flag: '', region: (region ?? 'Europe') as Region, skill: 0 } : null;
 
-  const champion = teamOf(row.championId, row.championName);
-  const runnerUp = teamOf(row.runnerUpId, row.runnerUpName);
-  const third = teamOf(row.thirdId, row.thirdName);
-  const fourth = teamOf(row.fourthId, row.fourthName);
+  const champion = teamOf(row.championId, row.championName, row.championRegion);
+  const runnerUp = teamOf(row.runnerUpId, row.runnerUpName, row.runnerUpRegion);
+  const third = teamOf(row.thirdId, row.thirdName, row.thirdRegion);
+  const fourth = teamOf(row.fourthId, row.fourthName, row.fourthRegion);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-grass-dark/40 border-2 border-grass hover:bg-grass/30 transition-colors">

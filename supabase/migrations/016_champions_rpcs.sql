@@ -23,7 +23,10 @@ RETURNS TABLE (
   runner_up_name TEXT,
   third_name TEXT,
   fourth_name TEXT,
-  champion_region TEXT
+  champion_region TEXT,
+  runner_up_region TEXT,
+  third_region TEXT,
+  fourth_region TEXT
 )
 LANGUAGE sql STABLE
 AS $$
@@ -110,7 +113,10 @@ AS $$
     tr.name AS runner_up_name,
     t3.name AS third_name,
     t4.name AS fourth_name,
-    tc.region AS champion_region
+    tc.region AS champion_region,
+    tr.region AS runner_up_region,
+    t3.region AS third_region,
+    t4.region AS fourth_region
   FROM flat f
   LEFT JOIN teams tc ON tc.id = f.champion_id
   LEFT JOIN teams tr ON tr.id = f.runner_up_id

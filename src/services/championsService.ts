@@ -12,10 +12,13 @@ export interface ChampionHistoryRow {
   championRegion: string | null;
   runnerUpId: string | null;
   runnerUpName: string | null;
+  runnerUpRegion: string | null;
   thirdId: string | null;
   thirdName: string | null;
+  thirdRegion: string | null;
   fourthId: string | null;
   fourthName: string | null;
+  fourthRegion: string | null;
   championScore: number | null;
   runnerUpScore: number | null;
   championPen: number | null;
@@ -103,10 +106,13 @@ export const championsService = {
       championRegion: r.champion_region ?? null,
       runnerUpId: r.runner_up_id ?? null,
       runnerUpName: r.runner_up_name ?? null,
+      runnerUpRegion: r.runner_up_region ?? null,
       thirdId: r.third_id ?? null,
       thirdName: r.third_name ?? null,
+      thirdRegion: r.third_region ?? null,
       fourthId: r.fourth_id ?? null,
       fourthName: r.fourth_name ?? null,
+      fourthRegion: r.fourth_region ?? null,
       championScore: numOrNull(r.champion_score),
       runnerUpScore: numOrNull(r.runner_up_score),
       championPen: numOrNull(r.champion_pen),
