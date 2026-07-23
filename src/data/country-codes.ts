@@ -60,19 +60,26 @@ export const COUNTRY_CODES: Record<string, string> = {
 };
 
 /**
- * Tamaños de bandera disponibles y su equivalente en flagcdn.
- * Todos respetan el ratio 4:3 con el que TeamFlag dibuja la imagen, así que la
- * bandera llena el recuadro sin deformarse.
+ * Ancho de imagen que se le pide a flagcdn para cada tamaño de render.
+ *
+ * Se usa el formato w{N}, que devuelve la bandera plana y rectangular — el
+ * mismo estilo que el proveedor anterior. El otro formato de flagcdn (WxH)
+ * entrega la bandera con efecto de tela ondeando, que no pega con el resto de
+ * la interfaz.
+ *
+ * De los anchos que publica flagcdn (20, 40, 80, 160, 320…) se elige el
+ * primero que cubra el doble del tamaño de render, para que la imagen no se
+ * vea borrosa en pantallas retina.
  */
-const FLAG_SIZES = {
-  16: '16x12',
-  24: '24x18',
-  32: '32x24',
-  48: '48x36',
-  64: '64x48',
+const FLAG_WIDTHS = {
+  16: 'w40',
+  24: 'w80',
+  32: 'w80',
+  48: 'w160',
+  64: 'w160',
 } as const;
 
-export type FlagSize = keyof typeof FLAG_SIZES;
+export type FlagSize = keyof typeof FLAG_WIDTHS;
 
 /**
  * Devuelve la URL de la bandera de un equipo.
@@ -81,8 +88,12 @@ export type FlagSize = keyof typeof FLAG_SIZES;
  * de la base — guardarla ahí fue lo que dejó podrido el parche anterior de las
  * banderas británicas cuando el proveedor cambió.
  *
+ * Cada bandera viene en su proporción real (Suiza es cuadrada, Nepal es más
+ * alta que ancha), así que TeamFlag la centra dentro del recuadro en vez de
+ * estirarla.
+ *
  * @param teamId - ID del equipo en nuestro sistema
- * @param size - Alto/ancho pedido, en el ratio 4:3 que usa TeamFlag
+ * @param size - Ancho al que TeamFlag va a dibujar la bandera
  * @returns URL de la imagen, o cadena vacía si el equipo no tiene código
  */
 export function getFlagUrl(teamId: string, size: FlagSize = 64): string {
@@ -91,5 +102,5 @@ export function getFlagUrl(teamId: string, size: FlagSize = 64): string {
     console.warn(`No country code found for team: ${teamId}`);
     return '';
   }
-  return `https://flagcdn.com/${FLAG_SIZES[size]}/${code}.png`;
+  return `https://flagcdn.com/${FLAG_WIDTHS[size]}/${code}.png`;
 }

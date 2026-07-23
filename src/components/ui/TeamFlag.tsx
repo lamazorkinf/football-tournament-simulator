@@ -47,13 +47,16 @@ export function TeamFlag({
     );
   }
 
+  // El recuadro es 4:3, pero cada bandera trae su proporción real: con
+  // objectFit contain entra entera y centrada en vez de estirarse (Suiza es
+  // cuadrada, Nepal es más alta que ancha).
   return (
     <img
       src={flagUrl}
       alt={`${teamName} flag`}
       title={teamName}
       className={`inline-block outline outline-2 outline-white ${className} ${clickable || onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-      style={{ width: size, height: size * 0.75, imageRendering: 'pixelated' }} // Maintain 4:3 aspect ratio
+      style={{ width: size, height: size * 0.75, objectFit: 'contain', imageRendering: 'pixelated' }}
       loading="lazy"
       onClick={onClick}
       onError={() => setHasError(true)}

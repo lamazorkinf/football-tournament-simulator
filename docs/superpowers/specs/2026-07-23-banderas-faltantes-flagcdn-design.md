@@ -23,25 +23,34 @@ la abreviatura.
 
 ## Evidencia
 
-Se probaron los 211 códigos del mapa contra ambos CDNs:
+Se probaron los 211 códigos del mapa contra ambos CDNs (el mapa tiene 211 entradas para 210
+equipos: `asa` quedó sin equipo asociado):
 
-| Proveedor          | Cobertura                       | Formato                                          |
-| ------------------ | ------------------------------- | ------------------------------------------------ |
-| flagsapi.com (hoy) | **206/211** — fallan los 5 de arriba | PNG 64×64 cuadrado                          |
-| flagcdn.com        | **211/211**                     | PNG 64×48 nativo, ratio 4:3 exacto                |
+| Proveedor          | Cobertura                            |
+| ------------------ | ------------------------------------ |
+| flagsapi.com (hoy) | **206/211** — fallan los 5 de arriba |
+| flagcdn.com        | **211/211**                          |
+
+flagcdn publica dos formatos, y la diferencia importa:
+
+- `{W}x{H}` — ratio 4:3 exacto, pero la bandera viene con **efecto de tela ondeando** y sombra.
+- `w{N}` — bandera **plana y rectangular**, el mismo estilo que servía FlagsAPI, en la
+  proporción real de cada país (Suiza cuadrada, Nepal más alta que ancha).
+
+Se usa `w{N}`: mantener el estilo plano de la interfaz pesa más que el ratio uniforme. Los
+anchos disponibles son 20, 40, 80, 160, 320…; se elige el primero que cubra el doble del tamaño
+de render, para no ver la imagen borrosa en pantallas retina.
 
 `TeamFlag` renderiza con `style={{ width: size, height: size * 0.75 }}`, es decir 4:3. Los PNG
-cuadrados de FlagsAPI se aplastan contra ese ratio, así que hoy las 206 banderas que "funcionan"
-se ven deformadas y con padding transparente. flagcdn entrega el ratio correcto de fábrica.
-
-flagcdn ofrece los cinco tamaños que usa el componente en 4:3 exacto: `16x12`, `24x18`, `32x24`,
-`48x36`, `64x48` (verificado, todos HTTP 200).
+cuadrados de FlagsAPI se aplastan contra ese ratio, así que hoy las 206 banderas que
+"funcionan" se ven deformadas. Con `objectFit: contain`, cada bandera entra entera y centrada
+dentro del recuadro, sin estirarse.
 
 ## Decisiones de diseño
 
-**Migrar los 211 equipos a flagcdn**, no solo los 5 rotos. Un único proveedor evita que
+**Migrar los 210 equipos a flagcdn**, no solo los 5 rotos. Un único proveedor evita que
 convivan dos encuadres distintos en la misma pantalla, y de paso corrige la deformación de los
-otros 206.
+otros 205.
 
 **La URL se deriva en código, no en la base de datos.** Hoy `TeamFlag.tsx:26` hace
 `providedFlagUrl || getFlagUrl(...)`: la URL completa vive en `teams.flag` y *gana* sobre la
@@ -97,10 +106,11 @@ llamador que mande `flag`, se elimina también esa rama.
 
 - `scripts/generate-flags.ts` se actualiza a la nueva firma de `getFlagUrl` y regenera
   `src/data/teams.json` con las URLs canónicas de flagcdn.
-- Migración `supabase/migrations/014_flagcdn_urls.sql`: `UPDATE` de las 211 filas de `teams.flag`
-  a la URL canónica (`https://flagcdn.com/64x48/<code>.png`). Aunque el render ya no lee esa
-  columna, se normaliza para que el dato deje de estar podrido y una reseed futura quede
-  consistente.
+- Migraciones `014_flagcdn_urls.sql` y `015_flagcdn_flat_urls.sql`: `UPDATE` de las 210 filas de
+  `teams.flag` a la URL canónica (`https://flagcdn.com/w160/<code>.png`). Aunque el render ya no
+  lee esa columna, se normaliza para que el dato deje de estar podrido y una reseed futura quede
+  consistente. Son dos migraciones porque la 014 usó el formato ondeado y la 015 lo corrigió al
+  plano tras verlo renderizado.
 - Se borran `scripts/fix-uk-flags.cjs` y `scripts/fix-uk-flags-v2.cjs`: son scripts one-shot
   cuyo parche es la causa del bug 2, y volver a correrlos reintroduciría el problema.
 
@@ -131,6 +141,6 @@ corrió durante el diseño; repetirla en CI sería lenta y frágil.
 
 ## Riesgo conocido
 
-Las banderas de los otros 206 equipos cambian de aspecto: hoy son PNG cuadrados aplastados a
-4:3, pasan a llenar el recuadro sin deformarse. Es una mejora, pero es un cambio visible en
-toda la aplicación y conviene mirarlo antes de mergear.
+Las banderas de los otros 205 equipos cambian de aspecto: hoy son PNG cuadrados aplastados a
+4:3, pasan a mostrarse enteras y sin deformar dentro del recuadro. Es una mejora, pero es un
+cambio visible en toda la aplicación y conviene mirarlo antes de mergear.

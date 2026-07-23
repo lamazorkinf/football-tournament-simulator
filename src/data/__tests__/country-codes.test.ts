@@ -3,24 +3,29 @@ import { COUNTRY_CODES, getFlagUrl } from '../country-codes';
 import teamsData from '../teams.json';
 
 describe('getFlagUrl', () => {
-  it('genera la URL de flagcdn en el ratio 4:3 del tamaño pedido', () => {
-    expect(getFlagUrl('arg', 16)).toBe('https://flagcdn.com/16x12/ar.png');
-    expect(getFlagUrl('arg', 24)).toBe('https://flagcdn.com/24x18/ar.png');
-    expect(getFlagUrl('arg', 32)).toBe('https://flagcdn.com/32x24/ar.png');
-    expect(getFlagUrl('arg', 48)).toBe('https://flagcdn.com/48x36/ar.png');
-    expect(getFlagUrl('arg', 64)).toBe('https://flagcdn.com/64x48/ar.png');
+  it('pide el ancho que cubre el doble del tamaño de render', () => {
+    expect(getFlagUrl('arg', 16)).toBe('https://flagcdn.com/w40/ar.png');
+    expect(getFlagUrl('arg', 24)).toBe('https://flagcdn.com/w80/ar.png');
+    expect(getFlagUrl('arg', 32)).toBe('https://flagcdn.com/w80/ar.png');
+    expect(getFlagUrl('arg', 48)).toBe('https://flagcdn.com/w160/ar.png');
+    expect(getFlagUrl('arg', 64)).toBe('https://flagcdn.com/w160/ar.png');
   });
 
-  it('usa 64x48 cuando no se pide un tamaño', () => {
-    expect(getFlagUrl('bra')).toBe('https://flagcdn.com/64x48/br.png');
+  it('usa el ancho de 64px cuando no se pide un tamaño', () => {
+    expect(getFlagUrl('bra')).toBe('https://flagcdn.com/w160/br.png');
   });
 
   it('resuelve los cinco códigos que FlagsAPI no servía', () => {
-    expect(getFlagUrl('eng')).toBe('https://flagcdn.com/64x48/gb-eng.png');
-    expect(getFlagUrl('wal')).toBe('https://flagcdn.com/64x48/gb-wls.png');
-    expect(getFlagUrl('sco')).toBe('https://flagcdn.com/64x48/gb-sct.png');
-    expect(getFlagUrl('nir')).toBe('https://flagcdn.com/64x48/gb-nir.png');
-    expect(getFlagUrl('kos')).toBe('https://flagcdn.com/64x48/xk.png');
+    expect(getFlagUrl('eng')).toBe('https://flagcdn.com/w160/gb-eng.png');
+    expect(getFlagUrl('wal')).toBe('https://flagcdn.com/w160/gb-wls.png');
+    expect(getFlagUrl('sco')).toBe('https://flagcdn.com/w160/gb-sct.png');
+    expect(getFlagUrl('nir')).toBe('https://flagcdn.com/w160/gb-nir.png');
+    expect(getFlagUrl('kos')).toBe('https://flagcdn.com/w160/xk.png');
+  });
+
+  it('devuelve el formato plano w{N}, no el ondeado WxH', () => {
+    const urls = Object.keys(COUNTRY_CODES).map((id) => getFlagUrl(id, 24));
+    expect(urls.every((url) => /^https:\/\/flagcdn\.com\/w\d+\/[a-z-]+\.png$/.test(url))).toBe(true);
   });
 
   it('devuelve cadena vacía y avisa por consola si el equipo no tiene código', () => {

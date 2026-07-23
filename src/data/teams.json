@@ -2,1470 +2,1470 @@
   {
     "id": "ger",
     "name": "Germany",
-    "flag": "https://flagcdn.com/64x48/de.png",
+    "flag": "https://flagcdn.com/w160/de.png",
     "region": "Europe",
     "skill": 82
   },
   {
     "id": "fra",
     "name": "France",
-    "flag": "https://flagcdn.com/64x48/fr.png",
+    "flag": "https://flagcdn.com/w160/fr.png",
     "region": "Europe",
     "skill": 88
   },
   {
     "id": "esp",
     "name": "Spain",
-    "flag": "https://flagcdn.com/64x48/es.png",
+    "flag": "https://flagcdn.com/w160/es.png",
     "region": "Europe",
     "skill": 90
   },
   {
     "id": "ita",
     "name": "Italy",
-    "flag": "https://flagcdn.com/64x48/it.png",
+    "flag": "https://flagcdn.com/w160/it.png",
     "region": "Europe",
     "skill": 80
   },
   {
     "id": "eng",
     "name": "England",
-    "flag": "https://flagcdn.com/64x48/gb-eng.png",
+    "flag": "https://flagcdn.com/w160/gb-eng.png",
     "region": "Europe",
     "skill": 87
   },
   {
     "id": "ned",
     "name": "Netherlands",
-    "flag": "https://flagcdn.com/64x48/nl.png",
+    "flag": "https://flagcdn.com/w160/nl.png",
     "region": "Europe",
     "skill": 84
   },
   {
     "id": "por",
     "name": "Portugal",
-    "flag": "https://flagcdn.com/64x48/pt.png",
+    "flag": "https://flagcdn.com/w160/pt.png",
     "region": "Europe",
     "skill": 85
   },
   {
     "id": "bel",
     "name": "Belgium",
-    "flag": "https://flagcdn.com/64x48/be.png",
+    "flag": "https://flagcdn.com/w160/be.png",
     "region": "Europe",
     "skill": 85
   },
   {
     "id": "cro",
     "name": "Croatia",
-    "flag": "https://flagcdn.com/64x48/hr.png",
+    "flag": "https://flagcdn.com/w160/hr.png",
     "region": "Europe",
     "skill": 82
   },
   {
     "id": "den",
     "name": "Denmark",
-    "flag": "https://flagcdn.com/64x48/dk.png",
+    "flag": "https://flagcdn.com/w160/dk.png",
     "region": "Europe",
     "skill": 78
   },
   {
     "id": "sui",
     "name": "Switzerland",
-    "flag": "https://flagcdn.com/64x48/ch.png",
+    "flag": "https://flagcdn.com/w160/ch.png",
     "region": "Europe",
     "skill": 81
   },
   {
     "id": "aut",
     "name": "Austria",
-    "flag": "https://flagcdn.com/64x48/at.png",
+    "flag": "https://flagcdn.com/w160/at.png",
     "region": "Europe",
     "skill": 77
   },
   {
     "id": "swe",
     "name": "Sweden",
-    "flag": "https://flagcdn.com/64x48/se.png",
+    "flag": "https://flagcdn.com/w160/se.png",
     "region": "Europe",
     "skill": 74
   },
   {
     "id": "pol",
     "name": "Poland",
-    "flag": "https://flagcdn.com/64x48/pl.png",
+    "flag": "https://flagcdn.com/w160/pl.png",
     "region": "Europe",
     "skill": 74
   },
   {
     "id": "ukr",
     "name": "Ukraine",
-    "flag": "https://flagcdn.com/64x48/ua.png",
+    "flag": "https://flagcdn.com/w160/ua.png",
     "region": "Europe",
     "skill": 75
   },
   {
     "id": "ser",
     "name": "Serbia",
-    "flag": "https://flagcdn.com/64x48/rs.png",
+    "flag": "https://flagcdn.com/w160/rs.png",
     "region": "Europe",
     "skill": 73
   },
   {
     "id": "tur",
     "name": "Turkey",
-    "flag": "https://flagcdn.com/64x48/tr.png",
+    "flag": "https://flagcdn.com/w160/tr.png",
     "region": "Europe",
     "skill": 76
   },
   {
     "id": "cze",
     "name": "Czech Republic",
-    "flag": "https://flagcdn.com/64x48/cz.png",
+    "flag": "https://flagcdn.com/w160/cz.png",
     "region": "Europe",
     "skill": 72
   },
   {
     "id": "wal",
     "name": "Wales",
-    "flag": "https://flagcdn.com/64x48/gb-wls.png",
+    "flag": "https://flagcdn.com/w160/gb-wls.png",
     "region": "Europe",
     "skill": 74
   },
   {
     "id": "sco",
     "name": "Scotland",
-    "flag": "https://flagcdn.com/64x48/gb-sct.png",
+    "flag": "https://flagcdn.com/w160/gb-sct.png",
     "region": "Europe",
     "skill": 73
   },
   {
     "id": "nor",
     "name": "Norway",
-    "flag": "https://flagcdn.com/64x48/no.png",
+    "flag": "https://flagcdn.com/w160/no.png",
     "region": "Europe",
     "skill": 79
   },
   {
     "id": "rus",
     "name": "Russia",
-    "flag": "https://flagcdn.com/64x48/ru.png",
+    "flag": "https://flagcdn.com/w160/ru.png",
     "region": "Europe",
     "skill": 74
   },
   {
     "id": "rou",
     "name": "Romania",
-    "flag": "https://flagcdn.com/64x48/ro.png",
+    "flag": "https://flagcdn.com/w160/ro.png",
     "region": "Europe",
     "skill": 70
   },
   {
     "id": "hun",
     "name": "Hungary",
-    "flag": "https://flagcdn.com/64x48/hu.png",
+    "flag": "https://flagcdn.com/w160/hu.png",
     "region": "Europe",
     "skill": 73
   },
   {
     "id": "gre",
     "name": "Greece",
-    "flag": "https://flagcdn.com/64x48/gr.png",
+    "flag": "https://flagcdn.com/w160/gr.png",
     "region": "Europe",
     "skill": 72
   },
   {
     "id": "svk",
     "name": "Slovakia",
-    "flag": "https://flagcdn.com/64x48/sk.png",
+    "flag": "https://flagcdn.com/w160/sk.png",
     "region": "Europe",
     "skill": 72
   },
   {
     "id": "fin",
     "name": "Finland",
-    "flag": "https://flagcdn.com/64x48/fi.png",
+    "flag": "https://flagcdn.com/w160/fi.png",
     "region": "Europe",
     "skill": 66
   },
   {
     "id": "bih",
     "name": "Bosnia and Herzegovina",
-    "flag": "https://flagcdn.com/64x48/ba.png",
+    "flag": "https://flagcdn.com/w160/ba.png",
     "region": "Europe",
     "skill": 68
   },
   {
     "id": "isl",
     "name": "Iceland",
-    "flag": "https://flagcdn.com/64x48/is.png",
+    "flag": "https://flagcdn.com/w160/is.png",
     "region": "Europe",
     "skill": 66
   },
   {
     "id": "ire",
     "name": "Republic of Ireland",
-    "flag": "https://flagcdn.com/64x48/ie.png",
+    "flag": "https://flagcdn.com/w160/ie.png",
     "region": "Europe",
     "skill": 69
   },
   {
     "id": "nir",
     "name": "Northern Ireland",
-    "flag": "https://flagcdn.com/64x48/gb-nir.png",
+    "flag": "https://flagcdn.com/w160/gb-nir.png",
     "region": "Europe",
     "skill": 66
   },
   {
     "id": "alb",
     "name": "Albania",
-    "flag": "https://flagcdn.com/64x48/al.png",
+    "flag": "https://flagcdn.com/w160/al.png",
     "region": "Europe",
     "skill": 67
   },
   {
     "id": "svn",
     "name": "Slovenia",
-    "flag": "https://flagcdn.com/64x48/si.png",
+    "flag": "https://flagcdn.com/w160/si.png",
     "region": "Europe",
     "skill": 69
   },
   {
     "id": "mkd",
     "name": "North Macedonia",
-    "flag": "https://flagcdn.com/64x48/mk.png",
+    "flag": "https://flagcdn.com/w160/mk.png",
     "region": "Europe",
     "skill": 67
   },
   {
     "id": "bul",
     "name": "Bulgaria",
-    "flag": "https://flagcdn.com/64x48/bg.png",
+    "flag": "https://flagcdn.com/w160/bg.png",
     "region": "Europe",
     "skill": 64
   },
   {
     "id": "mne",
     "name": "Montenegro",
-    "flag": "https://flagcdn.com/64x48/me.png",
+    "flag": "https://flagcdn.com/w160/me.png",
     "region": "Europe",
     "skill": 65
   },
   {
     "id": "isr",
     "name": "Israel",
-    "flag": "https://flagcdn.com/64x48/il.png",
+    "flag": "https://flagcdn.com/w160/il.png",
     "region": "Africa",
     "skill": 65
   },
   {
     "id": "geo",
     "name": "Georgia",
-    "flag": "https://flagcdn.com/64x48/ge.png",
+    "flag": "https://flagcdn.com/w160/ge.png",
     "region": "Europe",
     "skill": 66
   },
   {
     "id": "arm",
     "name": "Armenia",
-    "flag": "https://flagcdn.com/64x48/am.png",
+    "flag": "https://flagcdn.com/w160/am.png",
     "region": "Europe",
     "skill": 60
   },
   {
     "id": "aze",
     "name": "Azerbaijan",
-    "flag": "https://flagcdn.com/64x48/az.png",
+    "flag": "https://flagcdn.com/w160/az.png",
     "region": "Europe",
     "skill": 58
   },
   {
     "id": "kaz",
     "name": "Kazakhstan",
-    "flag": "https://flagcdn.com/64x48/kz.png",
+    "flag": "https://flagcdn.com/w160/kz.png",
     "region": "Europe",
     "skill": 60
   },
   {
     "id": "blr",
     "name": "Belarus",
-    "flag": "https://flagcdn.com/64x48/by.png",
+    "flag": "https://flagcdn.com/w160/by.png",
     "region": "Europe",
     "skill": 62
   },
   {
     "id": "lux",
     "name": "Luxembourg",
-    "flag": "https://flagcdn.com/64x48/lu.png",
+    "flag": "https://flagcdn.com/w160/lu.png",
     "region": "Europe",
     "skill": 62
   },
   {
     "id": "cyp",
     "name": "Cyprus",
-    "flag": "https://flagcdn.com/64x48/cy.png",
+    "flag": "https://flagcdn.com/w160/cy.png",
     "region": "Europe",
     "skill": 58
   },
   {
     "id": "est",
     "name": "Estonia",
-    "flag": "https://flagcdn.com/64x48/ee.png",
+    "flag": "https://flagcdn.com/w160/ee.png",
     "region": "Europe",
     "skill": 58
   },
   {
     "id": "lva",
     "name": "Latvia",
-    "flag": "https://flagcdn.com/64x48/lv.png",
+    "flag": "https://flagcdn.com/w160/lv.png",
     "region": "Europe",
     "skill": 56
   },
   {
     "id": "ltu",
     "name": "Lithuania",
-    "flag": "https://flagcdn.com/64x48/lt.png",
+    "flag": "https://flagcdn.com/w160/lt.png",
     "region": "Europe",
     "skill": 55
   },
   {
     "id": "fro",
     "name": "Faroe Islands",
-    "flag": "https://flagcdn.com/64x48/fo.png",
+    "flag": "https://flagcdn.com/w160/fo.png",
     "region": "Europe",
     "skill": 58
   },
   {
     "id": "mlt",
     "name": "Malta",
-    "flag": "https://flagcdn.com/64x48/mt.png",
+    "flag": "https://flagcdn.com/w160/mt.png",
     "region": "Europe",
     "skill": 54
   },
   {
     "id": "mda",
     "name": "Moldova",
-    "flag": "https://flagcdn.com/64x48/md.png",
+    "flag": "https://flagcdn.com/w160/md.png",
     "region": "Europe",
     "skill": 54
   },
   {
     "id": "kos",
     "name": "Kosovo",
-    "flag": "https://flagcdn.com/64x48/xk.png",
+    "flag": "https://flagcdn.com/w160/xk.png",
     "region": "Europe",
     "skill": 65
   },
   {
     "id": "lie",
     "name": "Liechtenstein",
-    "flag": "https://flagcdn.com/64x48/li.png",
+    "flag": "https://flagcdn.com/w160/li.png",
     "region": "Europe",
     "skill": 35
   },
   {
     "id": "and",
     "name": "Andorra",
-    "flag": "https://flagcdn.com/64x48/ad.png",
+    "flag": "https://flagcdn.com/w160/ad.png",
     "region": "Europe",
     "skill": 52
   },
   {
     "id": "smr",
     "name": "San Marino",
-    "flag": "https://flagcdn.com/64x48/sm.png",
+    "flag": "https://flagcdn.com/w160/sm.png",
     "region": "Europe",
     "skill": 30
   },
   {
     "id": "gib",
     "name": "Gibraltar",
-    "flag": "https://flagcdn.com/64x48/gi.png",
+    "flag": "https://flagcdn.com/w160/gi.png",
     "region": "Europe",
     "skill": 39
   },
   {
     "id": "bra",
     "name": "Brazil",
-    "flag": "https://flagcdn.com/64x48/br.png",
+    "flag": "https://flagcdn.com/w160/br.png",
     "region": "America",
     "skill": 86
   },
   {
     "id": "arg",
     "name": "Argentina",
-    "flag": "https://flagcdn.com/64x48/ar.png",
+    "flag": "https://flagcdn.com/w160/ar.png",
     "region": "America",
     "skill": 89
   },
   {
     "id": "uru",
     "name": "Uruguay",
-    "flag": "https://flagcdn.com/64x48/uy.png",
+    "flag": "https://flagcdn.com/w160/uy.png",
     "region": "America",
     "skill": 78
   },
   {
     "id": "col",
     "name": "Colombia",
-    "flag": "https://flagcdn.com/64x48/co.png",
+    "flag": "https://flagcdn.com/w160/co.png",
     "region": "America",
     "skill": 83
   },
   {
     "id": "chi",
     "name": "Chile",
-    "flag": "https://flagcdn.com/64x48/cl.png",
+    "flag": "https://flagcdn.com/w160/cl.png",
     "region": "America",
     "skill": 71
   },
   {
     "id": "par",
     "name": "Paraguay",
-    "flag": "https://flagcdn.com/64x48/py.png",
+    "flag": "https://flagcdn.com/w160/py.png",
     "region": "America",
     "skill": 74
   },
   {
     "id": "ecu",
     "name": "Ecuador",
-    "flag": "https://flagcdn.com/64x48/ec.png",
+    "flag": "https://flagcdn.com/w160/ec.png",
     "region": "America",
     "skill": 77
   },
   {
     "id": "per",
     "name": "Peru",
-    "flag": "https://flagcdn.com/64x48/pe.png",
+    "flag": "https://flagcdn.com/w160/pe.png",
     "region": "America",
     "skill": 71
   },
   {
     "id": "ven",
     "name": "Venezuela",
-    "flag": "https://flagcdn.com/64x48/ve.png",
+    "flag": "https://flagcdn.com/w160/ve.png",
     "region": "America",
     "skill": 72
   },
   {
     "id": "bol",
     "name": "Bolivia",
-    "flag": "https://flagcdn.com/64x48/bo.png",
+    "flag": "https://flagcdn.com/w160/bo.png",
     "region": "America",
     "skill": 65
   },
   {
     "id": "mex",
     "name": "Mexico",
-    "flag": "https://flagcdn.com/64x48/mx.png",
+    "flag": "https://flagcdn.com/w160/mx.png",
     "region": "America",
     "skill": 84
   },
   {
     "id": "usa",
     "name": "United States",
-    "flag": "https://flagcdn.com/64x48/us.png",
+    "flag": "https://flagcdn.com/w160/us.png",
     "region": "America",
     "skill": 80
   },
   {
     "id": "can",
     "name": "Canada",
-    "flag": "https://flagcdn.com/64x48/ca.png",
+    "flag": "https://flagcdn.com/w160/ca.png",
     "region": "America",
     "skill": 75
   },
   {
     "id": "crc",
     "name": "Costa Rica",
-    "flag": "https://flagcdn.com/64x48/cr.png",
+    "flag": "https://flagcdn.com/w160/cr.png",
     "region": "America",
     "skill": 71
   },
   {
     "id": "jam",
     "name": "Jamaica",
-    "flag": "https://flagcdn.com/64x48/jm.png",
+    "flag": "https://flagcdn.com/w160/jm.png",
     "region": "America",
     "skill": 66
   },
   {
     "id": "pan",
     "name": "Panama",
-    "flag": "https://flagcdn.com/64x48/pa.png",
+    "flag": "https://flagcdn.com/w160/pa.png",
     "region": "America",
     "skill": 73
   },
   {
     "id": "hon",
     "name": "Honduras",
-    "flag": "https://flagcdn.com/64x48/hn.png",
+    "flag": "https://flagcdn.com/w160/hn.png",
     "region": "America",
     "skill": 67
   },
   {
     "id": "slv",
     "name": "El Salvador",
-    "flag": "https://flagcdn.com/64x48/sv.png",
+    "flag": "https://flagcdn.com/w160/sv.png",
     "region": "America",
     "skill": 62
   },
   {
     "id": "tri",
     "name": "Trinidad and Tobago",
-    "flag": "https://flagcdn.com/64x48/tt.png",
+    "flag": "https://flagcdn.com/w160/tt.png",
     "region": "America",
     "skill": 61
   },
   {
     "id": "hti",
     "name": "Haiti",
-    "flag": "https://flagcdn.com/64x48/ht.png",
+    "flag": "https://flagcdn.com/w160/ht.png",
     "region": "America",
     "skill": 64
   },
   {
     "id": "cub",
     "name": "Cuba",
-    "flag": "https://flagcdn.com/64x48/cu.png",
+    "flag": "https://flagcdn.com/w160/cu.png",
     "region": "America",
     "skill": 53
   },
   {
     "id": "gua",
     "name": "Guatemala",
-    "flag": "https://flagcdn.com/64x48/gt.png",
+    "flag": "https://flagcdn.com/w160/gt.png",
     "region": "America",
     "skill": 62
   },
   {
     "id": "nic",
     "name": "Nicaragua",
-    "flag": "https://flagcdn.com/64x48/ni.png",
+    "flag": "https://flagcdn.com/w160/ni.png",
     "region": "America",
     "skill": 57
   },
   {
     "id": "sur",
     "name": "Suriname",
-    "flag": "https://flagcdn.com/64x48/sr.png",
+    "flag": "https://flagcdn.com/w160/sr.png",
     "region": "America",
     "skill": 58
   },
   {
     "id": "brb",
     "name": "Barbados",
-    "flag": "https://flagcdn.com/64x48/bb.png",
+    "flag": "https://flagcdn.com/w160/bb.png",
     "region": "America",
     "skill": 51
   },
   {
     "id": "dom",
     "name": "Dominican Republic",
-    "flag": "https://flagcdn.com/64x48/do.png",
+    "flag": "https://flagcdn.com/w160/do.png",
     "region": "America",
     "skill": 56
   },
   {
     "id": "ber",
     "name": "Bermuda",
-    "flag": "https://flagcdn.com/64x48/bm.png",
+    "flag": "https://flagcdn.com/w160/bm.png",
     "region": "America",
     "skill": 53
   },
   {
     "id": "blz",
     "name": "Belize",
-    "flag": "https://flagcdn.com/64x48/bz.png",
+    "flag": "https://flagcdn.com/w160/bz.png",
     "region": "America",
     "skill": 51
   },
   {
     "id": "guy",
     "name": "Guyana",
-    "flag": "https://flagcdn.com/64x48/gy.png",
+    "flag": "https://flagcdn.com/w160/gy.png",
     "region": "America",
     "skill": 55
   },
   {
     "id": "pue",
     "name": "Puerto Rico",
-    "flag": "https://flagcdn.com/64x48/pr.png",
+    "flag": "https://flagcdn.com/w160/pr.png",
     "region": "America",
     "skill": 55
   },
   {
     "id": "cuw",
     "name": "Curaçao",
-    "flag": "https://flagcdn.com/64x48/cw.png",
+    "flag": "https://flagcdn.com/w160/cw.png",
     "region": "America",
     "skill": 64
   },
   {
     "id": "atg",
     "name": "Antigua and Barbuda",
-    "flag": "https://flagcdn.com/64x48/ag.png",
+    "flag": "https://flagcdn.com/w160/ag.png",
     "region": "America",
     "skill": 54
   },
   {
     "id": "skn",
     "name": "Saint Kitts and Nevis",
-    "flag": "https://flagcdn.com/64x48/kn.png",
+    "flag": "https://flagcdn.com/w160/kn.png",
     "region": "America",
     "skill": 55
   },
   {
     "id": "lca",
     "name": "Saint Lucia",
-    "flag": "https://flagcdn.com/64x48/lc.png",
+    "flag": "https://flagcdn.com/w160/lc.png",
     "region": "America",
     "skill": 53
   },
   {
     "id": "vin",
     "name": "Saint Vincent and the Grenadines",
-    "flag": "https://flagcdn.com/64x48/vc.png",
+    "flag": "https://flagcdn.com/w160/vc.png",
     "region": "America",
     "skill": 52
   },
   {
     "id": "grn",
     "name": "Grenada",
-    "flag": "https://flagcdn.com/64x48/gd.png",
+    "flag": "https://flagcdn.com/w160/gd.png",
     "region": "America",
     "skill": 53
   },
   {
     "id": "msr",
     "name": "Montserrat",
-    "flag": "https://flagcdn.com/64x48/ms.png",
+    "flag": "https://flagcdn.com/w160/ms.png",
     "region": "America",
     "skill": 52
   },
   {
     "id": "dma",
     "name": "Dominica",
-    "flag": "https://flagcdn.com/64x48/dm.png",
+    "flag": "https://flagcdn.com/w160/dm.png",
     "region": "America",
     "skill": 51
   },
   {
     "id": "aru",
     "name": "Aruba",
-    "flag": "https://flagcdn.com/64x48/aw.png",
+    "flag": "https://flagcdn.com/w160/aw.png",
     "region": "America",
     "skill": 48
   },
   {
     "id": "cay",
     "name": "Cayman Islands",
-    "flag": "https://flagcdn.com/64x48/ky.png",
+    "flag": "https://flagcdn.com/w160/ky.png",
     "region": "America",
     "skill": 45
   },
   {
     "id": "bah",
     "name": "Bahamas",
-    "flag": "https://flagcdn.com/64x48/bs.png",
+    "flag": "https://flagcdn.com/w160/bs.png",
     "region": "America",
     "skill": 34
   },
   {
     "id": "tca",
     "name": "Turks and Caicos Islands",
-    "flag": "https://flagcdn.com/64x48/tc.png",
+    "flag": "https://flagcdn.com/w160/tc.png",
     "region": "America",
     "skill": 35
   },
   {
     "id": "vgb",
     "name": "British Virgin Islands",
-    "flag": "https://flagcdn.com/64x48/vg.png",
+    "flag": "https://flagcdn.com/w160/vg.png",
     "region": "America",
     "skill": 31
   },
   {
     "id": "vir",
     "name": "US Virgin Islands",
-    "flag": "https://flagcdn.com/64x48/vi.png",
+    "flag": "https://flagcdn.com/w160/vi.png",
     "region": "America",
     "skill": 32
   },
   {
     "id": "aia",
     "name": "Anguilla",
-    "flag": "https://flagcdn.com/64x48/ai.png",
+    "flag": "https://flagcdn.com/w160/ai.png",
     "region": "America",
     "skill": 31
   },
   {
     "id": "sen",
     "name": "Senegal",
-    "flag": "https://flagcdn.com/64x48/sn.png",
+    "flag": "https://flagcdn.com/w160/sn.png",
     "region": "Africa",
     "skill": 79
   },
   {
     "id": "mar",
     "name": "Morocco",
-    "flag": "https://flagcdn.com/64x48/ma.png",
+    "flag": "https://flagcdn.com/w160/ma.png",
     "region": "Africa",
     "skill": 85
   },
   {
     "id": "tun",
     "name": "Tunisia",
-    "flag": "https://flagcdn.com/64x48/tn.png",
+    "flag": "https://flagcdn.com/w160/tn.png",
     "region": "Africa",
     "skill": 69
   },
   {
     "id": "alg",
     "name": "Algeria",
-    "flag": "https://flagcdn.com/64x48/dz.png",
+    "flag": "https://flagcdn.com/w160/dz.png",
     "region": "Africa",
     "skill": 75
   },
   {
     "id": "egy",
     "name": "Egypt",
-    "flag": "https://flagcdn.com/64x48/eg.png",
+    "flag": "https://flagcdn.com/w160/eg.png",
     "region": "Africa",
     "skill": 77
   },
   {
     "id": "nga",
     "name": "Nigeria",
-    "flag": "https://flagcdn.com/64x48/ng.png",
+    "flag": "https://flagcdn.com/w160/ng.png",
     "region": "Africa",
     "skill": 76
   },
   {
     "id": "cmr",
     "name": "Cameroon",
-    "flag": "https://flagcdn.com/64x48/cm.png",
+    "flag": "https://flagcdn.com/w160/cm.png",
     "region": "Africa",
     "skill": 73
   },
   {
     "id": "gha",
     "name": "Ghana",
-    "flag": "https://flagcdn.com/64x48/gh.png",
+    "flag": "https://flagcdn.com/w160/gh.png",
     "region": "Africa",
     "skill": 67
   },
   {
     "id": "civ",
     "name": "Ivory Coast",
-    "flag": "https://flagcdn.com/64x48/ci.png",
+    "flag": "https://flagcdn.com/w160/ci.png",
     "region": "Africa",
     "skill": 75
   },
   {
     "id": "mli",
     "name": "Mali",
-    "flag": "https://flagcdn.com/64x48/ml.png",
+    "flag": "https://flagcdn.com/w160/ml.png",
     "region": "Africa",
     "skill": 70
   },
   {
     "id": "bfa",
     "name": "Burkina Faso",
-    "flag": "https://flagcdn.com/64x48/bf.png",
+    "flag": "https://flagcdn.com/w160/bf.png",
     "region": "Africa",
     "skill": 68
   },
   {
     "id": "cgo",
     "name": "Congo DR",
-    "flag": "https://flagcdn.com/64x48/cd.png",
+    "flag": "https://flagcdn.com/w160/cd.png",
     "region": "Africa",
     "skill": 73
   },
   {
     "id": "zaf",
     "name": "South Africa",
-    "flag": "https://flagcdn.com/64x48/za.png",
+    "flag": "https://flagcdn.com/w160/za.png",
     "region": "Africa",
     "skill": 70
   },
   {
     "id": "gab",
     "name": "Gabon",
-    "flag": "https://flagcdn.com/64x48/ga.png",
+    "flag": "https://flagcdn.com/w160/ga.png",
     "region": "Africa",
     "skill": 64
   },
   {
     "id": "gui",
     "name": "Guinea",
-    "flag": "https://flagcdn.com/64x48/gn.png",
+    "flag": "https://flagcdn.com/w160/gn.png",
     "region": "Africa",
     "skill": 65
   },
   {
     "id": "cap",
     "name": "Cape Verde",
-    "flag": "https://flagcdn.com/64x48/cv.png",
+    "flag": "https://flagcdn.com/w160/cv.png",
     "region": "Africa",
     "skill": 67
   },
   {
     "id": "uga",
     "name": "Uganda",
-    "flag": "https://flagcdn.com/64x48/ug.png",
+    "flag": "https://flagcdn.com/w160/ug.png",
     "region": "Africa",
     "skill": 63
   },
   {
     "id": "zam",
     "name": "Zambia",
-    "flag": "https://flagcdn.com/64x48/zm.png",
+    "flag": "https://flagcdn.com/w160/zm.png",
     "region": "Africa",
     "skill": 63
   },
   {
     "id": "ken",
     "name": "Kenya",
-    "flag": "https://flagcdn.com/64x48/ke.png",
+    "flag": "https://flagcdn.com/w160/ke.png",
     "region": "Africa",
     "skill": 60
   },
   {
     "id": "mad",
     "name": "Madagascar",
-    "flag": "https://flagcdn.com/64x48/mg.png",
+    "flag": "https://flagcdn.com/w160/mg.png",
     "region": "Africa",
     "skill": 61
   },
   {
     "id": "mau",
     "name": "Mauritania",
-    "flag": "https://flagcdn.com/64x48/mr.png",
+    "flag": "https://flagcdn.com/w160/mr.png",
     "region": "Africa",
     "skill": 60
   },
   {
     "id": "ben",
     "name": "Benin",
-    "flag": "https://flagcdn.com/64x48/bj.png",
+    "flag": "https://flagcdn.com/w160/bj.png",
     "region": "Africa",
     "skill": 63
   },
   {
     "id": "nig",
     "name": "Niger",
-    "flag": "https://flagcdn.com/64x48/ne.png",
+    "flag": "https://flagcdn.com/w160/ne.png",
     "region": "Africa",
     "skill": 59
   },
   {
     "id": "tog",
     "name": "Togo",
-    "flag": "https://flagcdn.com/64x48/tg.png",
+    "flag": "https://flagcdn.com/w160/tg.png",
     "region": "Africa",
     "skill": 59
   },
   {
     "id": "gui-bis",
     "name": "Guinea-Bissau",
-    "flag": "https://flagcdn.com/64x48/gw.png",
+    "flag": "https://flagcdn.com/w160/gw.png",
     "region": "Africa",
     "skill": 57
   },
   {
     "id": "rwa",
     "name": "Rwanda",
-    "flag": "https://flagcdn.com/64x48/rw.png",
+    "flag": "https://flagcdn.com/w160/rw.png",
     "region": "Africa",
     "skill": 57
   },
   {
     "id": "bdi",
     "name": "Burundi",
-    "flag": "https://flagcdn.com/64x48/bi.png",
+    "flag": "https://flagcdn.com/w160/bi.png",
     "region": "Africa",
     "skill": 56
   },
   {
     "id": "eth",
     "name": "Ethiopia",
-    "flag": "https://flagcdn.com/64x48/et.png",
+    "flag": "https://flagcdn.com/w160/et.png",
     "region": "Africa",
     "skill": 56
   },
   {
     "id": "tan",
     "name": "Tanzania",
-    "flag": "https://flagcdn.com/64x48/tz.png",
+    "flag": "https://flagcdn.com/w160/tz.png",
     "region": "Africa",
     "skill": 60
   },
   {
     "id": "zim",
     "name": "Zimbabwe",
-    "flag": "https://flagcdn.com/64x48/zw.png",
+    "flag": "https://flagcdn.com/w160/zw.png",
     "region": "Africa",
     "skill": 57
   },
   {
     "id": "nam",
     "name": "Namibia",
-    "flag": "https://flagcdn.com/64x48/na.png",
+    "flag": "https://flagcdn.com/w160/na.png",
     "region": "Africa",
     "skill": 58
   },
   {
     "id": "moz",
     "name": "Mozambique",
-    "flag": "https://flagcdn.com/64x48/mz.png",
+    "flag": "https://flagcdn.com/w160/mz.png",
     "region": "Africa",
     "skill": 61
   },
   {
     "id": "ang",
     "name": "Angola",
-    "flag": "https://flagcdn.com/64x48/ao.png",
+    "flag": "https://flagcdn.com/w160/ao.png",
     "region": "Africa",
     "skill": 64
   },
   {
     "id": "lbr",
     "name": "Liberia",
-    "flag": "https://flagcdn.com/64x48/lr.png",
+    "flag": "https://flagcdn.com/w160/lr.png",
     "region": "Africa",
     "skill": 56
   },
   {
     "id": "sle",
     "name": "Sierra Leone",
-    "flag": "https://flagcdn.com/64x48/sl.png",
+    "flag": "https://flagcdn.com/w160/sl.png",
     "region": "Africa",
     "skill": 58
   },
   {
     "id": "mal",
     "name": "Malawi",
-    "flag": "https://flagcdn.com/64x48/mw.png",
+    "flag": "https://flagcdn.com/w160/mw.png",
     "region": "Africa",
     "skill": 57
   },
   {
     "id": "cgob",
     "name": "Congo",
-    "flag": "https://flagcdn.com/64x48/cg.png",
+    "flag": "https://flagcdn.com/w160/cg.png",
     "region": "Africa",
     "skill": 57
   },
   {
     "id": "eqg",
     "name": "Equatorial Guinea",
-    "flag": "https://flagcdn.com/64x48/gq.png",
+    "flag": "https://flagcdn.com/w160/gq.png",
     "region": "Africa",
     "skill": 61
   },
   {
     "id": "cta",
     "name": "Central African Republic",
-    "flag": "https://flagcdn.com/64x48/cf.png",
+    "flag": "https://flagcdn.com/w160/cf.png",
     "region": "Africa",
     "skill": 56
   },
   {
     "id": "cha",
     "name": "Chad",
-    "flag": "https://flagcdn.com/64x48/td.png",
+    "flag": "https://flagcdn.com/w160/td.png",
     "region": "Africa",
     "skill": 50
   },
   {
     "id": "stp",
     "name": "São Tomé and Príncipe",
-    "flag": "https://flagcdn.com/64x48/st.png",
+    "flag": "https://flagcdn.com/w160/st.png",
     "region": "Africa",
     "skill": 46
   },
   {
     "id": "gam",
     "name": "Gambia",
-    "flag": "https://flagcdn.com/64x48/gm.png",
+    "flag": "https://flagcdn.com/w160/gm.png",
     "region": "Africa",
     "skill": 59
   },
   {
     "id": "mri",
     "name": "Mauritius",
-    "flag": "https://flagcdn.com/64x48/mu.png",
+    "flag": "https://flagcdn.com/w160/mu.png",
     "region": "Africa",
     "skill": 51
   },
   {
     "id": "com",
     "name": "Comoros",
-    "flag": "https://flagcdn.com/64x48/km.png",
+    "flag": "https://flagcdn.com/w160/km.png",
     "region": "Africa",
     "skill": 60
   },
   {
     "id": "sey",
     "name": "Seychelles",
-    "flag": "https://flagcdn.com/64x48/sc.png",
+    "flag": "https://flagcdn.com/w160/sc.png",
     "region": "Africa",
     "skill": 36
   },
   {
     "id": "dji",
     "name": "Djibouti",
-    "flag": "https://flagcdn.com/64x48/dj.png",
+    "flag": "https://flagcdn.com/w160/dj.png",
     "region": "Africa",
     "skill": 46
   },
   {
     "id": "som",
     "name": "Somalia",
-    "flag": "https://flagcdn.com/64x48/so.png",
+    "flag": "https://flagcdn.com/w160/so.png",
     "region": "Africa",
     "skill": 41
   },
   {
     "id": "ssd",
     "name": "South Sudan",
-    "flag": "https://flagcdn.com/64x48/ss.png",
+    "flag": "https://flagcdn.com/w160/ss.png",
     "region": "Africa",
     "skill": 52
   },
   {
     "id": "eri",
     "name": "Eritrea",
-    "flag": "https://flagcdn.com/64x48/er.png",
+    "flag": "https://flagcdn.com/w160/er.png",
     "region": "Africa",
     "skill": 50
   },
   {
     "id": "les",
     "name": "Lesotho",
-    "flag": "https://flagcdn.com/64x48/ls.png",
+    "flag": "https://flagcdn.com/w160/ls.png",
     "region": "Africa",
     "skill": 55
   },
   {
     "id": "bot",
     "name": "Botswana",
-    "flag": "https://flagcdn.com/64x48/bw.png",
+    "flag": "https://flagcdn.com/w160/bw.png",
     "region": "Africa",
     "skill": 55
   },
   {
     "id": "swa",
     "name": "Eswatini",
-    "flag": "https://flagcdn.com/64x48/sz.png",
+    "flag": "https://flagcdn.com/w160/sz.png",
     "region": "Africa",
     "skill": 53
   },
   {
     "id": "lby",
     "name": "Libya",
-    "flag": "https://flagcdn.com/64x48/ly.png",
+    "flag": "https://flagcdn.com/w160/ly.png",
     "region": "Africa",
     "skill": 60
   },
   {
     "id": "sud",
     "name": "Sudan",
-    "flag": "https://flagcdn.com/64x48/sd.png",
+    "flag": "https://flagcdn.com/w160/sd.png",
     "region": "Africa",
     "skill": 59
   },
   {
     "id": "jpn",
     "name": "Japan",
-    "flag": "https://flagcdn.com/64x48/jp.png",
+    "flag": "https://flagcdn.com/w160/jp.png",
     "region": "Asia",
     "skill": 79
   },
   {
     "id": "kor",
     "name": "South Korea",
-    "flag": "https://flagcdn.com/64x48/kr.png",
+    "flag": "https://flagcdn.com/w160/kr.png",
     "region": "Asia",
     "skill": 75
   },
   {
     "id": "irn",
     "name": "Iran",
-    "flag": "https://flagcdn.com/64x48/ir.png",
+    "flag": "https://flagcdn.com/w160/ir.png",
     "region": "Asia",
     "skill": 78
   },
   {
     "id": "aus",
     "name": "Australia",
-    "flag": "https://flagcdn.com/64x48/au.png",
+    "flag": "https://flagcdn.com/w160/au.png",
     "region": "Asia",
     "skill": 76
   },
   {
     "id": "sau",
     "name": "Saudi Arabia",
-    "flag": "https://flagcdn.com/64x48/sa.png",
+    "flag": "https://flagcdn.com/w160/sa.png",
     "region": "Asia",
     "skill": 68
   },
   {
     "id": "qat",
     "name": "Qatar",
-    "flag": "https://flagcdn.com/64x48/qa.png",
+    "flag": "https://flagcdn.com/w160/qa.png",
     "region": "Asia",
     "skill": 68
   },
   {
     "id": "uae",
     "name": "UAE",
-    "flag": "https://flagcdn.com/64x48/ae.png",
+    "flag": "https://flagcdn.com/w160/ae.png",
     "region": "Asia",
     "skill": 67
   },
   {
     "id": "irq",
     "name": "Iraq",
-    "flag": "https://flagcdn.com/64x48/iq.png",
+    "flag": "https://flagcdn.com/w160/iq.png",
     "region": "Asia",
     "skill": 68
   },
   {
     "id": "chn",
     "name": "China",
-    "flag": "https://flagcdn.com/64x48/cn.png",
+    "flag": "https://flagcdn.com/w160/cn.png",
     "region": "Asia",
     "skill": 63
   },
   {
     "id": "uzb",
     "name": "Uzbekistan",
-    "flag": "https://flagcdn.com/64x48/uz.png",
+    "flag": "https://flagcdn.com/w160/uz.png",
     "region": "Europe",
     "skill": 68
   },
   {
     "id": "tha",
     "name": "Thailand",
-    "flag": "https://flagcdn.com/64x48/th.png",
+    "flag": "https://flagcdn.com/w160/th.png",
     "region": "Asia",
     "skill": 63
   },
   {
     "id": "vie",
     "name": "Vietnam",
-    "flag": "https://flagcdn.com/64x48/vn.png",
+    "flag": "https://flagcdn.com/w160/vn.png",
     "region": "Asia",
     "skill": 62
   },
   {
     "id": "omn",
     "name": "Oman",
-    "flag": "https://flagcdn.com/64x48/om.png",
+    "flag": "https://flagcdn.com/w160/om.png",
     "region": "Asia",
     "skill": 65
   },
   {
     "id": "jor",
     "name": "Jordan",
-    "flag": "https://flagcdn.com/64x48/jo.png",
+    "flag": "https://flagcdn.com/w160/jo.png",
     "region": "Asia",
     "skill": 66
   },
   {
     "id": "bhr",
     "name": "Bahrain",
-    "flag": "https://flagcdn.com/64x48/bh.png",
+    "flag": "https://flagcdn.com/w160/bh.png",
     "region": "Asia",
     "skill": 63
   },
   {
     "id": "syr",
     "name": "Syria",
-    "flag": "https://flagcdn.com/64x48/sy.png",
+    "flag": "https://flagcdn.com/w160/sy.png",
     "region": "Asia",
     "skill": 64
   },
   {
     "id": "lbn",
     "name": "Lebanon",
-    "flag": "https://flagcdn.com/64x48/lb.png",
+    "flag": "https://flagcdn.com/w160/lb.png",
     "region": "Asia",
     "skill": 59
   },
   {
     "id": "pal",
     "name": "Palestine",
-    "flag": "https://flagcdn.com/64x48/ps.png",
+    "flag": "https://flagcdn.com/w160/ps.png",
     "region": "Asia",
     "skill": 62
   },
   {
     "id": "kuw",
     "name": "Kuwait",
-    "flag": "https://flagcdn.com/64x48/kw.png",
+    "flag": "https://flagcdn.com/w160/kw.png",
     "region": "Asia",
     "skill": 57
   },
   {
     "id": "tkm",
     "name": "Turkmenistan",
-    "flag": "https://flagcdn.com/64x48/tm.png",
+    "flag": "https://flagcdn.com/w160/tm.png",
     "region": "Asia",
     "skill": 56
   },
   {
     "id": "kgz",
     "name": "Kyrgyzstan",
-    "flag": "https://flagcdn.com/64x48/kg.png",
+    "flag": "https://flagcdn.com/w160/kg.png",
     "region": "Asia",
     "skill": 60
   },
   {
     "id": "tjk",
     "name": "Tajikistan",
-    "flag": "https://flagcdn.com/64x48/tj.png",
+    "flag": "https://flagcdn.com/w160/tj.png",
     "region": "Asia",
     "skill": 61
   },
   {
     "id": "afg",
     "name": "Afghanistan",
-    "flag": "https://flagcdn.com/64x48/af.png",
+    "flag": "https://flagcdn.com/w160/af.png",
     "region": "Asia",
     "skill": 52
   },
   {
     "id": "ind",
     "name": "India",
-    "flag": "https://flagcdn.com/64x48/in.png",
+    "flag": "https://flagcdn.com/w160/in.png",
     "region": "Asia",
     "skill": 56
   },
   {
     "id": "mya",
     "name": "Myanmar",
-    "flag": "https://flagcdn.com/64x48/mm.png",
+    "flag": "https://flagcdn.com/w160/mm.png",
     "region": "Asia",
     "skill": 54
   },
   {
     "id": "phi",
     "name": "Philippines",
-    "flag": "https://flagcdn.com/64x48/ph.png",
+    "flag": "https://flagcdn.com/w160/ph.png",
     "region": "Asia",
     "skill": 57
   },
   {
     "id": "idn",
     "name": "Indonesia",
-    "flag": "https://flagcdn.com/64x48/id.png",
+    "flag": "https://flagcdn.com/w160/id.png",
     "region": "Asia",
     "skill": 59
   },
   {
     "id": "mas",
     "name": "Malaysia",
-    "flag": "https://flagcdn.com/64x48/my.png",
+    "flag": "https://flagcdn.com/w160/my.png",
     "region": "Asia",
     "skill": 56
   },
   {
     "id": "sin",
     "name": "Singapore",
-    "flag": "https://flagcdn.com/64x48/sg.png",
+    "flag": "https://flagcdn.com/w160/sg.png",
     "region": "Asia",
     "skill": 55
   },
   {
     "id": "ban",
     "name": "Bangladesh",
-    "flag": "https://flagcdn.com/64x48/bd.png",
+    "flag": "https://flagcdn.com/w160/bd.png",
     "region": "Asia",
     "skill": 51
   },
   {
     "id": "prk",
     "name": "North Korea",
-    "flag": "https://flagcdn.com/64x48/kp.png",
+    "flag": "https://flagcdn.com/w160/kp.png",
     "region": "Asia",
     "skill": 58
   },
   {
     "id": "hkg",
     "name": "Hong Kong",
-    "flag": "https://flagcdn.com/64x48/hk.png",
+    "flag": "https://flagcdn.com/w160/hk.png",
     "region": "Asia",
     "skill": 54
   },
   {
     "id": "yem",
     "name": "Yemen",
-    "flag": "https://flagcdn.com/64x48/ye.png",
+    "flag": "https://flagcdn.com/w160/ye.png",
     "region": "Asia",
     "skill": 56
   },
   {
     "id": "pak",
     "name": "Pakistan",
-    "flag": "https://flagcdn.com/64x48/pk.png",
+    "flag": "https://flagcdn.com/w160/pk.png",
     "region": "Asia",
     "skill": 42
   },
   {
     "id": "sri",
     "name": "Sri Lanka",
-    "flag": "https://flagcdn.com/64x48/lk.png",
+    "flag": "https://flagcdn.com/w160/lk.png",
     "region": "Asia",
     "skill": 49
   },
   {
     "id": "mdv",
     "name": "Maldives",
-    "flag": "https://flagcdn.com/64x48/mv.png",
+    "flag": "https://flagcdn.com/w160/mv.png",
     "region": "Asia",
     "skill": 52
   },
   {
     "id": "nep",
     "name": "Nepal",
-    "flag": "https://flagcdn.com/64x48/np.png",
+    "flag": "https://flagcdn.com/w160/np.png",
     "region": "Asia",
     "skill": 52
   },
   {
     "id": "bhu",
     "name": "Bhutan",
-    "flag": "https://flagcdn.com/64x48/bt.png",
+    "flag": "https://flagcdn.com/w160/bt.png",
     "region": "Asia",
     "skill": 47
   },
   {
     "id": "cam",
     "name": "Cambodia",
-    "flag": "https://flagcdn.com/64x48/kh.png",
+    "flag": "https://flagcdn.com/w160/kh.png",
     "region": "Asia",
     "skill": 52
   },
   {
     "id": "lao",
     "name": "Laos",
-    "flag": "https://flagcdn.com/64x48/la.png",
+    "flag": "https://flagcdn.com/w160/la.png",
     "region": "Asia",
     "skill": 50
   },
   {
     "id": "tls",
     "name": "Timor-Leste",
-    "flag": "https://flagcdn.com/64x48/tl.png",
+    "flag": "https://flagcdn.com/w160/tl.png",
     "region": "Asia",
     "skill": 39
   },
   {
     "id": "bru",
     "name": "Brunei",
-    "flag": "https://flagcdn.com/64x48/bn.png",
+    "flag": "https://flagcdn.com/w160/bn.png",
     "region": "Asia",
     "skill": 47
   },
   {
     "id": "mac",
     "name": "Macau",
-    "flag": "https://flagcdn.com/64x48/mo.png",
+    "flag": "https://flagcdn.com/w160/mo.png",
     "region": "Asia",
     "skill": 47
   },
   {
     "id": "mon",
     "name": "Mongolia",
-    "flag": "https://flagcdn.com/64x48/mn.png",
+    "flag": "https://flagcdn.com/w160/mn.png",
     "region": "Asia",
     "skill": 48
   },
   {
     "id": "tpe",
     "name": "Chinese Taipei",
-    "flag": "https://flagcdn.com/64x48/tw.png",
+    "flag": "https://flagcdn.com/w160/tw.png",
     "region": "Asia",
     "skill": 52
   },
   {
     "id": "gum",
     "name": "Guam",
-    "flag": "https://flagcdn.com/64x48/gu.png",
+    "flag": "https://flagcdn.com/w160/gu.png",
     "region": "Asia",
     "skill": 37
   },
   {
     "id": "nzl",
     "name": "New Zealand",
-    "flag": "https://flagcdn.com/64x48/nz.png",
+    "flag": "https://flagcdn.com/w160/nz.png",
     "region": "Asia",
     "skill": 64
   },
   {
     "id": "png",
     "name": "Papua New Guinea",
-    "flag": "https://flagcdn.com/64x48/pg.png",
+    "flag": "https://flagcdn.com/w160/pg.png",
     "region": "Asia",
     "skill": 53
   },
   {
     "id": "fij",
     "name": "Fiji",
-    "flag": "https://flagcdn.com/64x48/fj.png",
+    "flag": "https://flagcdn.com/w160/fj.png",
     "region": "Asia",
     "skill": 54
   },
   {
     "id": "ncl",
     "name": "New Caledonia",
-    "flag": "https://flagcdn.com/64x48/nc.png",
+    "flag": "https://flagcdn.com/w160/nc.png",
     "region": "Asia",
     "skill": 55
   },
   {
     "id": "tah",
     "name": "Tahiti",
-    "flag": "https://flagcdn.com/64x48/pf.png",
+    "flag": "https://flagcdn.com/w160/pf.png",
     "region": "Asia",
     "skill": 54
   },
   {
     "id": "slb",
     "name": "Solomon Islands",
-    "flag": "https://flagcdn.com/64x48/sb.png",
+    "flag": "https://flagcdn.com/w160/sb.png",
     "region": "Asia",
     "skill": 55
   },
   {
     "id": "van",
     "name": "Vanuatu",
-    "flag": "https://flagcdn.com/64x48/vu.png",
+    "flag": "https://flagcdn.com/w160/vu.png",
     "region": "Asia",
     "skill": 54
   },
   {
     "id": "cok",
     "name": "Cook Islands",
-    "flag": "https://flagcdn.com/64x48/ck.png",
+    "flag": "https://flagcdn.com/w160/ck.png",
     "region": "Asia",
     "skill": 50
   },
   {
     "id": "sam",
     "name": "Samoa",
-    "flag": "https://flagcdn.com/64x48/ws.png",
+    "flag": "https://flagcdn.com/w160/ws.png",
     "region": "Asia",
     "skill": 48
   },
   {
     "id": "ton",
     "name": "Tonga",
-    "flag": "https://flagcdn.com/64x48/to.png",
+    "flag": "https://flagcdn.com/w160/to.png",
     "region": "Asia",
     "skill": 40
   }
