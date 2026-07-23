@@ -74,7 +74,10 @@ RETURNS TABLE (
   runner_up_name TEXT,
   third_name TEXT,
   fourth_name TEXT,
-  champion_region TEXT
+  champion_region TEXT,
+  runner_up_region TEXT,
+  third_region TEXT,
+  fourth_region TEXT
 )
 LANGUAGE sql STABLE
 AS $$
@@ -161,7 +164,10 @@ AS $$
     tr.name AS runner_up_name,
     t3.name AS third_name,
     t4.name AS fourth_name,
-    tc.region AS champion_region
+    tc.region AS champion_region,
+    tr.region AS runner_up_region,
+    t3.region AS third_region,
+    t4.region AS fourth_region
   FROM flat f
   LEFT JOIN teams tc ON tc.id = f.champion_id
   LEFT JOIN teams tr ON tr.id = f.runner_up_id
@@ -291,7 +297,7 @@ git commit -m "feat(campeones): RPCs champions_history y champions_palmares (mig
 **Interfaces:**
 - Consumes: `supabase`, `isSupabaseConfigured` de `../lib/supabase`; RPCs de Task 1.
 - Produces:
-  - `interface ChampionHistoryRow { tournamentId: string; year: number; kind: 'world-cup'|'continental'|'confederations'; region: string|null; championId: string|null; championName: string|null; championRegion: string|null; runnerUpId: string|null; runnerUpName: string|null; thirdId: string|null; thirdName: string|null; fourthId: string|null; fourthName: string|null; championScore: number|null; runnerUpScore: number|null; championPen: number|null; runnerUpPen: number|null }`
+  - `interface ChampionHistoryRow { tournamentId: string; year: number; kind: 'world-cup'|'continental'|'confederations'; region: string|null; championId: string|null; championName: string|null; championRegion: string|null; runnerUpId: string|null; runnerUpName: string|null; runnerUpRegion: string|null; thirdId: string|null; thirdName: string|null; thirdRegion: string|null; fourthId: string|null; fourthName: string|null; fourthRegion: string|null; championScore: number|null; runnerUpScore: number|null; championPen: number|null; runnerUpPen: number|null }` (las regiones de los 4 puestos se usan para construir el `Team` que abre el perfil, sin región falsa)
   - `interface PalmaresRow { teamId: string; teamName: string; region: string; titles: number; runnerUps: number; thirds: number; wcTitles: number; continentalTitles: number; confedTitles: number }`
   - `interface TimelineFilters { kind: ChampionHistoryRow['kind']|'all'; region: string|null; teamId: string|null; yearFrom: number|null; yearTo: number|null }`
   - `formatFinalScore(row: ChampionHistoryRow): string`
@@ -464,10 +470,13 @@ export interface ChampionHistoryRow {
   championRegion: string | null;
   runnerUpId: string | null;
   runnerUpName: string | null;
+  runnerUpRegion: string | null;
   thirdId: string | null;
   thirdName: string | null;
+  thirdRegion: string | null;
   fourthId: string | null;
   fourthName: string | null;
+  fourthRegion: string | null;
   championScore: number | null;
   runnerUpScore: number | null;
   championPen: number | null;
@@ -555,10 +564,13 @@ export const championsService = {
       championRegion: r.champion_region ?? null,
       runnerUpId: r.runner_up_id ?? null,
       runnerUpName: r.runner_up_name ?? null,
+      runnerUpRegion: r.runner_up_region ?? null,
       thirdId: r.third_id ?? null,
       thirdName: r.third_name ?? null,
+      thirdRegion: r.third_region ?? null,
       fourthId: r.fourth_id ?? null,
       fourthName: r.fourth_name ?? null,
+      fourthRegion: r.fourth_region ?? null,
       championScore: numOrNull(r.champion_score),
       runnerUpScore: numOrNull(r.runner_up_score),
       championPen: numOrNull(r.champion_pen),
