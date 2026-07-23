@@ -28,11 +28,27 @@ RETURNS TABLE (
 LANGUAGE sql STABLE
 AS $$
   WITH comps AS (
-    -- Mundial
+    -- Mundial. Fallback a tournaments_new cuando el JSONB no trae 'worldCup'
+    -- (torneos legacy previos al snapshot del ciclo): se sintetiza la final y
+    -- el 3er puesto desde las columnas planas, con campeón/subcampeón/podio
+    -- pero SIN marcador (no está disponible fuera del JSONB) -- igual que
+    -- mostraba el componente anterior, que leía el Mundial de tournaments_new.
     SELECT t.id AS tournament_id, t.year, 'world-cup'::text AS kind,
            NULL::text AS region, 0 AS ord,
-           cs.state->'worldCup'->'knockout'->'final'      AS final,
-           cs.state->'worldCup'->'knockout'->'thirdPlace' AS third
+           COALESCE(
+             cs.state->'worldCup'->'knockout'->'final',
+             CASE WHEN t.champion_team_id IS NOT NULL
+                  THEN jsonb_build_object('winnerId', t.champion_team_id,
+                                          'loserId', t.runner_up_team_id)
+                  ELSE NULL END
+           ) AS final,
+           COALESCE(
+             cs.state->'worldCup'->'knockout'->'thirdPlace',
+             CASE WHEN t.third_place_team_id IS NOT NULL
+                  THEN jsonb_build_object('winnerId', t.third_place_team_id,
+                                          'loserId', t.fourth_place_team_id)
+                  ELSE NULL END
+           ) AS third
     FROM tournaments_new t
     JOIN tournament_cycle_state cs ON cs.tournament_id = t.id
     WHERE t.status = 'completed'
