@@ -185,7 +185,7 @@ function App() {
         ) : currentView === 'tournaments' ? (
           <TournamentHistory />
         ) : currentView === 'champions' ? (
-          <ChampionsHistory />
+          <ChampionsHistory onNavigate={handleNavigate} />
         ) : currentView === 'continental' ? (
           <ContinentalView cycle={currentTournament} teams={teams} />
         ) : currentView === 'confederations' ? (

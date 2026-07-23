@@ -1,229 +1,81 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
-import { TeamFlag } from '../ui/TeamFlag';
-import { TeamNameTooltip } from '../ui/TeamNameTooltip';
-import { useTeamProfile } from '../../hooks/useTeamProfile';
-import { Trophy, Medal, Award, Loader } from 'lucide-react';
-import { db } from '../../lib/supabaseNormalized';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import type { CycleStatePayload } from '../../core/cycle';
-import type { Region, Team } from '../../types';
+import { useTournamentStore } from '../../store/useTournamentStore';
+import {
+  championsService,
+  summarizeChampions,
+  type ChampionHistoryRow,
+  type PalmaresRow,
+  type CompetitionKind,
+} from '../../services/championsService';
+import { ChampionsPalmares } from './ChampionsPalmares';
+import { ChampionsTimeline } from './ChampionsTimeline';
+import { Trophy, ListOrdered, Loader, AlertTriangle } from 'lucide-react';
 
-const REGION_LABELS: Record<Region, string> = {
-  Europe: 'Europa',
-  America: 'América',
-  Africa: 'África',
-  Asia: 'Asia',
+type Tab = 'palmares' | 'timeline';
+
+// Mapea el tipo de competición a la vista/bracket correspondiente.
+const VIEW_FOR_KIND: Record<CompetitionKind, string> = {
+  'world-cup': 'worldcup',
+  continental: 'continental',
+  confederations: 'confederations',
 };
 
-// Orden de las competiciones dentro de un mismo año (Mundial primero, luego los
-// continentales por región y por último la Copa Confederaciones).
-const CONTINENTAL_ORDER: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
-
-type CompetitionKind = 'world-cup' | 'continental' | 'confederations';
-
-interface ChampionRow {
-  key: string;
-  year: number;
-  competition: string;
-  kind: CompetitionKind;
-  order: number;
-  champion: Team | null;
-  runnerUp: Team | null;
-  thirdPlace: Team | null;
-  fourthPlace: Team | null;
+interface ChampionsHistoryProps {
+  onNavigate: (view: string) => void;
 }
 
-// Filas crudas de Supabase. El helper `db` devuelve `any` (ver
-// supabaseNormalized.ts), así que se castea cada consulta a estas formas.
-interface TournamentRow {
-  id: string;
-  year: number;
-  status: string;
-  champion_team_id: string | null;
-  runner_up_team_id: string | null;
-  third_place_team_id: string | null;
-  fourth_place_team_id: string | null;
-}
-
-interface CycleStateRow {
-  tournament_id: string;
-  state: CycleStatePayload | null;
-}
-
-interface TeamRow {
-  id: string;
-  name: string;
-  flag: string;
-  region: Region;
-  skill: number;
-}
-
-export function ChampionsHistory() {
-  const [rows, setRows] = useState<ChampionRow[]>([]);
+export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
+  const [tab, setTab] = useState<Tab>('palmares');
+  const [history, setHistory] = useState<ChampionHistoryRow[]>([]);
+  const [palmares, setPalmares] = useState<PalmaresRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openTeamProfile } = useTeamProfile();
+  const [error, setError] = useState(false);
+  const [teamFilter, setTeamFilter] = useState<string | null>(null);
+  const { selectTournament } = useTournamentStore();
 
   useEffect(() => {
-    loadChampionsHistory();
+    const signal = { cancelled: false };
+    load(signal);
+    return () => {
+      signal.cancelled = true;
+    };
   }, []);
 
-  const loadChampionsHistory = async () => {
+  const load = async (signal: { cancelled: boolean }) => {
     if (!isSupabaseConfigured()) {
       setLoading(false);
       return;
     }
-
+    setLoading(true);
+    setError(false);
     try {
-      // 1. Torneos (ciclos) completados: aportan el campeón del Mundial.
-      const { data: tournamentsRaw, error: tournamentsError } = await db
-        .tournaments_new()
-        .select('*')
-        .eq('status', 'completed')
-        .order('year', { ascending: false });
-
-      if (tournamentsError) throw tournamentsError;
-
-      const tournaments = tournamentsRaw as TournamentRow[] | null;
-
-      if (!tournaments || tournaments.length === 0) {
-        setRows([]);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Estado del ciclo (continental + confederaciones) de esos torneos.
-      const tournamentIds = tournaments.map((t) => t.id);
-      const { data: cycleStatesRaw, error: cycleStatesError } = await db
-        .tournament_cycle_state()
-        .select('tournament_id, state')
-        .in('tournament_id', tournamentIds);
-
-      if (cycleStatesError) throw cycleStatesError;
-
-      const cycleStates = cycleStatesRaw as CycleStateRow[] | null;
-      const stateByTournament = new Map<string, CycleStatePayload>();
-      cycleStates?.forEach((row) => {
-        if (row.state) stateByTournament.set(row.tournament_id, row.state);
-      });
-
-      // 3. Reunir todos los IDs de equipos referenciados en cualquier competición.
-      const teamIds = new Set<string>();
-      const addId = (id?: string | null) => {
-        if (id) teamIds.add(id);
-      };
-
-      tournaments.forEach((t) => {
-        addId(t.champion_team_id);
-        addId(t.runner_up_team_id);
-        addId(t.third_place_team_id);
-        addId(t.fourth_place_team_id);
-      });
-
-      stateByTournament.forEach((state) => {
-        Object.values(state.continental?.brackets ?? {}).forEach((bracket) => {
-          addId(bracket.championId);
-          addId(bracket.runnerUpId);
-          addId(bracket.thirdPlaceId);
-          addId(bracket.thirdPlace?.loserId); // 4° puesto = perdedor del partido por el 3°
-        });
-        const confed = state.confederationsCup;
-        addId(confed?.championId);
-        addId(confed?.knockout?.final?.loserId);
-        addId(confed?.knockout?.thirdPlace?.winnerId);
-        addId(confed?.knockout?.thirdPlace?.loserId); // 4° puesto
-      });
-
-      // 4. Traer los equipos de una sola vez.
-      const teamsMap = new Map<string, Team>();
-      if (teamIds.size > 0) {
-        const { data: teamsRaw, error: teamsError } = await db
-          .teams()
-          .select('*')
-          .in('id', Array.from(teamIds));
-
-        if (teamsError) throw teamsError;
-
-        const teams = teamsRaw as TeamRow[] | null;
-        teams?.forEach((team) => {
-          teamsMap.set(team.id, {
-            id: team.id,
-            name: team.name,
-            flag: team.flag,
-            region: team.region,
-            skill: team.skill,
-          });
-        });
-      }
-
-      const teamOf = (id?: string | null): Team | null =>
-        id ? teamsMap.get(id) ?? null : null;
-
-      // 5. Construir una fila por competición con campeón definido.
-      const allRows: ChampionRow[] = [];
-
-      tournaments.forEach((t) => {
-        // Mundial
-        if (t.champion_team_id) {
-          allRows.push({
-            key: `${t.id}-world-cup`,
-            year: t.year,
-            competition: 'Mundial',
-            kind: 'world-cup',
-            order: 0,
-            champion: teamOf(t.champion_team_id),
-            runnerUp: teamOf(t.runner_up_team_id),
-            thirdPlace: teamOf(t.third_place_team_id),
-            fourthPlace: teamOf(t.fourth_place_team_id),
-          });
-        }
-
-        const state = stateByTournament.get(t.id);
-        if (!state) return;
-
-        // Continentales (uno por región)
-        CONTINENTAL_ORDER.forEach((region, idx) => {
-          const bracket = state.continental?.brackets?.[region];
-          if (!bracket?.championId) return;
-          allRows.push({
-            key: `${t.id}-continental-${region}`,
-            year: t.year,
-            competition: `Continental · ${REGION_LABELS[region]}`,
-            kind: 'continental',
-            order: 1 + idx,
-            champion: teamOf(bracket.championId),
-            runnerUp: teamOf(bracket.runnerUpId),
-            thirdPlace: teamOf(bracket.thirdPlaceId),
-            fourthPlace: teamOf(bracket.thirdPlace?.loserId),
-          });
-        });
-
-        // Copa Confederaciones
-        const confed = state.confederationsCup;
-        if (confed?.championId) {
-          allRows.push({
-            key: `${t.id}-confederations`,
-            year: t.year,
-            competition: 'Copa Confederaciones',
-            kind: 'confederations',
-            order: 5,
-            champion: teamOf(confed.championId),
-            runnerUp: teamOf(confed.knockout?.final?.loserId),
-            thirdPlace: teamOf(confed.knockout?.thirdPlace?.winnerId),
-            fourthPlace: teamOf(confed.knockout?.thirdPlace?.loserId),
-          });
-        }
-      });
-
-      // Año descendente y, dentro del año, por orden de competición.
-      allRows.sort((a, b) => b.year - a.year || a.order - b.order);
-
-      setRows(allRows);
-    } catch (error) {
-      console.error('Error loading champions history:', error);
-    } finally {
+      const [hist, palm] = await Promise.all([
+        championsService.getChampionsHistory(),
+        championsService.getPalmares(),
+      ]);
+      if (signal.cancelled) return;
+      setHistory(hist);
+      setPalmares(palm);
       setLoading(false);
+    } catch (err) {
+      console.error('Error loading champions history:', err);
+      if (!signal.cancelled) {
+        setError(true);
+        setLoading(false);
+      }
     }
+  };
+
+  const handleSelectTeam = (teamId: string) => {
+    setTeamFilter(teamId);
+    setTab('timeline');
+  };
+
+  const handleOpenTournament = async (tournamentId: string, kind: CompetitionKind) => {
+    await selectTournament(tournamentId);
+    onNavigate(VIEW_FOR_KIND[kind]);
   };
 
   if (loading) {
@@ -234,7 +86,31 @@ export function ChampionsHistory() {
     );
   }
 
-  if (rows.length === 0) {
+  if (error) {
+    return (
+      <Card>
+        <CardContent>
+          <div className="text-center py-12">
+            <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-gold" />
+            <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">
+              Error al cargar los campeones
+            </p>
+            <p className="text-sm text-grass-soft mb-4">
+              No se pudo leer el historial. Reintentá.
+            </p>
+            <button
+              onClick={() => load({ cancelled: false })}
+              className="px-4 py-2 font-arcade text-[10px] uppercase border-2 border-gold text-gold hover:bg-grass/40 transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (history.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -258,11 +134,10 @@ export function ChampionsHistory() {
     );
   }
 
-  const totalYears = new Set(rows.map((r) => r.year)).size;
+  const summary = summarizeChampions(history);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-shadow-retro">
@@ -272,113 +147,53 @@ export function ChampionsHistory() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-grass-soft">
-            Campeones de todas las competiciones ({rows.length}{' '}
-            {rows.length === 1 ? 'título' : 'títulos'} en {totalYears}{' '}
-            {totalYears === 1 ? 'año' : 'años'})
+            {summary.totalTitles} {summary.totalTitles === 1 ? 'título' : 'títulos'} ·{' '}
+            {summary.years} {summary.years === 1 ? 'año' : 'años'} · {summary.teams}{' '}
+            {summary.teams === 1 ? 'selección' : 'selecciones'}
           </p>
         </CardContent>
       </Card>
 
-      {/* Champions Table */}
+      {/* Selector de pestaña */}
+      <div className="flex border-b-4 border-grass">
+        <button
+          onClick={() => setTab('palmares')}
+          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
+            tab === 'palmares'
+              ? 'border-gold text-gold bg-grass/30'
+              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
+          }`}
+        >
+          <Trophy className="w-4 h-4" />
+          Palmarés
+        </button>
+        <button
+          onClick={() => setTab('timeline')}
+          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
+            tab === 'timeline'
+              ? 'border-gold text-gold bg-grass/30'
+              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
+          }`}
+        >
+          <ListOrdered className="w-4 h-4" />
+          Cronología
+        </button>
+      </div>
+
       <Card>
         <CardContent className="pt-6">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-grass-dark">
-                <tr className="border-b-2 border-grass">
-                  <th className="text-left py-3 px-2 sm:px-4 font-arcade text-[10px] text-gold uppercase">
-                    Año
-                  </th>
-                  <th className="text-left py-3 px-2 sm:px-4 font-arcade text-[10px] text-gold uppercase">
-                    Competición
-                  </th>
-                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
-                    <div className="flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-gold" />
-                      <span>Campeón</span>
-                    </div>
-                  </th>
-                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
-                    <div className="flex items-center gap-2">
-                      <Medal className="w-4 h-4 text-grass-soft" />
-                      <span>Subcampeón</span>
-                    </div>
-                  </th>
-                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
-                    <div className="flex items-center gap-2">
-                      <Award className="w-4 h-4 text-grass-soft" />
-                      <span>3° Lugar</span>
-                    </div>
-                  </th>
-                  <th className="text-left py-3 px-4 font-arcade text-[10px] text-gold uppercase">
-                    4° Lugar
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-grass">
-                {rows.map((row) => {
-                  return (
-                    <tr key={row.key} className="hover:bg-grass/40 transition-colors">
-                      <td className="py-4 px-2 sm:px-4">
-                        <span className="font-terminal text-led tabular-nums text-lg">{row.year}</span>
-                      </td>
-                      <td className="py-4 px-2 sm:px-4">
-                        <span className="font-arcade text-[10px] text-white uppercase whitespace-nowrap">
-                          {row.competition}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <ChampionCell
-                          team={row.champion}
-                          size={32}
-                          onOpen={openTeamProfile}
-                        />
-                      </td>
-                      <td className="py-4 px-4">
-                        <ChampionCell team={row.runnerUp} size={24} onOpen={openTeamProfile} />
-                      </td>
-                      <td className="py-4 px-4">
-                        <ChampionCell team={row.thirdPlace} size={24} onOpen={openTeamProfile} />
-                      </td>
-                      <td className="py-4 px-4">
-                        <ChampionCell team={row.fourthPlace} size={24} onOpen={openTeamProfile} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {tab === 'palmares' ? (
+            <ChampionsPalmares rows={palmares} onSelectTeam={handleSelectTeam} />
+          ) : (
+            <ChampionsTimeline
+              rows={history}
+              teamFilter={teamFilter}
+              onClearTeamFilter={() => setTeamFilter(null)}
+              onOpenTournament={handleOpenTournament}
+            />
+          )}
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-interface ChampionCellProps {
-  team: Team | null;
-  size: 24 | 32;
-  onOpen: (team: Team) => void;
-  blink?: boolean;
-}
-
-function ChampionCell({ team, size, onOpen, blink = false }: ChampionCellProps) {
-  if (!team) {
-    return <span className="text-grass-soft italic">-</span>;
-  }
-
-  return (
-    <div className={`flex items-center gap-2 ${blink ? 'blink' : ''}`}>
-      <TeamFlag
-        teamId={team.id}
-        teamName={team.name}
-        size={size}
-        onClick={() => onOpen(team)}
-        clickable
-      />
-      <TeamNameTooltip teamName={team.name}>
-        <span className="font-arcade text-[10px] uppercase">{team.id.toUpperCase()}</span>
-      </TeamNameTooltip>
     </div>
   );
 }
