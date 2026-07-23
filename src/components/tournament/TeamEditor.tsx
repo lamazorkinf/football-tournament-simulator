@@ -24,8 +24,7 @@ export function TeamEditor() {
   const [editForm, setEditForm] = useState<{
     skill: number;
     region: Region;
-    flag: string;
-  }>({ skill: 50, region: 'Europe', flag: '' });
+  }>({ skill: 50, region: 'Europe' });
   const filteredTeams = useMemo(() => {
     // Búsqueda insensible a acentos (Curaçao, São Tomé).
     const normalize = (s: string) =>
@@ -41,7 +40,7 @@ export function TeamEditor() {
 
   const handleEdit = (team: Team) => {
     setEditingTeam(team.id);
-    setEditForm({ skill: Math.round(team.skill), region: team.region, flag: team.flag });
+    setEditForm({ skill: Math.round(team.skill), region: team.region });
   };
 
   const handleSave = (teamId: string) => {
@@ -193,12 +192,12 @@ export function TeamEditor() {
 interface TeamRowProps {
   team: Team;
   isEditing: boolean;
-  editForm: { skill: number; region: Region; flag: string };
+  editForm: { skill: number; region: Region };
   onEdit: () => void;
   onSave: () => void;
   onCancel: () => void;
   onDelete: () => void;
-  onFormChange: (form: { skill: number; region: Region; flag: string }) => void;
+  onFormChange: (form: { skill: number; region: Region }) => void;
 }
 
 function TeamRow({
@@ -231,7 +230,7 @@ function TeamRow({
               </Button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-grass-soft mb-1">Skill</label>
               <input
@@ -263,18 +262,6 @@ function TeamRow({
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-xs text-grass-soft mb-1">Flag URL</label>
-              <input
-                type="url"
-                value={editForm.flag}
-                onChange={(e) =>
-                  onFormChange({ ...editForm, flag: e.target.value })
-                }
-                placeholder="https://example.com/flag.png"
-                className="w-full px-3 py-1 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold text-sm"
-              />
             </div>
           </div>
         </div>

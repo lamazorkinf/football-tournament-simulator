@@ -114,7 +114,6 @@ export const teamsService = {
 
     const dbUpdates: TeamUpdate = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
-    if (updates.flag !== undefined) dbUpdates.flag = updates.flag;
     if (updates.region !== undefined) dbUpdates.region = updates.region;
     if (updates.skill !== undefined) dbUpdates.skill = updates.skill;
 
