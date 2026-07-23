@@ -65,6 +65,14 @@ describe('filterTimeline', () => {
     // esp: campeón en 2026 (continental) y tercero en 2025 (confed) ⇒ 2 filas
     expect(filterTimeline(rows, { ...base, teamId: 'esp' })).toHaveLength(2);
   });
+  it('filtra por equipo que solo aparece como subcampeón', () => {
+    // ita es subcampeón en 2026 (continental, campeón esp)
+    expect(filterTimeline(rows, { ...base, teamId: 'ita' }).map((r) => r.championId)).toEqual(['esp']);
+  });
+  it('filtra por equipo que solo aparece como cuarto', () => {
+    // mex es cuarto en 2025 (confed, campeón fra)
+    expect(filterTimeline(rows, { ...base, teamId: 'mex' }).map((r) => r.championId)).toEqual(['fra']);
+  });
   it('filtra por rango de años inclusivo', () => {
     expect(filterTimeline(rows, { ...base, yearFrom: 2026, yearTo: 2026 })).toHaveLength(2);
   });
@@ -98,10 +106,24 @@ describe('championsService.getChampionsHistory', () => {
       .mockResolvedValue({ data: [histDbRow()], error: null } as never);
 
     const res = await championsService.getChampionsHistory();
-    expect(res[0]).toMatchObject({
-      tournamentId: 't1', year: 2026, kind: 'world-cup',
-      championId: 'arg', championName: 'Argentina', runnerUpId: 'fra',
-      championScore: 2, runnerUpScore: 1, championPen: null,
+    expect(res[0]).toEqual({
+      tournamentId: 't1',
+      year: 2026,
+      kind: 'world-cup',
+      region: null,
+      championId: 'arg',
+      championName: 'Argentina',
+      championRegion: 'America',
+      runnerUpId: 'fra',
+      runnerUpName: 'Francia',
+      thirdId: 'bra',
+      thirdName: 'Brasil',
+      fourthId: 'nld',
+      fourthName: 'Holanda',
+      championScore: 2,
+      runnerUpScore: 1,
+      championPen: null,
+      runnerUpPen: null,
     });
   });
   it('sin Supabase ⇒ []', async () => {
@@ -129,5 +151,9 @@ describe('championsService.getPalmares', () => {
       titles: 4, runnerUps: 1, thirds: 0,
       wcTitles: 2, continentalTitles: 2, confedTitles: 0,
     });
+  });
+  it('sin Supabase ⇒ []', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(false);
+    expect(await championsService.getPalmares()).toEqual([]);
   });
 });
