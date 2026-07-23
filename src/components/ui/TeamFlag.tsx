@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { getFlagUrl } from '../../data/country-codes';
+import { getFlagUrl, type FlagSize } from '../../data/country-codes';
 
 interface TeamFlagProps {
   teamId: string;
   teamName: string;
   flagUrl?: string; // URL from database, takes priority over generated URL
-  size?: 16 | 24 | 32 | 48 | 64;
-  style?: 'flat' | 'shiny';
+  size?: FlagSize;
   className?: string;
   onClick?: () => void; // Optional click handler
   clickable?: boolean; // Whether to show hover effect
@@ -17,13 +16,12 @@ export function TeamFlag({
   teamName,
   flagUrl: providedFlagUrl,
   size = 32,
-  style = 'flat',
   className = '',
   onClick,
   clickable = false
 }: TeamFlagProps) {
   // Use provided flagUrl from database, or generate as fallback
-  const flagUrl = providedFlagUrl || getFlagUrl(teamId, size, style);
+  const flagUrl = providedFlagUrl || getFlagUrl(teamId, size);
 
   // El fallback se maneja con estado de React, no inyectando nodos DOM crudos:
   // el onError anterior hacía document.createElement + insertBefore dentro de un
