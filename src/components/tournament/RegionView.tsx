@@ -112,7 +112,6 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                                     <TeamFlag
                                       teamId={team.id}
                                       teamName={team.name}
-                                      flagUrl={team.flag}
                                       size={24}
                                     />
                                   )}

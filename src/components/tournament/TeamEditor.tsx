@@ -216,7 +216,7 @@ function TeamRow({
       <div className="bg-grass-dark border-2 border-gold p-4">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
+            <TeamFlag teamId={team.id} teamName={team.name} size={48} />
             <div className="flex-1 min-w-0">
               <span className="font-semibold text-white">{team.name}</span>
               <span className="text-xs text-grass-soft ml-2">({team.id})</span>
@@ -286,7 +286,7 @@ function TeamRow({
     <div className="bg-grass-dark border-2 border-grass hover:border-gold p-4 transition-colors">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
+          <TeamFlag teamId={team.id} teamName={team.name} size={48} />
           <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-3">
             <div className="flex items-baseline gap-2 min-w-0">
               <span className="font-semibold text-white truncate">{team.name}</span>

@@ -349,7 +349,7 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                             : 'bg-night border-grass'
                         }`}
                       >
-                        <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
+                        <TeamFlag teamId={team.id} teamName={team.name} size={24} />
                         <span className="text-xs sm:text-sm truncate flex-1">{team.name}</span>
                       </motion.div>
                     ))}
@@ -394,7 +394,6 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
                                 <TeamFlag
                                   teamId={team.id}
                                   teamName={team.name}
-                                  flagUrl={team.flag}
                                   size={16}
                                 />
                                 <span className="text-xs truncate flex-1">{team.name}</span>

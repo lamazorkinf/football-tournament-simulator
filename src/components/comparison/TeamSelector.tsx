@@ -48,7 +48,6 @@ export function TeamSelector({
             <TeamFlag
               teamId={selectedTeam.id}
               teamName={selectedTeam.name}
-              flagUrl={selectedTeam.flag}
               size={48}
             />
             <div>
@@ -115,7 +114,6 @@ export function TeamSelector({
                 <TeamFlag
                   teamId={team.id}
                   teamName={team.name}
-                  flagUrl={team.flag}
                   size={32}
                 />
                 <div className="flex-1 min-w-0">

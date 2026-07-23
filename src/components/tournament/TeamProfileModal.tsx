@@ -432,7 +432,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
           {/* Header */}
           <div className="sticky top-0 bg-grass border-b-4 border-line text-white px-6 py-4 flex items-center justify-between z-10">
             <div className="flex items-center gap-4">
-              <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={48} />
+              <TeamFlag teamId={team.id} teamName={team.name} size={48} />
               <div>
                 <h2 className="text-2xl font-bold">{team.name}</h2>
                 <p className="text-white/70 text-sm">{team.region}</p>
@@ -741,7 +741,6 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
                                   <TeamFlag
                                     teamId={opponent.id}
                                     teamName={opponent.name}
-                                    flagUrl={opponent.flag}
                                     size={32}
                                   />
                                   <div>

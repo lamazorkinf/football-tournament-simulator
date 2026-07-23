@@ -123,7 +123,7 @@ export function StandingsTable({
                         if (team) {
                           return (
                             <>
-                              <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
+                              <TeamFlag teamId={team.id} teamName={team.name} size={24} />
                               <TeamNameTooltip teamName={team.name}>
                                 <span className="font-arcade text-[10px] uppercase">
                                   {team.id.toUpperCase()}

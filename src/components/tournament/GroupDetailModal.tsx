@@ -141,7 +141,6 @@ export function GroupDetailModal({
                                 <TeamFlag
                                   teamId={homeTeam.id}
                                   teamName={homeTeam.name}
-                                  flagUrl={homeTeam.flag}
                                   size={24}
                                 />
                                 <span className="text-sm truncate">{homeTeam.name}</span>
@@ -170,7 +169,6 @@ export function GroupDetailModal({
                                 <TeamFlag
                                   teamId={awayTeam.id}
                                   teamName={awayTeam.name}
-                                  flagUrl={awayTeam.flag}
                                   size={24}
                                 />
                               </div>

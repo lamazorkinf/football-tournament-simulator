@@ -372,7 +372,6 @@ function ChampionCell({ team, size, onOpen, blink = false }: ChampionCellProps) 
       <TeamFlag
         teamId={team.id}
         teamName={team.name}
-        flagUrl={team.flag}
         size={size}
         onClick={() => onOpen(team)}
         clickable

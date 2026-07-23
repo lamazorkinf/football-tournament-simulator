@@ -42,7 +42,6 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
                   <TeamFlag
                     teamId={team1.id}
                     teamName={team1.name}
-                    flagUrl={team1.flag}
                     size={32}
                   />
                 </div>
@@ -128,7 +127,6 @@ export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps
                   <TeamFlag
                     teamId={team2.id}
                     teamName={team2.name}
-                    flagUrl={team2.flag}
                     size={32}
                   />
                 </div>

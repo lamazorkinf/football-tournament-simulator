@@ -94,7 +94,6 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
                               <TeamFlag
                                 teamId={team.id}
                                 teamName={team.name}
-                                flagUrl={team.flag}
                                 size={24}
                               />
                             )}

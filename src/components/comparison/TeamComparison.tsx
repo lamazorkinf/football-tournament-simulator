@@ -175,7 +175,6 @@ export function TeamComparison() {
                 <TeamFlag
                   teamId={team1.id}
                   teamName={team1.name}
-                  flagUrl={team1.flag}
                   size={64}
                 />
               </div>
@@ -208,7 +207,6 @@ export function TeamComparison() {
                 <TeamFlag
                   teamId={team2.id}
                   teamName={team2.name}
-                  flagUrl={team2.flag}
                   size={64}
                 />
               </div>

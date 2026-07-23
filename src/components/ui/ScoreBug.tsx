@@ -21,7 +21,7 @@ export function ScoreBug({ homeTeam, awayTeam, homeScore, awayScore, size = 'md'
       <div className="bg-grass-dark border-4 border-line shadow-hard-panel px-3 py-2 space-y-2 w-full">
         <div className="flex items-center justify-between gap-2 font-arcade text-[10px]">
           <span className="flex items-center gap-2 min-w-0">
-            <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={24} />
+            <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} size={24} />
             <TeamNameTooltip teamName={homeTeam.name}>
               <span>{homeTeam.id.toUpperCase()}</span>
             </TeamNameTooltip>
@@ -30,7 +30,7 @@ export function ScoreBug({ homeTeam, awayTeam, homeScore, awayScore, size = 'md'
             <TeamNameTooltip teamName={awayTeam.name}>
               <span>{awayTeam.id.toUpperCase()}</span>
             </TeamNameTooltip>
-            <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={24} />
+            <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} size={24} />
           </span>
         </div>
         <div className="bg-black border-2 border-line font-arcade text-led tabular-nums text-center text-xl py-1">
@@ -43,7 +43,7 @@ export function ScoreBug({ homeTeam, awayTeam, homeScore, awayScore, size = 'md'
   return (
     <div className="flex items-center gap-3 bg-grass-dark border-4 border-line shadow-hard-panel px-4 py-3">
       <div className={`flex flex-1 items-center gap-2 font-arcade ${code}`}>
-        <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={flagSize} />
+        <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} size={flagSize} />
         <TeamNameTooltip teamName={homeTeam.name}>
           <span>{homeTeam.id.toUpperCase()}</span>
         </TeamNameTooltip>
@@ -55,7 +55,7 @@ export function ScoreBug({ homeTeam, awayTeam, homeScore, awayScore, size = 'md'
         <TeamNameTooltip teamName={awayTeam.name}>
           <span>{awayTeam.id.toUpperCase()}</span>
         </TeamNameTooltip>
-        <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={flagSize} />
+        <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} size={flagSize} />
       </div>
     </div>
   );

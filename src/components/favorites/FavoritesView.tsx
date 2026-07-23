@@ -140,7 +140,7 @@ function FavoriteTeamRow({
       <Star
         className={`w-5 h-5 flex-shrink-0 ${isFavorite ? 'text-gold fill-gold' : 'text-grass-soft'}`}
       />
-      <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
+      <TeamFlag teamId={team.id} teamName={team.name} size={24} />
       <span className="flex-1 min-w-0 truncate text-sm text-white">{team.name}</span>
       <span className="text-xs text-grass-soft uppercase hidden sm:inline">{team.region}</span>
       <span className="font-arcade text-[10px] text-led w-10 text-right">{Math.round(team.skill)}</span>

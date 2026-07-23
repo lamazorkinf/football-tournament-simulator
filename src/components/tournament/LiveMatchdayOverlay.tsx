@@ -150,7 +150,7 @@ function LiveGridCard({
       {/* Equipos + marcador */}
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {home && <TeamFlag teamId={home.id} teamName={home.name} flagUrl={home.flag} size={24} />}
+          {home && <TeamFlag teamId={home.id} teamName={home.name} size={24} />}
           <span className="font-arcade text-[10px] text-white uppercase truncate">
             {home?.id.toUpperCase() ?? entry.homeTeamId}
           </span>
@@ -166,7 +166,7 @@ function LiveGridCard({
           <span className="font-arcade text-[10px] text-white uppercase truncate">
             {away?.id.toUpperCase() ?? entry.awayTeamId}
           </span>
-          {away && <TeamFlag teamId={away.id} teamName={away.name} flagUrl={away.flag} size={24} />}
+          {away && <TeamFlag teamId={away.id} teamName={away.name} size={24} />}
         </div>
       </div>
 

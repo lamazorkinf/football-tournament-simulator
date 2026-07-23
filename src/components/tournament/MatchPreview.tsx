@@ -154,7 +154,6 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                               <TeamFlag
                                 teamId={team.id}
                                 teamName={team.name}
-                                flagUrl={team.flag}
                                 size={16}
                                 onClick={() => openTeamProfile(team)}
                                 clickable
@@ -197,7 +196,6 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                 <TeamFlag
                   teamId={homeTeam.id}
                   teamName={homeTeam.name}
-                  flagUrl={homeTeam.flag}
                   size={24}
                   onClick={() => openTeamProfile(homeTeam)}
                   clickable
@@ -238,7 +236,6 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                 <TeamFlag
                   teamId={awayTeam.id}
                   teamName={awayTeam.name}
-                  flagUrl={awayTeam.flag}
                   size={24}
                   onClick={() => openTeamProfile(awayTeam)}
                   clickable
@@ -291,7 +288,6 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                 <TeamFlag
                   teamId={homeTeam.id}
                   teamName={homeTeam.name}
-                  flagUrl={homeTeam.flag}
                   size={24}
                   onClick={() => openTeamProfile(homeTeam)}
                   clickable
@@ -306,7 +302,6 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
                 <TeamFlag
                   teamId={awayTeam.id}
                   teamName={awayTeam.name}
-                  flagUrl={awayTeam.flag}
                   size={24}
                   onClick={() => openTeamProfile(awayTeam)}
                   clickable

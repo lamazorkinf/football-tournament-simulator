@@ -215,7 +215,6 @@ export function RunnersUpModal({ qualifiers, teams, onClose }: RunnersUpModalPro
                             <TeamFlag
                               teamId={entry.team.id}
                               teamName={entry.team.name}
-                              flagUrl={entry.team.flag}
                               size={24}
                             />
                             <span className="text-white truncate">

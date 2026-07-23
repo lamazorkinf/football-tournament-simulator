@@ -208,7 +208,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                             <span className="font-terminal text-xl text-grass-soft tabular-nums w-6">
                               {idx + 1}
                             </span>
-                            <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={32} />
+                            <TeamFlag teamId={team.id} teamName={team.name} size={32} />
                             <div>
                               <p className="font-medium text-white">{team.name}</p>
                               <p className="text-xs text-grass-soft">
@@ -256,7 +256,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                             <span className="font-terminal text-xl text-grass-soft tabular-nums w-6">
                               {idx + 1}
                             </span>
-                            <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={32} />
+                            <TeamFlag teamId={team.id} teamName={team.name} size={32} />
                             <div>
                               <p className="font-medium text-white">{team.name}</p>
                               <p className="text-xs text-grass-soft">
@@ -335,7 +335,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                         <div className="font-terminal text-2xl text-grass-soft tabular-nums w-8">
                           #{index + 1}
                         </div>
-                        <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={32} />
+                        <TeamFlag teamId={team.id} teamName={team.name} size={32} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-white">
@@ -417,7 +417,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                               className="flex items-center justify-between text-sm"
                             >
                               <div className="flex items-center gap-2">
-                                <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
+                                <TeamFlag teamId={team.id} teamName={team.name} size={24} />
                                 <span className="text-white">{team.name}</span>
                               </div>
                               <span className="font-terminal text-led tabular-nums">

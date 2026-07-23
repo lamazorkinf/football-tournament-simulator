@@ -86,7 +86,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
           }`}
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} flagUrl={homeTeam.flag} size={24} />
+            <TeamFlag teamId={homeTeam.id} teamName={homeTeam.name} size={24} />
             <TeamNameTooltip teamName={homeTeam.name}>
               <span className={`font-arcade text-[10px] uppercase truncate ${homeWon && isPlayed ? 'text-led' : ''}`}>
                 {homeTeam.id}
@@ -105,7 +105,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
           }`}
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} flagUrl={awayTeam.flag} size={24} />
+            <TeamFlag teamId={awayTeam.id} teamName={awayTeam.name} size={24} />
             <TeamNameTooltip teamName={awayTeam.name}>
               <span className={`font-arcade text-[10px] uppercase truncate ${awayWon && isPlayed ? 'text-led' : ''}`}>
                 {awayTeam.id}

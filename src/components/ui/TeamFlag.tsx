@@ -4,7 +4,6 @@ import { getFlagUrl, type FlagSize } from '../../data/country-codes';
 interface TeamFlagProps {
   teamId: string;
   teamName: string;
-  flagUrl?: string; // URL from database, takes priority over generated URL
   size?: FlagSize;
   className?: string;
   onClick?: () => void; // Optional click handler
@@ -14,14 +13,15 @@ interface TeamFlagProps {
 export function TeamFlag({
   teamId,
   teamName,
-  flagUrl: providedFlagUrl,
   size = 32,
   className = '',
   onClick,
   clickable = false
 }: TeamFlagProps) {
-  // Use provided flagUrl from database, or generate as fallback
-  const flagUrl = providedFlagUrl || getFlagUrl(teamId, size);
+  // La URL se deriva del teamId y del tamaño pedido. Antes ganaba la columna
+  // teams.flag de la base, y por eso un parche viejo que quedó congelado ahí
+  // seguía sirviendo URLs muertas mucho después de que el proveedor cambiara.
+  const flagUrl = getFlagUrl(teamId, size);
 
   // El fallback se maneja con estado de React, no inyectando nodos DOM crudos:
   // el onError anterior hacía document.createElement + insertBefore dentro de un

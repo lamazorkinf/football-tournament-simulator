@@ -104,7 +104,7 @@ export function LiveMatchModal() {
           <>
             <div className="flex items-center justify-center gap-4">
               <div className="flex flex-col items-center gap-1 w-24">
-                {home && <TeamFlag teamId={home.id} teamName={home.name} flagUrl={home.flag} size={32} />}
+                {home && <TeamFlag teamId={home.id} teamName={home.name} size={32} />}
                 <span className="font-arcade text-[10px] text-white text-center uppercase truncate w-full">
                   {home?.name ?? activeMatch.homeTeamId}
                 </span>
@@ -113,7 +113,7 @@ export function LiveMatchModal() {
                 {`${playback.displayHomeScore} - ${playback.displayAwayScore}`}
               </div>
               <div className="flex flex-col items-center gap-1 w-24">
-                {away && <TeamFlag teamId={away.id} teamName={away.name} flagUrl={away.flag} size={32} />}
+                {away && <TeamFlag teamId={away.id} teamName={away.name} size={32} />}
                 <span className="font-arcade text-[10px] text-white text-center uppercase truncate w-full">
                   {away?.name ?? activeMatch.awayTeamId}
                 </span>

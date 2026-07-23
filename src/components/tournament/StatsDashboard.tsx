@@ -164,7 +164,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                       <span className="font-terminal text-xl text-grass-soft tabular-nums w-6">
                         {idx + 1}
                       </span>
-                      <TeamFlag teamId={stat.team.id} teamName={stat.team.name} flagUrl={stat.team.flag} size={32} />
+                      <TeamFlag teamId={stat.team.id} teamName={stat.team.name} size={32} />
                       <div>
                         <p className="font-medium text-white">{stat.team.name}</p>
                         <p className="text-xs text-grass-soft">
@@ -205,7 +205,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
                       <span className="font-terminal text-xl text-grass-soft tabular-nums w-6">
                         {idx + 1}
                       </span>
-                      <TeamFlag teamId={stat.team.id} teamName={stat.team.name} flagUrl={stat.team.flag} size={32} />
+                      <TeamFlag teamId={stat.team.id} teamName={stat.team.name} size={32} />
                       <div>
                         <p className="font-medium text-white">{stat.team.name}</p>
                         <p className="text-xs text-grass-soft">

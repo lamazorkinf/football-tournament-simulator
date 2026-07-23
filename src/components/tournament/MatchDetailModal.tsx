@@ -77,7 +77,6 @@ export function MatchDetailModal({
                 <TeamFlag
                   teamId={homeTeam.id}
                   teamName={homeTeam.name}
-                  flagUrl={homeTeam.flag}
                   size={64}
                 />
                 <h3 className="font-bold text-lg mt-3 mb-1 text-white">{homeTeam.name}</h3>
@@ -122,7 +121,6 @@ export function MatchDetailModal({
                 <TeamFlag
                   teamId={awayTeam.id}
                   teamName={awayTeam.name}
-                  flagUrl={awayTeam.flag}
                   size={64}
                 />
                 <h3 className="font-bold text-lg mt-3 mb-1 text-white">{awayTeam.name}</h3>
@@ -214,7 +212,7 @@ export function MatchDetailModal({
                       className="flex items-center gap-3 text-sm"
                     >
                       <span className="font-terminal tabular-nums text-grass-soft w-8">{minute}'</span>
-                      <TeamFlag teamId={team.id} teamName={team.name} flagUrl={team.flag} size={24} />
+                      <TeamFlag teamId={team.id} teamName={team.name} size={24} />
                       <span className="font-medium text-white">{team.name}</span>
                       <span className="text-grass-soft">⚽</span>
                     </motion.div>
