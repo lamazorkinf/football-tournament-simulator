@@ -209,7 +209,7 @@ AS $$
   )
   SELECT
     i.team_id,
-    tm.name AS team_name,
+    COALESCE(tm.name, i.team_id) AS team_name,  -- nunca vacío si el equipo fue removido
     tm.region,
     COALESCE(a.titles, 0)             AS titles,
     COALESCE(r.runner_ups, 0)         AS runner_ups,
@@ -221,7 +221,9 @@ AS $$
   LEFT JOIN agg a ON a.team_id = i.team_id
   LEFT JOIN ru  r ON r.team_id = i.team_id
   LEFT JOIN th  t ON t.team_id = i.team_id
-  JOIN teams tm ON tm.id = i.team_id
+  -- LEFT (no INNER): un equipo del podio que ya no exista en teams (curación de
+  -- teams.json) igual aparece con sus conteos, en vez de desaparecer en silencio.
+  LEFT JOIN teams tm ON tm.id = i.team_id
   ORDER BY titles DESC, runner_ups DESC, thirds DESC, team_name ASC;
 $$;
 
