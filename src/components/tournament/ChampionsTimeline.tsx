@@ -9,14 +9,9 @@ import {
 import type { Region, Team } from '../../types';
 import { TeamFlag } from '../ui/TeamFlag';
 import { useTeamProfile } from '../../hooks/useTeamProfile';
+import { REGION_LABELS } from '../../utils/regionLabels';
 import { ChevronRight, X } from 'lucide-react';
 
-const REGION_LABELS: Record<Region, string> = {
-  Europe: 'Europa',
-  America: 'América',
-  Africa: 'África',
-  Asia: 'Asia',
-};
 
 const KIND_LABELS: Record<CompetitionKind, string> = {
   'world-cup': 'Mundial',

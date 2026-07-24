@@ -1,15 +1,6 @@
 import type { KnockoutMatch, MatchdayOutcome, Team } from '../../types';
-import type { JornadaGroup, MatchStage } from '../../core/jornada';
+import type { JornadaGroup } from '../../core/jornada';
 import type { MatchResult } from '../../store/useMatchResultsStore';
-
-/** Rótulo de etapa para el resumen de la jornada. */
-const STAGE_LABEL: Record<MatchStage, string> = {
-  qualifier: 'Clasificatorias',
-  'world-cup': 'Mundial · Grupos',
-  knockout: 'Mundial · Playoffs',
-  continental: 'Continental',
-  confederations: 'Confederaciones',
-};
 
 /**
  * Resumen COMPLETO de una jornada: los outcomes recién simulados más los
@@ -45,8 +36,8 @@ export function buildJornadaResults(
       awayTeamId: awayTeam.id,
       homeScore: outcome ? outcome.homeScore : ctx.match.homeScore ?? 0,
       awayScore: outcome ? outcome.awayScore : ctx.match.awayScore ?? 0,
-      stage: STAGE_LABEL[ctx.stage],
       groupName: ctx.groupName,
+      region: ctx.region,
       isFavorite: favoriteTeamIds.has(homeTeam.id) || favoriteTeamIds.has(awayTeam.id),
       penalties,
     });

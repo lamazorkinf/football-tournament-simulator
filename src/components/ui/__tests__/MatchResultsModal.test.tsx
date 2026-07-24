@@ -8,7 +8,6 @@ const result = (homeTeam: string, awayTeam: string, isFavorite = false): MatchRe
   awayTeam,
   homeScore: 1,
   awayScore: 0,
-  stage: 'Continental',
   groupName: 'Octavos',
   isFavorite,
 });
@@ -98,6 +97,26 @@ describe('MatchResultsModal', () => {
     expect(screen.getByText('Islandia')).toBeInTheDocument();
     expect(screen.getByText('Malta')).toBeInTheDocument();
     expect(screen.queryByAltText(/flag/)).not.toBeInTheDocument();
+  });
+
+  it('dice de qué confederación es cada partido', () => {
+    useMatchResultsStore.getState().showResults(
+      [{ ...result('Italia', 'Gales'), region: 'Europe', groupName: 'R64' }],
+      'Continental · R64',
+    );
+    render(<MatchResultsModal />);
+
+    expect(screen.getByText('Europa · R64')).toBeInTheDocument();
+  });
+
+  it('un partido sin confederación muestra solo su grupo', () => {
+    useMatchResultsStore.getState().showResults(
+      [{ ...result('Italia', 'Gales'), groupName: 'Semifinal' }],
+      'Confederaciones · Semis',
+    );
+    render(<MatchResultsModal />);
+
+    expect(screen.getByText('Semifinal')).toBeInTheDocument();
   });
 
   it('sin favoritos respeta el orden de la jornada', () => {

@@ -3,6 +3,7 @@ import type { Cycle, Team, KnockoutMatch, Region } from '../../types';
 import { CYCLE_REGIONS } from '../../core/cycle';
 import { isMatchPlayable } from '../../core/calendar';
 import { continentalRoundLabel, isContinentalDrawn } from '../../utils/cycleProgress';
+import { REGION_LABELS } from '../../utils/regionLabels';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -13,9 +14,6 @@ import { WatchLiveButton } from './WatchLiveButton';
 import { Play, Trophy, Globe2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
-const REGION_LABELS: Record<Region, string> = {
-  Europe: 'Europa', America: 'América', Africa: 'África', Asia: 'Asia',
-};
 
 const ROUND_KEYS: { key: 'roundOf64' | 'roundOf32' | 'roundOf16' | 'quarterFinals' | 'semiFinals'; label: string }[] = [
   { key: 'roundOf64', label: 'R64' },

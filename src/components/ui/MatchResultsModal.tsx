@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { X, Trophy, Star } from 'lucide-react';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { penaltiesLabel } from '../../utils/matchLabels';
+import { regionLabel } from '../../utils/regionLabels';
 import { Button } from './Button';
 import { TeamFlag } from './TeamFlag';
 
@@ -58,6 +59,16 @@ export function MatchResultsModal() {
         <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(85vh-80px)]">
           <div className="space-y-2 sm:space-y-3">
             {orderedResults.map((result, index) => {
+              // La etapa ya está en el título del resumen (una jornada es de
+              // una sola fase); lo que cambia partido a partido es dónde se
+              // juega: "Europa · R64", "América · Grupo C".
+              const context = [
+                result.region ? regionLabel(result.region) : null,
+                result.groupName,
+              ]
+                .filter(Boolean)
+                .join(' · ');
+
               // Un partido que fue a penales no termina empatado: el ganador es
               // el que ganó desde el punto, aunque el marcador diga 1-1.
               const penales = penaltiesLabel(result.penalties);
@@ -77,12 +88,12 @@ export function MatchResultsModal() {
                     result.isFavorite ? 'border-gold' : 'border-grass hover:border-line'
                   }`}
                 >
-                  {(result.groupName || result.isFavorite) && (
+                  {(context || result.isFavorite) && (
                     <div className="flex items-center gap-1.5 text-xs text-grass-soft mb-1 sm:mb-2 font-medium">
                       {result.isFavorite && (
                         <Star className="w-3.5 h-3.5 text-gold fill-gold flex-shrink-0" aria-label="Equipo favorito" />
                       )}
-                      {result.groupName}
+                      {context}
                     </div>
                   )}
                   <div className="flex items-center justify-between gap-1 sm:gap-0">

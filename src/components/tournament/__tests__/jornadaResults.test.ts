@@ -120,11 +120,19 @@ describe('buildJornadaResults', () => {
     expect(results[0]).toMatchObject({ homeTeamId: 'arg', awayTeamId: 'bra' });
   });
 
-  it('rotula la etapa de cada partido', () => {
+  it('lleva la región y el grupo de cada partido', () => {
     const j = jornada([ctx(match('m1', 'arg', 'bra'))]);
 
     const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set());
 
-    expect(results[0]).toMatchObject({ stage: 'Clasificatorias', groupName: 'Grupo A' });
+    expect(results[0]).toMatchObject({ region: 'America', groupName: 'Grupo A' });
+  });
+
+  it('un partido sin región (Mundial, Confederaciones) no la inventa', () => {
+    const j = jornada([{ ...ctx(match('m1', 'arg', 'bra')), stage: 'confederations', region: undefined }]);
+
+    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set());
+
+    expect(results[0].region).toBeUndefined();
   });
 });

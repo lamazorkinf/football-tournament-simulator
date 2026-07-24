@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Region } from '../types';
 
 export interface MatchResult {
   homeTeam: string;
@@ -11,8 +12,14 @@ export interface MatchResult {
   awayTeamId?: string;
   homeScore: number;
   awayScore: number;
-  stage: string;
   groupName?: string;
+  /**
+   * Confederación del partido, cuando la fase la tiene (continental y
+   * clasificatorias). Sin ella, una jornada continental repite "R64" 82 veces
+   * sin decir de qué continente es cada cruce. La etapa no viaja acá: no puede
+   * variar dentro de una jornada y ya está en el título del resumen.
+   */
+  region?: Region;
   /** Involucra un equipo favorito: el modal lo ordena primero. */
   isFavorite?: boolean;
   /**
