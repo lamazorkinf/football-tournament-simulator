@@ -2,13 +2,14 @@ import { Workflow, CalendarDays, Globe2, Award, Menu } from 'lucide-react';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
 
-// Etiquetas cortas a propósito: son 5 columnas y Press Start 2P es una
-// tipografía ancha (~1em por carácter), así que arriba de 7 caracteres se
-// desborda en pantallas de 375px. "JORNADA" usa la misma palabra que el resto
-// de la app para la tanda de partidos.
+// Etiquetas cortas a propósito: son 5 columnas y Press Start 2P ocupa ~1em por
+// carácter, así que el ancho disponible por columna manda. Medido en el
+// navegador: a 375px una etiqueta de 7 caracteres entra con CERO margen y a
+// 320px se superpone con la de al lado. De ahí el tope de 6.
+// "FECHA" es la palabra rioplatense para la tanda de partidos de una jornada.
 const TABS = [
   { id: 'wizard' as View, icon: Workflow, label: 'INICIO' },
-  { id: 'matches' as View, icon: CalendarDays, label: 'JORNADA' },
+  { id: 'matches' as View, icon: CalendarDays, label: 'FECHA' },
   { id: 'qualifiers' as View, icon: Globe2, label: 'CLASIF' },
   { id: 'worldcup' as View, icon: Award, label: 'COPA' },
 ];
