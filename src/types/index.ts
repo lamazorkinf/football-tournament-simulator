@@ -149,7 +149,11 @@ export interface TournamentState {
   advanceToWorldCup: () => Promise<boolean>;
   advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => boolean;
   advanceToKnockout: () => Promise<boolean>;
-  regenerateKnockoutStage: () => Promise<void>;
+  // Mismo contrato que advanceToKnockout: `false` en cada guard temprano (sin
+  // Mundial, sorteo en curso, playoffs ya jugados, grupos incompletos) y si
+  // falla la persistencia; `true` sólo cuando la regeneración se completó y
+  // quedó guardada.
+  regenerateKnockoutStage: () => Promise<boolean>;
   simulateKnockoutMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
   // `force` rehace un sorteo ya existente (borrándolo antes). Sin él, la acción
   // se niega si las clasificatorias ya están sorteadas.
@@ -159,7 +163,13 @@ export interface TournamentState {
   // no cuenta como fallo del sorteo -éste ya quedó válido en memoria- así que
   // sigue devolviendo `true`.
   generateDrawAndFixtures: (options?: { force?: boolean }) => Promise<boolean>;
-  regenerateWorldCupDrawAndFixtures: () => Promise<void>;
+  // `false` en cada guard temprano (sin Mundial, playoffs/grupos ya jugados,
+  // sorteo en curso, clasificatorias recalculadas ≠ 64) y si falla la
+  // persistencia (el `throw` de abajo hace que el `await` de este método
+  // rechace en vez de resolver, así que un caller que quiera el booleano en
+  // vez del throw debe envolverlo). `true` sólo si el sorteo nuevo quedó
+  // calculado, guardado y aplicado al estado.
+  regenerateWorldCupDrawAndFixtures: () => Promise<boolean>;
   // Mismo contrato que advanceToWorldCup/advanceToKnockout de arriba, pero
   // sincrónico: `false` si el guard de "ya sorteado" rechaza.
   drawContinental: () => boolean;

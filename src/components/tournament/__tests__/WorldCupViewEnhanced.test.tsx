@@ -44,7 +44,7 @@ describe('WorldCupViewEnhanced', () => {
       currentTournament: cycle,
       teams: [],
       advanceToKnockout: vi.fn(async () => true),
-      regenerateKnockoutStage: vi.fn(async () => undefined),
+      regenerateKnockoutStage: vi.fn(async () => true),
       simulateMatch: vi.fn(async () => null),
     });
 
@@ -111,7 +111,7 @@ describe('WorldCupViewEnhanced — handleAdvanceToKnockout', () => {
       currentTournament: cycle,
       teams: [],
       advanceToKnockout: vi.fn(async () => false),
-      regenerateKnockoutStage: vi.fn(async () => undefined),
+      regenerateKnockoutStage: vi.fn(async () => true),
       simulateMatch: vi.fn(async () => null),
     });
 
@@ -132,7 +132,7 @@ describe('WorldCupViewEnhanced — handleAdvanceToKnockout', () => {
       currentTournament: cycle,
       teams: [],
       advanceToKnockout: vi.fn(async () => true),
-      regenerateKnockoutStage: vi.fn(async () => undefined),
+      regenerateKnockoutStage: vi.fn(async () => true),
       simulateMatch: vi.fn(async () => null),
     });
 
@@ -142,5 +142,78 @@ describe('WorldCupViewEnhanced — handleAdvanceToKnockout', () => {
 
     expect(toast.success).toHaveBeenCalledWith('Dieciseisavos de final generados');
     expect(screen.getByRole('tab', { name: 'Playoffs (bloqueado)' })).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+// Dieciseisavos ya generados (roundOf32 con un partido sin jugar): el mismo
+// estado que muestra el botón "Regenerar Playoffs".
+function makeCycleWithKnockoutUnplayed() {
+  const worldCup: WorldCup = {
+    groups: [
+      {
+        id: 'wc-g1',
+        name: 'Grupo A',
+        teamIds: ['a', 'b', 'c', 'd'],
+        matches: [
+          { id: 'wc-m1', homeTeamId: 'a', awayTeamId: 'b', homeScore: 1, awayScore: 0, isPlayed: true },
+        ],
+        standings: [],
+      },
+    ],
+    knockout: {
+      roundOf32: [
+        { id: 'ko-1', homeTeamId: 'a', awayTeamId: 'b', homeScore: null, awayScore: null, isPlayed: false, round: 'round-of-32' },
+      ],
+      roundOf16: [],
+      quarterFinals: [],
+      semiFinals: [],
+      thirdPlace: null,
+      final: null,
+    },
+    qualifiedTeamIds: [],
+  };
+  return toCycle({ ...baseTournament(), worldCup });
+}
+
+describe('WorldCupViewEnhanced — handleRegenerateKnockout (ConfirmDialog)', () => {
+  it('no festeja y deja el diálogo abierto si el guard rechaza', async () => {
+    const cycle = makeCycleWithKnockoutUnplayed();
+    useTournamentStore.setState({
+      currentTournament: cycle,
+      teams: [],
+      advanceToKnockout: vi.fn(async () => true),
+      regenerateKnockoutStage: vi.fn(async () => false),
+      simulateMatch: vi.fn(async () => null),
+    });
+
+    render(<WorldCupViewEnhanced />);
+
+    await userEvent.click(screen.getByRole('tab', { name: /playoffs/i }));
+    await userEvent.click(screen.getByRole('button', { name: /regenerar playoffs/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^regenerar$/i }));
+
+    expect(toast.success).not.toHaveBeenCalled();
+    // El diálogo sigue abierto: no se cierra como si la acción destructiva
+    // hubiera funcionado.
+    expect(screen.getByRole('button', { name: /^regenerar$/i })).toBeInTheDocument();
+  });
+
+  it('festeja y cierra el diálogo cuando la regeneración se completa', async () => {
+    const cycle = makeCycleWithKnockoutUnplayed();
+    useTournamentStore.setState({
+      currentTournament: cycle,
+      teams: [],
+      advanceToKnockout: vi.fn(async () => true),
+      regenerateKnockoutStage: vi.fn(async () => true),
+      simulateMatch: vi.fn(async () => null),
+    });
+
+    render(<WorldCupViewEnhanced />);
+
+    await userEvent.click(screen.getByRole('tab', { name: /playoffs/i }));
+    await userEvent.click(screen.getByRole('button', { name: /regenerar playoffs/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^regenerar$/i }));
+
+    expect(toast.success).toHaveBeenCalledWith('Playoffs regenerados');
   });
 });

@@ -826,7 +826,12 @@ describe('valor de retorno de advanceToWorldCup, advanceToWorldCupWithManualDraw
 
     it('devuelve true aunque la persistencia falle: la acción es sincrónica y fire-and-forget', async () => {
       setUpTournament(0);
-      createWorldCupGroups.mockRejectedValue(new Error('network down'));
+      // `Once`: clearAllMocks (en el beforeEach de este describe y de los que
+      // corren después) limpia llamadas pero NO la implementación, así que
+      // un `mockRejectedValue` a secas se colaría en cualquier test posterior
+      // que también use `createWorldCupGroups` sin re-mockearlo (p. ej. los de
+      // `regenerateWorldCupDrawAndFixtures`, más abajo en este archivo).
+      createWorldCupGroups.mockRejectedValueOnce(new Error('network down'));
 
       const result = store().advanceToWorldCupWithManualDraw(manualGroups());
 
@@ -941,7 +946,10 @@ describe('valor de retorno de advanceToWorldCup, advanceToWorldCupWithManualDraw
       useTournamentStore.setState({
         currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
       });
-      createKnockoutMatch.mockRejectedValue(new Error('network down'));
+      // `Once`: ver el comentario equivalente en advanceToWorldCupWithManualDraw
+      // más arriba — un `mockRejectedValue` a secas se colaría en el test de
+      // `regenerateKnockoutStage` que reutiliza este mismo mock más abajo.
+      createKnockoutMatch.mockRejectedValueOnce(new Error('network down'));
 
       expect(await store().advanceToKnockout()).toBe(false);
     });
@@ -1024,6 +1032,169 @@ describe('valor de retorno de advanceToWorldCup, advanceToWorldCupWithManualDraw
 
       expect(store().drawConfederations()).toBe(true);
     });
+  });
+});
+
+/** Adjunta un Mundial sin jugar (para que las guards de "ya jugado" no frenen antes de la validación). */
+function attachUnplayedWorldCup(cycle: Cycle): Cycle {
+  return {
+    ...cycle,
+    worldCup: {
+      groups: [{ id: 'wc-old', name: 'Grupo Viejo', teamIds: ['a', 'b', 'c', 'd'], matches: [], standings: [] }],
+      knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+      qualifiedTeamIds: [],
+    },
+  };
+}
+
+describe('regenerateWorldCupDrawAndFixtures', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isSupabaseConfigured.mockReturnValue(true);
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  afterEach(() => {
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  it('devuelve false si no hay Mundial', async () => {
+    const cycle = setUpTournament(0);
+    useTournamentStore.setState({ currentTournament: { ...cycle, worldCup: null } });
+
+    expect(await store().regenerateWorldCupDrawAndFixtures()).toBe(false);
+  });
+
+  it('devuelve false si ya se jugó algún partido del Mundial', async () => {
+    const base = setUpTournament(0);
+    const played: Cycle = {
+      ...base,
+      worldCup: {
+        groups: [{
+          id: 'wc-g1', name: 'Grupo A', teamIds: ['a', 'b', 'c', 'd'],
+          matches: [{ id: 'm1', homeTeamId: 'a', awayTeamId: 'b', homeScore: 1, awayScore: 0, isPlayed: true }],
+          standings: [],
+        }],
+        knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+        qualifiedTeamIds: [],
+      },
+    };
+    useTournamentStore.setState({ currentTournament: played, tournaments: [played], currentTournamentId: played.id });
+
+    expect(await store().regenerateWorldCupDrawAndFixtures()).toBe(false);
+    expect(deleteWorldCupData).not.toHaveBeenCalled();
+  });
+
+  it('devuelve false si ya hay un sorteo en curso', async () => {
+    const cycle = attachUnplayedWorldCup(setUpTournament(0));
+    useTournamentStore.setState({
+      currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, isDrawing: true,
+    });
+
+    expect(await store().regenerateWorldCupDrawAndFixtures()).toBe(false);
+    expect(deleteWorldCupData).not.toHaveBeenCalled();
+  });
+
+  it('valida los 64 clasificados recalculados ANTES de borrar', async () => {
+    // Antes del fix, el borrado de la base corría ANTES de esta validación:
+    // con clasificatorias parciales el usuario veía "se esperaban 64…"
+    // seguido de "Sorteo del Mundial regenerado", el diálogo se cerraba como
+    // si hubiera funcionado, y el Mundial ya había sido borrado de la base
+    // mientras la memoria seguía con el viejo. Acá las clasificatorias son
+    // las de `setUpTournament(0)`: grupos con `standings: []`, que recalculan
+    // 0 equipos clasificados (≠ 64).
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cycle = attachUnplayedWorldCup(setUpTournament(0));
+    useTournamentStore.setState({ currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id });
+
+    const result = await store().regenerateWorldCupDrawAndFixtures();
+
+    expect(result).toBe(false);
+    expect(deleteWorldCupData).not.toHaveBeenCalled();
+    expect(deleteWorldCupMatchHistory).not.toHaveBeenCalled();
+    expect(createWorldCupGroups).not.toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
+
+  it('camino feliz: borra el Mundial anterior ANTES de escribir el nuevo y devuelve true', async () => {
+    const { cycle: fullyQualified, teams } = makeFullyQualifiedCycle();
+    const cycle = attachUnplayedWorldCup(fullyQualified);
+    useTournamentStore.setState({
+      currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+    });
+
+    const result = await store().regenerateWorldCupDrawAndFixtures();
+
+    expect(result).toBe(true);
+    expect(deleteWorldCupData).toHaveBeenCalledWith(cycle.id);
+    expect(createWorldCupGroups).toHaveBeenCalledTimes(1);
+    expect(deleteWorldCupData.mock.invocationCallOrder[0]).toBeLessThan(
+      createWorldCupGroups.mock.invocationCallOrder[0]
+    );
+  });
+});
+
+describe('regenerateKnockoutStage — valor de retorno', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isSupabaseConfigured.mockReturnValue(true);
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  afterEach(() => {
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  it('devuelve false si no hay Mundial', async () => {
+    const cycle = setUpTournament(0);
+    useTournamentStore.setState({ currentTournament: { ...cycle, worldCup: null } });
+
+    expect(await store().regenerateKnockoutStage()).toBe(false);
+  });
+
+  it('devuelve false si la fase de grupos no está completa', async () => {
+    const { groups, teams } = makeGroupsReadyForKnockout();
+    const incompleteGroups = groups.map((g, i) => (i === 0 ? withUnplayedMatch(g) : g));
+    const cycle = setUpTournament(0);
+    const withGroups: Cycle = {
+      ...cycle,
+      worldCup: {
+        groups: incompleteGroups,
+        knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+        qualifiedTeamIds: [],
+      },
+    };
+    useTournamentStore.setState({
+      currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
+    });
+
+    expect(await store().regenerateKnockoutStage()).toBe(false);
+  });
+
+  it('devuelve true cuando la regeneración se completa de verdad', async () => {
+    const { groups, teams } = makeGroupsReadyForKnockout();
+    const cycle = setUpTournament(0);
+    const withGroups: Cycle = {
+      ...cycle,
+      worldCup: {
+        groups,
+        knockout: {
+          roundOf32: [
+            { id: 'ko-old', homeTeamId: 'a', awayTeamId: 'b', homeScore: null, awayScore: null, isPlayed: false, round: 'round-of-32' },
+          ],
+          roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null,
+        },
+        qualifiedTeamIds: [],
+      },
+    };
+    useTournamentStore.setState({
+      currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
+    });
+
+    expect(await store().regenerateKnockoutStage()).toBe(true);
+    expect(deleteKnockoutData).toHaveBeenCalledWith(withGroups.id);
+    expect(createKnockoutMatch).toHaveBeenCalledTimes(16);
   });
 });
 

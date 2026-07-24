@@ -634,7 +634,15 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
           </>
         }
         onConfirm={async () => {
-          await regenerateWorldCupDrawAndFixtures();
+          const completed = await regenerateWorldCupDrawAndFixtures();
+          // El store ya avisó el motivo del rechazo con su propio toast.
+          // Lanzar acá (en vez de sólo retornar) es lo que hace que
+          // ConfirmDialog deje el diálogo abierto en vez de cerrarlo como si
+          // la acción destructiva hubiera funcionado — mismo patrón que
+          // handleRedrawQualifiers. Los errores de base que el store relanza
+          // (borrado o guardado fallidos) llegan tal cual: no hace falta
+          // atraparlos acá.
+          if (!completed) throw new Error('No se pudo regenerar el sorteo del Mundial.');
           toast.success('Sorteo del Mundial regenerado');
         }}
       />
