@@ -141,9 +141,14 @@ export interface TournamentState {
   simulateMatch: (matchId: string, groupId: string, stage: 'qualifier' | 'world-cup') => Promise<SimulatedMatchOutcome | null>;
   simulateMatchdayBatch: (matches: Array<{ matchId: string; groupId: string; stage: 'qualifier' | 'world-cup'; groupName: string; region?: Region }>) => Promise<MatchdayOutcome[]>;
   simulateRoundBatch: (items: Array<{ matchId: string; kind: 'knockout' | 'continental' | 'confederations' }>) => Promise<MatchdayOutcome[]>;
-  advanceToWorldCup: () => void;
-  advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => void;
-  advanceToKnockout: () => Promise<void>;
+  // Devuelven `true` sólo si el sorteo/avance se completó de verdad: `false`
+  // en cada guard temprano (sin torneo, ya sorteado/generado, sorteo en
+  // curso, requisitos previos incompletos). El store ya avisó el motivo del
+  // rechazo con su propio toast, así que un handler que recibe `false` no
+  // debe festejar ni navegar — mismo patrón que generateDrawAndFixtures.
+  advanceToWorldCup: () => Promise<boolean>;
+  advanceToWorldCupWithManualDraw: (worldCupGroups: WorldCupGroup[]) => boolean;
+  advanceToKnockout: () => Promise<boolean>;
   regenerateKnockoutStage: () => Promise<void>;
   simulateKnockoutMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
   // `force` rehace un sorteo ya existente (borrándolo antes). Sin él, la acción
@@ -155,9 +160,11 @@ export interface TournamentState {
   // sigue devolviendo `true`.
   generateDrawAndFixtures: (options?: { force?: boolean }) => Promise<boolean>;
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
-  drawContinental: () => void;
+  // Mismo contrato que advanceToWorldCup/advanceToKnockout de arriba, pero
+  // sincrónico: `false` si el guard de "ya sorteado" rechaza.
+  drawContinental: () => boolean;
   simulateContinentalMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
-  drawConfederations: () => void;
+  drawConfederations: () => boolean;
   simulateConfederationsMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
   advanceToQualifiers: () => void;
 }

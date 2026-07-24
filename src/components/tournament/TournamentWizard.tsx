@@ -90,13 +90,17 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   };
 
   const handleDrawContinental = () => {
-    drawContinental();
+    const completed = drawContinental();
+    // El store ya avisó el motivo del rechazo con su propio toast: si no se
+    // completó, no hay nada que festejar ni a dónde navegar.
+    if (!completed) return;
     toast.success('Torneos continentales sorteados');
     onNavigate?.('continental');
   };
 
   const handleDrawConfederations = () => {
-    drawConfederations();
+    const completed = drawConfederations();
+    if (!completed) return;
     toast.success('Copa Confederaciones sorteada');
     onNavigate?.('confederations');
   };
@@ -198,7 +202,9 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   const handleAdvanceToWorldCup = async () => {
     // await: advanceToWorldCup es async — sin esto el toast de éxito se
     // mostraba antes de que el avance terminara (o fallara).
-    await advanceToWorldCup();
+    const completed = await advanceToWorldCup();
+    // El store ya avisó el motivo del rechazo con su propio toast.
+    if (!completed) return;
     toast.success('Avanzado a Copa del Mundo con 64 equipos clasificados');
   };
 
@@ -244,7 +250,13 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
 
   const handleDrawSimulatorComplete = (groups: WorldCupGroup[]) => {
     console.log('Draw completed with groups:', groups);
-    advanceToWorldCupWithManualDraw(groups);
+    const completed = advanceToWorldCupWithManualDraw(groups);
+    // Si el guard rechaza (p. ej. el Mundial ya se sorteó mientras el
+    // simulador estaba abierto), el store ya avisó el motivo con su propio
+    // toast. Acá no hay que descartar el sorteo manual que el usuario armó a
+    // mano: el simulador se queda abierto en vez de cerrarse como si hubiera
+    // funcionado.
+    if (!completed) return;
     setShowDrawSimulator(false);
     toast.success('🏆 ¡Sorteo manual completado y guardado exitosamente!');
   };
@@ -257,7 +269,8 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   const handleRegenerateWorldCupDraw = () => setConfirmRegenWorldCup(true);
 
   const handleAdvanceToKnockout = async () => {
-    await advanceToKnockout();
+    const completed = await advanceToKnockout();
+    if (!completed) return;
     toast.success('Dieciseisavos de final generados');
   };
 

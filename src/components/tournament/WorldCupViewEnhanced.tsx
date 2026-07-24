@@ -108,7 +108,11 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
       : 0;
 
   const handleAdvanceToKnockout = async () => {
-    await advanceToKnockout();
+    const completed = await advanceToKnockout();
+    // El store ya avisó el motivo del rechazo con su propio toast: sin esto,
+    // el usuario veía ese aviso seguido de un "generados" contradictorio y la
+    // pestaña igual saltaba a Playoffs aunque no hubiera nada nuevo ahí.
+    if (!completed) return;
     toast.success('Dieciseisavos de final generados');
     setActiveTab('playoffs');
   };
