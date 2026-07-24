@@ -438,20 +438,19 @@ export const useTournamentStore = create<TournamentState>()(
 
           // Se cambia al torneo recién creado sin preguntar: crearlo desde el
           // selector es una acción explícita, quedarse en el viejo sorprende.
-          // Recién ahora se aplica la regresión de skills al pool global.
+          //
+          // Pero NO se toca el pool global de skills. La regresión del 3% es
+          // para el torneo nuevo y ya viaja en su `originalSkills`;
+          // generateDrawAndFixtures la aplica al generar su sorteo. Escribirla
+          // acá degradaría permanentemente —también en la base— los equipos del
+          // torneo que el usuario todavía está jugando: volvería a él y sus
+          // partidos restantes se simularían contra un pool debilitado.
           set({
-            teams: teamsWithTiers,
             currentTournamentId: tournament.id,
             currentTournament: tournament,
           });
 
-          if (isSupabaseConfigured()) {
-            teamsService
-              .batchUpdateTeams(teamsWithTiers.map((t) => ({ id: t.id, skill: t.skill })))
-              .catch((error) => console.error('Error saving regressed skills:', error));
-          }
-
-          useToastStore.getState().success(`Torneo Mundial ${year} creado`);
+          useToastStore.getState().success(`Mundial ${year} creado`);
         } catch (error) {
           progress.resetProgress();
           throw error;
@@ -1658,7 +1657,10 @@ export const useTournamentStore = create<TournamentState>()(
           } catch (error: unknown) {
             console.error('❌ Error deleting World Cup data:', error);
             useToastStore.getState().error('Error al eliminar datos del Mundial. Intentá de nuevo.');
-            return;
+            // Relanza: el ConfirmDialog que disparó esto se cierra al resolver.
+            // Con `return` el usuario veía el toast de error y el de éxito a la
+            // vez, y el diálogo se cerraba como si hubiera funcionado.
+            throw error;
           }
         }
 
@@ -1727,7 +1729,7 @@ export const useTournamentStore = create<TournamentState>()(
           } catch (error: unknown) {
             console.error('❌ Error saving new World Cup groups:', error);
             useToastStore.getState().error('Error al guardar los nuevos grupos del Mundial. Intentá de nuevo.');
-            return;
+            throw error;
           }
         }
 
@@ -1970,7 +1972,7 @@ export const useTournamentStore = create<TournamentState>()(
               console.error('❌ Error deleting knockout data:', error);
               progress.resetProgress();
               useToastStore.getState().error('Error al eliminar datos de playoffs. Intentá de nuevo.');
-              return;
+              throw error;
             }
           }
 
@@ -1995,7 +1997,7 @@ export const useTournamentStore = create<TournamentState>()(
               console.error('❌ Error saving knockout matches:', error);
               progress.resetProgress();
               useToastStore.getState().error('Error al guardar los partidos de playoffs. Intentá de nuevo.');
-              return;
+              throw error;
             }
           }
 

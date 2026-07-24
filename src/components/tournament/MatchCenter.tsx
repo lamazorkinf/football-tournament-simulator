@@ -179,9 +179,9 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
 
   // Rótulo de etapa para el modal de resultados.
   const stageResultLabel: Record<MatchStage, string> = {
-    qualifier: 'Eliminatorias',
-    'world-cup': 'Copa Mundial',
-    knockout: 'Mundial',
+    qualifier: 'Clasificatorias',
+    'world-cup': 'Mundial · Grupos',
+    knockout: 'Mundial · Playoffs',
     continental: 'Continental',
     confederations: 'Confederaciones',
   };
@@ -466,9 +466,9 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 className="px-3 py-2 min-h-11 lg:min-h-0 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
               >
                 <option value="all">Todas las etapas</option>
-                <option value="qualifier">Eliminatorias</option>
-                <option value="world-cup">Copa Mundial</option>
-                <option value="knockout">Mundial</option>
+                <option value="qualifier">Clasificatorias</option>
+                <option value="world-cup">Mundial · Grupos</option>
+                <option value="knockout">Mundial · Playoffs</option>
                 <option value="continental">Continental</option>
                 <option value="confederations">Confederaciones</option>
               </select>
@@ -778,9 +778,9 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
       confederations: 'bg-black/40 text-gold border border-gold',
     };
     const labels: Record<MatchStage, string> = {
-      qualifier: 'Eliminatorias',
-      'world-cup': 'Copa Mundial',
-      knockout: 'Mundial',
+      qualifier: 'Clasificatorias',
+      'world-cup': 'Mundial · Grupos',
+      knockout: 'Mundial · Playoffs',
       continental: 'Continental',
       confederations: 'Confederaciones',
     };

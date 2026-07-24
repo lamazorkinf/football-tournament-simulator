@@ -152,7 +152,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
           <div className="flex flex-wrap items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-grass/30 border-2 border-grass"></div>
-              <span className="text-grass-soft">Clasifica a Eliminatorias</span>
+              <span className="text-grass-soft">Clasifica a Playoffs</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-night border-2 border-grass"></div>

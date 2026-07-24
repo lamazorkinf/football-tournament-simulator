@@ -272,7 +272,7 @@ export const KnockoutView = ({
           </Button>
           <div className="flex items-center gap-2">
             <Trophy className="w-6 h-6 text-gold" />
-            <h2 className="font-arcade text-lg text-white text-shadow-retro">Eliminatorias</h2>
+            <h2 className="font-arcade text-lg text-white text-shadow-retro">Playoffs</h2>
           </div>
         </div>
         {tournamentComplete && (
@@ -294,7 +294,7 @@ export const KnockoutView = ({
             <div className="flex items-center gap-3">
               <Trophy className="w-8 h-8 text-gold" />
               <div>
-                <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Progreso de las Eliminatorias</h3>
+                <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Progreso de los Playoffs</h3>
                 <p className="text-sm text-grass-soft">
                   {(() => {
                     const allMatches = [

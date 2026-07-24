@@ -135,9 +135,9 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
 
   const getStageLabel = (stage: string) => {
     const labels = {
-      qualifier: 'Eliminatoria',
-      'world-cup-group': 'Copa del Mundo - Grupos',
-      'world-cup-knockout': 'Copa del Mundo - Eliminación',
+      qualifier: 'Clasificatorias',
+      'world-cup-group': 'Mundial · Grupos',
+      'world-cup-knockout': 'Mundial · Playoffs',
     };
     return labels[stage as keyof typeof labels] || stage;
   };
@@ -227,8 +227,8 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
                 className="px-3 py-1 bg-black border-2 border-line text-white text-sm font-terminal"
               >
                 <option value="all">Todos</option>
-                <option value="qualifier">Eliminatorias</option>
-                <option value="world-cup-group">Copa del Mundo</option>
+                <option value="qualifier">Clasificatorias</option>
+                <option value="world-cup-group">Mundial · Grupos</option>
               </select>
             </div>
           </div>

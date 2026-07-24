@@ -80,7 +80,7 @@ export function TournamentOverview({ tournament, teams, onNavigate }: Tournament
                 <TrendingUp className="w-6 h-6 text-night" />
               </div>
               <div className="flex-1">
-                <h3 className="font-arcade text-xs text-gold uppercase mb-2">Próximo Paso</h3>
+                <h3 className="font-arcade text-xs text-gold uppercase mb-2">Paso Siguiente</h3>
                 <p className="text-white mb-4">{nextStep.message}</p>
                 <Button
                   variant="primary"

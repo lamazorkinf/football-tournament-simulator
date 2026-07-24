@@ -139,7 +139,7 @@ export function ExportImport() {
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Exportación Completa del Torneo</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Exportar el Torneo Completo</h3>
             <p className="text-sm text-grass-soft mb-4">
               Exportá todos los datos del torneo: equipos, grupos, partidos y resultados.
               Usalo para respaldar tu progreso o compartirlo con otros.
@@ -151,7 +151,7 @@ export function ExportImport() {
           </div>
 
           <div className="border-t-2 border-grass pt-4">
-            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Exportación Solo de Equipos</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Exportar Solo los Equipos</h3>
             <p className="text-sm text-grass-soft mb-4">
               Exportá solo los datos de los equipos, con su habilidad y región actuales.
             </p>
@@ -246,7 +246,7 @@ export function ExportImport() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Información del Archivo</CardTitle>
+          <CardTitle>Datos del Archivo</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

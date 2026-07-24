@@ -119,7 +119,7 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
       <Tabs
         items={[
           { id: 'current', label: 'Torneo Actual', icon: TrendingUp },
-          { id: 'historical', label: 'Estadísticas Históricas', icon: History },
+          { id: 'historical', label: 'Acumulado', icon: History },
         ]}
         value={view}
         onChange={(id) => setView(id as 'current' | 'historical')}

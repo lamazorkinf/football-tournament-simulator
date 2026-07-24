@@ -92,7 +92,7 @@ export function ConfederationsCupView({ cycle, teams, onNavigate }: Confederatio
 
       <Card>
         <CardHeader>
-          <CardTitle>Eliminación</CardTitle>
+          <CardTitle>Playoffs</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -175,7 +175,7 @@ function ConfedMatch({ match, cycle, getTeam, onPlay, isSaving }: ConfedMatchPro
       {!match.isPlayed && playable && (
         <div className="space-y-1">
           <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
-            <Play className="w-3 h-3" /> Play
+            <Play className="w-3 h-3" /> Jugar
           </Button>
           <WatchLiveButton
             matchId={match.id}

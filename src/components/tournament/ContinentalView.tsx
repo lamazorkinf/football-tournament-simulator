@@ -211,7 +211,7 @@ function BracketMatch({ match, cycle, getTeam, onPlay, isSaving }: BracketMatchP
       {!match.isPlayed && playable && (
         <div className="space-y-1">
           <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
-            <Play className="w-3 h-3" /> Play
+            <Play className="w-3 h-3" /> Jugar
           </Button>
           <WatchLiveButton
             matchId={match.id}

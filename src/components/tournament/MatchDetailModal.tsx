@@ -152,7 +152,7 @@ export function MatchDetailModal({
 
           {/* Stats Grid */}
           <div className="p-6 space-y-4">
-            <h3 className="font-arcade text-[10px] text-gold uppercase mb-3">Estadísticas del Partido</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-3">Datos del Partido</h3>
 
             {/* Skill Changes - Only show if available */}
             {(homeSkillChange !== 0 || awaySkillChange !== 0) && (
@@ -197,7 +197,7 @@ export function MatchDetailModal({
 
             {/* Goal Timeline (simulated) */}
             <div className="bg-night p-4">
-              <h4 className="font-arcade text-[10px] text-gold uppercase mb-3">Línea de Tiempo de Goles</h4>
+              <h4 className="font-arcade text-[10px] text-gold uppercase mb-3">Goles Minuto a Minuto</h4>
               <div className="space-y-2">
                 {goals.map((goal, idx) => {
                   const team = goal.isHome ? homeTeam : awayTeam;
