@@ -5,12 +5,14 @@ import {
   canDrawContinental, canDrawConfederations,
   canAdvanceToQualifiers, canDrawQualifiers,
   continentalRoundLabel, getCyclePhaseBanner,
+  isQualifiersDrawn, getQualifiersDrawStatus,
 } from '../cycleProgress';
 import { toCycle } from '../../core/cycle';
 import {
   baseTournament, makeDrawnContinentalCycle,
   makeContinentalDoneCycle, makeDrawnConfedCycle,
 } from '../../test/fixtures/cycle';
+import type { Group, Match, Region } from '../../types';
 
 describe('cycleProgress', () => {
   it('ciclo nuevo: continental sin sortear', () => {
@@ -59,5 +61,107 @@ describe('cycleProgress', () => {
     const { cycle } = makeDrawnContinentalCycle();
     expect(getCyclePhaseBanner(cycle)).toEqual({ label: 'Torneos Continentales · R64', targetView: 'continental' });
     expect(getCyclePhaseBanner(toCycle(baseTournament()))).toEqual({ label: 'Torneos Continentales · —', targetView: 'continental' });
+  });
+});
+
+/** Grupo de clasificatorias armado a mano: `matches` en 0 = sorteado a medias. */
+function makeGroup(
+  id: string,
+  region: Region,
+  opts: { teams?: number; matches?: number } = {}
+): Group {
+  const teamCount = opts.teams ?? 5;
+  const teamIds = Array.from({ length: teamCount }, (_, i) => `${id}-t${i}`);
+  const matches: Match[] = Array.from({ length: opts.matches ?? 0 }, (_, i) => ({
+    id: `${id}-m${i}`,
+    homeTeamId: teamIds[0],
+    awayTeamId: teamIds[1] ?? teamIds[0],
+    homeScore: null,
+    awayScore: null,
+    isPlayed: false,
+    stage: 'qualifier',
+    matchday: i + 1,
+  }));
+  return {
+    id,
+    name: `Group ${id}`,
+    region,
+    teamIds,
+    matches,
+    standings: [],
+    isDrawComplete: matches.length > 0,
+  };
+}
+
+/** Ciclo con las cuatro regiones pobladas por la función que se le pase. */
+function cycleWithQualifiers(build: (region: Region) => Group[]) {
+  return {
+    ...toCycle(baseTournament()),
+    qualifiers: {
+      Europe: build('Europe'),
+      America: build('America'),
+      Africa: build('Africa'),
+      Asia: build('Asia'),
+    },
+  };
+}
+
+describe('isQualifiersDrawn / getQualifiersDrawStatus', () => {
+  it('ciclo nuevo: sin sortear', () => {
+    const cycle = toCycle(baseTournament());
+    expect(isQualifiersDrawn(cycle)).toBe(false);
+    expect(getQualifiersDrawStatus(cycle)).toEqual({ state: 'not-drawn' });
+  });
+
+  it('grupos creados pero sin partidos: sigue sin sortear', () => {
+    const cycle = cycleWithQualifiers((r) => [makeGroup(`${r}-1`, r, { teams: 0 })]);
+    expect(isQualifiersDrawn(cycle)).toBe(false);
+    expect(getQualifiersDrawStatus(cycle)).toEqual({ state: 'not-drawn' });
+  });
+
+  it('todas las regiones con partidos: sorteado', () => {
+    const cycle = cycleWithQualifiers((r) => [
+      makeGroup(`${r}-1`, r, { matches: 20 }),
+      makeGroup(`${r}-2`, r, { matches: 20 }),
+    ]);
+    expect(isQualifiersDrawn(cycle)).toBe(true);
+    expect(getQualifiersDrawStatus(cycle)).toEqual({ state: 'drawn' });
+  });
+
+  it('un grupo sin partidos entre otros sorteados: parcial', () => {
+    const cycle = cycleWithQualifiers((r) => [
+      makeGroup(`${r}-1`, r, { matches: 20 }),
+      makeGroup(`${r}-2`, r, { matches: r === 'Asia' ? 0 : 20 }),
+    ]);
+    expect(isQualifiersDrawn(cycle)).toBe(true);
+    expect(getQualifiersDrawStatus(cycle)).toEqual({
+      state: 'partial',
+      groupsMissing: 1,
+      totalGroups: 8,
+      regionsMissing: 0,
+    });
+  });
+
+  it('una región entera sin grupos: parcial', () => {
+    const cycle = cycleWithQualifiers((r) =>
+      r === 'Africa' ? [] : [makeGroup(`${r}-1`, r, { matches: 20 })]
+    );
+    expect(getQualifiersDrawStatus(cycle)).toEqual({
+      state: 'partial',
+      groupsMissing: 0,
+      totalGroups: 3,
+      regionsMissing: 1,
+    });
+  });
+
+  it('un grupo sorteado sin equipos no cuenta como sano', () => {
+    const cycle = cycleWithQualifiers((r) => [
+      makeGroup(`${r}-1`, r, { matches: 20 }),
+      makeGroup(`${r}-2`, r, { teams: 0, matches: 20 }),
+    ]);
+    expect(getQualifiersDrawStatus(cycle)).toMatchObject({
+      state: 'partial',
+      groupsMissing: 4,
+    });
   });
 });

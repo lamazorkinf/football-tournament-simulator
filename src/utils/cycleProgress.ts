@@ -1,4 +1,4 @@
-import type { Cycle } from '../types';
+import type { Cycle, Region } from '../types';
 import { getPhaseMatches } from '../core/calendar';
 
 export interface PhaseProgress {
@@ -36,6 +36,44 @@ export function isContinentalDrawn(cycle: Cycle): boolean {
 /** ¿Ya se sortearon los grupos de la Copa Confederaciones? */
 export function isConfederationsDrawn(cycle: Cycle): boolean {
   return cycle.confederationsCup.groups.length > 0;
+}
+
+const QUALIFIER_REGIONS: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
+
+/** ¿Ya se sortearon las clasificatorias? (algún grupo con partidos generados). */
+export function isQualifiersDrawn(cycle: Cycle): boolean {
+  return QUALIFIER_REGIONS.some((region) =>
+    (cycle.qualifiers[region] ?? []).some((group) => group.matches.length > 0)
+  );
+}
+
+/**
+ * Estado del sorteo de clasificatorias, distinguiendo el caso "quedó a medias".
+ *
+ * El guardado escribe las cuatro regiones en paralelo, así que un fallo de red
+ * puede dejar unas persistidas y otras no. Al recargar, la base vuelve a ser la
+ * fuente de verdad y ese residuo aparece como grupos sin partidos (o como una
+ * región entera sin grupos).
+ */
+export type QualifiersDrawStatus =
+  | { state: 'not-drawn' }
+  | { state: 'partial'; groupsMissing: number; totalGroups: number; regionsMissing: number }
+  | { state: 'drawn' };
+
+export function getQualifiersDrawStatus(cycle: Cycle): QualifiersDrawStatus {
+  const groups = QUALIFIER_REGIONS.flatMap((region) => cycle.qualifiers[region] ?? []);
+  const totalGroups = groups.length;
+  // Un grupo está sano cuando el sorteo le asignó equipos Y le generó partidos.
+  const healthy = groups.filter(
+    (group) => group.teamIds.length > 0 && group.matches.length > 0
+  ).length;
+  const regionsMissing = QUALIFIER_REGIONS.filter(
+    (region) => (cycle.qualifiers[region] ?? []).length === 0
+  ).length;
+
+  if (healthy === 0) return { state: 'not-drawn' };
+  if (healthy === totalGroups && regionsMissing === 0) return { state: 'drawn' };
+  return { state: 'partial', groupsMissing: totalGroups - healthy, totalGroups, regionsMissing };
 }
 
 export function canDrawContinental(cycle: Cycle): boolean {
