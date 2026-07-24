@@ -67,7 +67,10 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
 
     // await: sin esto el toast de éxito se mostraba de inmediato, aunque el
     // sorteo aún no hubiera terminado (o hubiera fallado).
-    await generateDrawAndFixtures();
+    const completed = await generateDrawAndFixtures();
+    // Si no se completó, el store ya avisó el motivo con su propio toast: acá
+    // no hay diálogo que dejar abierto, así que alcanza con no festejar.
+    if (!completed) return;
 
     toast.success(
       hasOriginalSkills
@@ -77,7 +80,12 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   };
 
   const handleRedrawQualifiers = async () => {
-    await generateDrawAndFixtures({ force: true });
+    const completed = await generateDrawAndFixtures({ force: true });
+    // El store ya avisó el motivo del fallo con su propio toast. Lanzar acá
+    // (en vez de sólo retornar) es lo que hace que ConfirmDialog deje el
+    // diálogo abierto en vez de cerrarlo como si la acción destructiva
+    // hubiera funcionado.
+    if (!completed) throw new Error('No se pudo rehacer el sorteo de clasificatorias.');
     toast.success('Sorteo de clasificatorias rehecho');
   };
 
@@ -387,7 +395,10 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                       ? 'falta una región entera'
                       : `faltan ${qualifiersDrawStatus.regionsMissing} regiones enteras`
                     : `faltan partidos en ${qualifiersDrawStatus.groupsMissing} de ${qualifiersDrawStatus.totalGroups} grupos`}
-                  . Rehacé el sorteo para completarlo.
+                  .{' '}
+                  {canRedrawQualifiers
+                    ? 'Rehacé el sorteo para completarlo.'
+                    : 'No se puede rehacer: ya se jugaron partidos.'}
                 </>
               ) : undefined
             }

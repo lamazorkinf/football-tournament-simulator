@@ -148,7 +148,12 @@ export interface TournamentState {
   simulateKnockoutMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
   // `force` rehace un sorteo ya existente (borrándolo antes). Sin él, la acción
   // se niega si las clasificatorias ya están sorteadas.
-  generateDrawAndFixtures: (options?: { force?: boolean }) => Promise<void>;
+  // Devuelve `true` sólo si el sorteo se generó de verdad: `false` en cada
+  // guard temprano (sin torneo, partidos jugados, ya sorteado sin `force`,
+  // sorteo en curso) y si explota antes de terminar. Un fallo de persistencia
+  // no cuenta como fallo del sorteo -éste ya quedó válido en memoria- así que
+  // sigue devolviendo `true`.
+  generateDrawAndFixtures: (options?: { force?: boolean }) => Promise<boolean>;
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
   drawContinental: () => void;
   simulateContinentalMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Cycle, Group, Match, Region, Team, TeamStanding, WorldCupGroup } from '../../types';
 
 const {
@@ -276,6 +276,99 @@ describe('generateDrawAndFixtures — guard de sorteo ya hecho', () => {
     await store().generateDrawAndFixtures();
 
     expect(deleteQualifierData).toHaveBeenCalledWith('t-guards');
+  });
+});
+
+describe('generateDrawAndFixtures — valor de retorno', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isSupabaseConfigured.mockReturnValue(true);
+    // Defensivo: el store es un singleton compartido entre tests, así que si
+    // algún test de este archivo deja `isDrawing` en `true` (p. ej. por un
+    // guard que no se ejercitó hasta el final), el candado se cuela en el
+    // siguiente test y lo hace fallar por un motivo que no tiene nada que ver
+    // con lo que ese test intenta probar.
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  afterEach(() => {
+    // Mismo motivo que el beforeEach: dejar el candado limpio para que no se
+    // cuele en el describe siguiente ('candado isDrawing'), que no lo resetea
+    // porque nunca lo toca a propósito.
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  it('devuelve true cuando el sorteo se genera de verdad', async () => {
+    setUpTournament(0);
+
+    const result = await store().generateDrawAndFixtures();
+
+    expect(result).toBe(true);
+  });
+
+  it('devuelve false si no hay torneo actual', async () => {
+    useTournamentStore.setState({ currentTournament: null });
+
+    const result = await store().generateDrawAndFixtures();
+
+    expect(result).toBe(false);
+  });
+
+  it('devuelve false si ya se jugó algún partido', async () => {
+    const cycle = setUpTournament(20);
+    useTournamentStore.setState({
+      currentTournament: { ...cycle, hasAnyMatchPlayed: true },
+    });
+
+    const result = await store().generateDrawAndFixtures();
+
+    expect(result).toBe(false);
+  });
+
+  it('devuelve false si ya está sorteado y no se pasa force', async () => {
+    setUpTournament(20);
+
+    const result = await store().generateDrawAndFixtures();
+
+    expect(result).toBe(false);
+  });
+
+  it('devuelve false si ya hay un sorteo en curso', async () => {
+    setUpTournament(0);
+    useTournamentStore.setState({ isDrawing: true });
+
+    const result = await store().generateDrawAndFixtures();
+
+    expect(result).toBe(false);
+  });
+
+  it('devuelve false si explota antes de terminar', async () => {
+    const cycle = setUpTournament(0);
+    const qualifiersSinAsia: Partial<Cycle['qualifiers']> = { ...cycle.qualifiers };
+    delete qualifiersSinAsia.Asia;
+    const corrupted: Cycle = {
+      ...cycle,
+      qualifiers: qualifiersSinAsia as Cycle['qualifiers'],
+    };
+    useTournamentStore.setState({ currentTournament: corrupted, tournaments: [corrupted] });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await store().generateDrawAndFixtures();
+
+    expect(result).toBe(false);
+    consoleError.mockRestore();
+  });
+
+  it('devuelve true aunque la persistencia falle: el sorteo ya quedó válido en memoria', async () => {
+    setUpTournament(0);
+    createQualifierGroups.mockRejectedValue(new Error('network down'));
+
+    const result = await store().generateDrawAndFixtures();
+
+    expect(result).toBe(true);
+    // El sorteo sí se generó y quedó en el estado local, aunque no se haya
+    // podido guardar.
+    expect(store().currentTournament!.qualifiers.Europe[0].matches.length).toBe(20);
   });
 });
 

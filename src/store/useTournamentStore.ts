@@ -1826,7 +1826,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (!state.currentTournament) {
           console.error('❌ No current tournament');
-          return;
+          return false;
         }
 
         console.log('✅ Current tournament:', state.currentTournament.id, state.currentTournament.name);
@@ -1835,7 +1835,7 @@ export const useTournamentStore = create<TournamentState>()(
         if (state.currentTournament.hasAnyMatchPlayed) {
           console.warn('⚠️ Cannot regenerate - matches already played');
           useToastStore.getState().warning('No se puede regenerar el sorteo: ya se jugaron partidos.');
-          return;
+          return false;
         }
 
         // Guard de "ya sorteado": sin esto, un segundo sorteo genera partidos
@@ -1846,12 +1846,12 @@ export const useTournamentStore = create<TournamentState>()(
           useToastStore
             .getState()
             .warning('El sorteo de las clasificatorias ya está hecho. Usá "Rehacer sorteo" para generarlo de nuevo.');
-          return;
+          return false;
         }
 
         if (state.isDrawing) {
           console.warn('⛔ Ya hay un sorteo en curso');
-          return;
+          return false;
         }
 
         const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
@@ -2004,12 +2004,14 @@ export const useTournamentStore = create<TournamentState>()(
           progress.updateProgress('Finalizando…', ++currentStep);
           console.log('✅ generateDrawAndFixtures completed');
           progress.completeProgress();
+          return true;
         } catch (error) {
           progress.resetProgress();
           console.error('❌ Error in generateDrawAndFixtures:', error);
           // No relanzar: handleGenerateDraw no captura, y propagar aquí
           // generaba un "Uncaught (in promise)".
           useToastStore.getState().error('No se pudo generar el sorteo.');
+          return false;
         } finally {
           // Sin el finally, un error dejaba el candado tomado para siempre y
           // ningún sorteo posterior volvía a correr en esa sesión.
