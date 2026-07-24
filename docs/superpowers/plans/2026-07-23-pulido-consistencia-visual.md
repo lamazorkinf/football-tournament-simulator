@@ -1056,6 +1056,190 @@ el resto pasa a toast. Ya no queda ningún diálogo del sistema operativo."
 
 ---
 
+### Task 16: Limpiar los 21 diálogos nativos del store
+
+> **Tarea agregada durante la ejecución.** El inventario original del spec salió de un `grep` restringido a `*.tsx`, así que no vio los diálogos nativos que viven en `src/store/useTournamentStore.ts`: **3 `confirm()` y 18 `alert()`**. Uno de ellos convierte el trabajo de la Task 3 en una regresión — `deleteTournament` pide su propia confirmación nativa *después* de que el usuario ya confirmó en el `ConfirmDialog` retro, o sea doble prompt.
+>
+> Esto contradice el no-objetivo del spec ("ningún cambio toca el store"). La contradicción se escaló y **el usuario decidió que manda el objetivo declarado** ("ya no queda ningún diálogo del sistema operativo"): se limpia el store entero. Se ejecuta al final de la Fase 1, después de la Task 5.
+
+**Files:**
+- Modify: `src/store/useTournamentStore.ts`
+- Modify: `src/components/tournament/TournamentHistory.tsx`
+- Modify: `src/components/tournament/__tests__/TournamentHistory.test.tsx`
+
+**Interfaces:**
+- Consumes: `ConfirmDialog` (Task 2); `useToastStore` de `src/store/useToastStore.ts`
+- Produces: `deleteTournament` pasa a **rechazar** ante un fallo de base, en vez de tragarse el error
+
+**Contexto que el implementador necesita:** el store **ya usa** `useToastStore` (`useToastStore.getState().warning(...)`, `.error(...)`, `.success(...)`, `.info(...)`, `.removeToast(id)` — ver `useTournamentStore.ts:611-643`). Los `alert()` son la excepción, no la regla: esta tarea los alinea con el patrón que el propio archivo ya sigue. `ToastContainer` está montado en `App.tsx`, así que los toasts del store se renderizan.
+
+Nótese que la app tiene **dos** sistemas de toast: los componentes usan `toast` de `sonner`, el store usa `useToastStore`. No unificarlos acá — dentro del store se usa `useToastStore`, que es lo que ese archivo ya hace.
+
+- [ ] **Step 1: Quitar el confirm de borrado y hacer que el fallo se propague**
+
+En `deleteTournament`:
+
+- La guarda de "único torneo" (`alert('No puedes eliminar el único torneo existente.')`) pasa a `useToastStore.getState().warning('No podés eliminar el único torneo existente.')`, conservando el `return`.
+- **El `confirm()` de borrado se elimina por completo.** La confirmación ahora vive en `TournamentHistory` (Task 3), donde el usuario la ve en el diálogo retro. Dejarla acá es el doble prompt.
+- El `alert('Error al eliminar el torneo de la base de datos.')` pasa a `useToastStore.getState().error('Error al eliminar el torneo de la base de datos.')` y, en lugar de `return`, **relanza**:
+
+```ts
+          } catch (error) {
+            console.error('Error deleting tournament:', error);
+            useToastStore.getState().error('Error al eliminar el torneo de la base de datos.');
+            // Relanza para que el ConfirmDialog de TournamentHistory quede
+            // ABIERTO: si se cierra, el usuario cree que el torneo se borró.
+            throw error;
+          }
+```
+
+- [ ] **Step 2: Verificar que el call site ya espera el borrado**
+
+En `TournamentHistory.tsx`, el `onConfirm` del `ConfirmDialog` de borrado tiene que `await` la acción para que el rechazo del Step 1 llegue al diálogo. Sin el `await`, la promesa rechazada no la ve nadie y el diálogo se cierra igual.
+
+**Esto ya se corrigió en el commit `d64d4ae`** (fix de review de la Task 3), así que lo esperable es encontrarlo así:
+
+```tsx
+        onConfirm={async () => {
+          if (pendingDelete) await deleteTournament(pendingDelete.id);
+        }}
+```
+
+Verificalo y seguí. Si por algún motivo no está así, dejalo así.
+
+- [ ] **Step 3: Escribir la prueba del fallo de borrado**
+
+Agregar a `src/components/tournament/__tests__/TournamentHistory.test.tsx`:
+
+```tsx
+  it('deja el diálogo abierto si falla el borrado en la base', async () => {
+    const failing = vi.fn().mockRejectedValue(new Error('sin red'));
+    useTournamentStore.setState({ deleteTournament: failing } as never);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<TournamentHistory />);
+    await userEvent.click(screen.getAllByTitle('Eliminar torneo')[0]);
+    await userEvent.click(screen.getByRole('button', { name: /^eliminar$/i }));
+
+    expect(failing).toHaveBeenCalledTimes(1);
+    // El diálogo sigue en pantalla: el borrado no ocurrió.
+    expect(screen.getByRole('button', { name: /^eliminar$/i })).toBeInTheDocument();
+    consoleError.mockRestore();
+  });
+```
+
+- [ ] **Step 4: Quitar el confirm de "cambiar al torneo nuevo"**
+
+En `createNewTournament` (~línea 439) el store pregunta `¿Deseas cambiar a este torneo ahora?`. Crear un torneo desde el selector es una acción explícita: quedarse en el viejo es el resultado sorpresivo. Se cambia siempre.
+
+Reemplazar el `confirm` y su `if (shouldSwitch) { … }` por el cuerpo ejecutado incondicionalmente, más un toast:
+
+```ts
+          // Se cambia al torneo recién creado sin preguntar: crearlo desde el
+          // selector es una acción explícita, quedarse en el viejo sorprende.
+          // Recién ahora se aplica la regresión de skills al pool global.
+          set({
+            teams: teamsWithTiers,
+            currentTournamentId: tournament.id,
+            currentTournament: tournament,
+          });
+
+          if (isSupabaseConfigured()) {
+            teamsService
+              .batchUpdateTeams(teamsWithTiers.map((t) => ({ id: t.id, skill: t.skill })))
+              .catch((error) => console.error('Error saving regressed skills:', error));
+          }
+
+          useToastStore.getState().success(`Torneo Mundial ${year} creado`);
+```
+
+**Cambio de comportamiento a registrar en el reporte:** antes, responder "no" dejaba el torneo creado pero *sin* aplicar la regresión de skills al pool global. Ahora la regresión se aplica siempre. Es el comportamiento correcto — el torneo se creó en ambos casos — pero es un cambio real, no solo cosmético.
+
+- [ ] **Step 5: Subir el confirm de recalcular rendimientos a la UI**
+
+En `recalculateTournamentPerformances` (~línea 611), eliminar el `confirm()` y su `return`. La confirmación se agrega en `TournamentHistory.tsx`, donde vive el botón que la dispara, con el mismo patrón de estado por fila que ya usa el borrado:
+
+```tsx
+  const [pendingRecalc, setPendingRecalc] = useState<Tournament | null>(null);
+```
+
+El botón de recalcular pasa a `onClick={() => setPendingRecalc(tournament)}`, y se agrega el diálogo:
+
+```tsx
+      <ConfirmDialog
+        open={pendingRecalc !== null}
+        onOpenChange={(open) => { if (!open) setPendingRecalc(null); }}
+        title="Recalcular rendimientos"
+        confirmLabel="Recalcular"
+        description={
+          <p>
+            Se eliminan y recrean todos los registros de rendimiento de los equipos
+            para <strong className="text-white">{pendingRecalc?.name}</strong>. Los datos
+            se recalculan a partir de los partidos, así que no se pierde nada.
+          </p>
+        }
+        onConfirm={() => {
+          if (pendingRecalc) recalculateTournamentPerformances(pendingRecalc.id);
+        }}
+      />
+```
+
+`variant` queda en el default (no `danger`): los registros de rendimiento son datos derivados y se reconstruyen a partir de los partidos, así que esto no destruye trabajo irrecuperable.
+
+- [ ] **Step 6: Convertir los 18 `alert()` a toasts**
+
+Reemplazar cada uno por `useToastStore.getState().error(...)` o `.warning(...)` según la tabla, conservando el `return` y el `progress.resetProgress()` que ya lo acompañan. Las guardas de "todavía no podés hacer esto" son `warning`; los fallos reales son `error`. Los que están en inglés se traducen.
+
+| Línea aprox. | Tipo | Mensaje resultante |
+|---|---|---|
+| 1378 | error | `Error: solo ${qualifiedTeamIds.length} equipos clasificados en lugar de 64.` |
+| 1436 | warning | `Completá todos los partidos de clasificatorias antes de avanzar al Mundial.` |
+| 1502 | error | `Error: solo ${qualifiedTeams.length} equipos clasificados en lugar de 64. Revisá los resultados de las clasificatorias.` |
+| 1557 | warning | `Completá primero todos los partidos de la fase de grupos del Mundial.` |
+| 1583 | error | `Error al guardar los partidos de playoffs. Intentá de nuevo.` |
+| 1618 | error | `No hay Mundial para regenerar.` |
+| 1639 | warning | `No se puede regenerar el sorteo del Mundial: ya se jugaron partidos.` |
+| 1654 | error | `Error al eliminar datos del Mundial. Intentá de nuevo.` |
+| 1702 | error | `Error: se esperaban 64 equipos clasificados y se encontraron ${qualifiedTeamIds.length}.` |
+| 1721 | error | `Error al guardar los nuevos grupos del Mundial. Intentá de nuevo.` |
+| 1761 | warning | `No se puede regenerar el sorteo: ya se jugaron partidos.` |
+| 1921 | error | `No hay Mundial para regenerar.` |
+| 1941 | warning | `No se puede regenerar: ya se jugaron partidos de playoffs.` |
+| 1948 | warning | `Completá primero todos los partidos de la fase de grupos.` |
+| 1964 | error | `Error al eliminar datos de playoffs. Intentá de nuevo.` |
+| 1989 | error | `Error al guardar los partidos de playoffs. Intentá de nuevo.` |
+
+Los de las líneas 556 y 572 ya se hicieron en el Step 1.
+
+Las líneas son aproximadas y se corren a medida que editás: localizá cada sitio por el texto del mensaje, no por el número.
+
+- [ ] **Step 7: Verificar que no queda ningún diálogo nativo en toda la app**
+
+Run: `grep -rn "confirm(\|[^.]alert(" src --include="*.tsx" --include="*.ts" | grep -v __tests__`
+Expected: sin resultados. Esta es la verificación que la Task 15 esperaba y que sin esta tarea habría fallado.
+
+- [ ] **Step 8: Verificar tipos y correr la suite**
+
+Run: `npx tsc -b && npm test`
+Expected: tsc sin salida; suite verde sin romper pruebas previas.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add src/store/useTournamentStore.ts src/components/tournament/TournamentHistory.tsx src/components/tournament/__tests__/TournamentHistory.test.tsx
+git commit -m "refactor(store): fuera los 21 diálogos nativos del store
+
+El inventario del spec salió de un grep sobre *.tsx y no los vio. El de
+deleteTournament convertía la Task 3 en doble prompt: el diálogo retro
+primero y el confirm del sistema encima.
+
+Los alert() pasan a useToastStore, que el propio store ya usaba. El
+borrado ahora relanza ante un fallo de base para que el diálogo quede
+abierto en vez de aparentar éxito."
+```
+
+---
+
 ## FASE 2 — Carga y vacío
 
 ### Task 6: EmptyState
