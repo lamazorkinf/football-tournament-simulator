@@ -16,4 +16,31 @@ describe('Sidebar', () => {
     await userEvent.click(screen.getByRole('button', { name: /confederaciones/i }));
     expect(onViewChange).toHaveBeenCalledWith('confederations');
   });
+
+  it('agrupa los ítems en secciones', () => {
+    useTournamentStore.setState({ tournaments: [], currentTournamentId: null });
+    render(<Sidebar currentView="wizard" onViewChange={vi.fn()} tournamentYear={2026} />);
+
+    expect(screen.getByText('Ciclo actual')).toBeInTheDocument();
+    expect(screen.getByText('Análisis')).toBeInTheDocument();
+    expect(screen.getByText('Archivo')).toBeInTheDocument();
+  });
+
+  it('marca como bloqueadas las fases no desbloqueadas pero las deja clickeables', async () => {
+    useTournamentStore.setState({ tournaments: [], currentTournamentId: null });
+    const onViewChange = vi.fn();
+    render(
+      <Sidebar
+        currentView="wizard"
+        onViewChange={onViewChange}
+        tournamentYear={2026}
+        lockedViews={['confederations']}
+      />
+    );
+
+    const confed = screen.getByRole('button', { name: /confederaciones/i });
+    expect(confed).not.toBeDisabled();
+    await userEvent.click(confed);
+    expect(onViewChange).toHaveBeenCalledWith('confederations');
+  });
 });

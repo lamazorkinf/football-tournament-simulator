@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
 import { useLiveMatchStore } from './store/useLiveMatchStore';
 import { useLiveMatchdayStore } from './store/useLiveMatchdayStore';
@@ -32,6 +32,7 @@ import { ActionDock } from './components/ui/ActionDock';
 import { ConnectionError } from './components/ui/ConnectionError';
 import { PixelBar } from './components/ui/PixelBar';
 import { MobileActionProvider } from './hooks/useMobileAction';
+import { isContinentalDrawn, isConfederationsDrawn } from './utils/cycleProgress';
 import { Trophy } from 'lucide-react';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
@@ -99,6 +100,21 @@ function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [refreshFromDatabase]);
 
+  // Debe declararse ANTES de los returns condicionales de más abajo: si no,
+  // cuando currentTournament pasa de null a existente cambia la cantidad de
+  // hooks ejecutados y React lanza "Rendered more hooks than during the
+  // previous render" (mismo motivo documentado en TournamentWizard.tsx). Por
+  // eso es tolerante a currentTournament nulo.
+  const lockedViews = useMemo(() => {
+    if (!currentTournament) return [];
+    const locked: View[] = [];
+    if (!isContinentalDrawn(currentTournament)) locked.push('continental');
+    if (!isConfederationsDrawn(currentTournament)) locked.push('confederations');
+    if (!currentTournament.confederationsCup.isComplete) locked.push('qualifiers');
+    if (!currentTournament.worldCup) locked.push('worldcup');
+    return locked;
+  }, [currentTournament]);
+
   if (initStatus === 'error' || initStatus === 'unconfigured') {
     return (
       <>
@@ -153,6 +169,7 @@ function App() {
         currentView={currentView}
         onViewChange={setCurrentView}
         tournamentYear={currentTournament.year}
+        lockedViews={lockedViews}
       />
 
       {/* Main content area with dynamic left margin based on sidebar state */}
