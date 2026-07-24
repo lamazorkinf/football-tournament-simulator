@@ -45,6 +45,7 @@ import { normalizedQualifiersService } from '../services/normalizedQualifiersSer
 import { normalizedWorldCupService } from '../services/normalizedWorldCupService';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { performDraw, generateGroupMatches, initializeStandings } from '../utils/drawSystem';
+import { isQualifiersDrawn } from '../utils/cycleProgress';
 import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
 import { supabase } from '../lib/supabase';
@@ -1753,8 +1754,9 @@ export const useTournamentStore = create<TournamentState>()(
         console.log('✅ regenerateWorldCupDrawAndFixtures completed');
       },
 
-      generateDrawAndFixtures: async () => {
-        console.log('🎲 generateDrawAndFixtures called');
+      generateDrawAndFixtures: async (options?: { force?: boolean }) => {
+        const force = options?.force ?? false;
+        console.log('🎲 generateDrawAndFixtures called', { force });
         const state = get();
         const progress = useProgressStore.getState();
 
@@ -1769,6 +1771,17 @@ export const useTournamentStore = create<TournamentState>()(
         if (state.currentTournament.hasAnyMatchPlayed) {
           console.warn('⚠️ Cannot regenerate - matches already played');
           useToastStore.getState().warning('No se puede regenerar el sorteo: ya se jugaron partidos.');
+          return;
+        }
+
+        // Guard de "ya sorteado": sin esto, un segundo sorteo genera partidos
+        // con nanoid nuevos que se SUMAN a los viejos en la base, porque el
+        // upsert por id nunca puede pisarlos.
+        if (!force && isQualifiersDrawn(state.currentTournament)) {
+          console.warn('⚠️ Cannot draw - qualifiers already drawn');
+          useToastStore
+            .getState()
+            .warning('El sorteo de las clasificatorias ya está hecho. Usá "Rehacer sorteo" para generarlo de nuevo.');
           return;
         }
 
@@ -1886,6 +1899,14 @@ export const useTournamentStore = create<TournamentState>()(
               // tras cambiar de proyecto Supabase) el insert de grupos violaba
               // la FK (23503). saveTournament hace upsert.
               await adaptiveTournamentService.saveTournament(updatedTournament);
+
+              // Borrado SIEMPRE, no solo con force: los partidos se crean con
+              // nanoid nuevo en cada sorteo, así que el upsert por id no puede
+              // reemplazar a los del sorteo anterior — solo agregarlos. Borrar
+              // primero también limpia el residuo de un intento que se cortó a
+              // mitad. El CASCADE de matches_new.qualifier_group_id arrastra
+              // planteles y partidos.
+              await normalizedQualifiersService.deleteQualifierData(updatedTournament.id);
 
               await Promise.all(
                 regions.map(async (region) => {

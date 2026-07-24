@@ -145,7 +145,9 @@ export interface TournamentState {
   advanceToKnockout: () => Promise<void>;
   regenerateKnockoutStage: () => Promise<void>;
   simulateKnockoutMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
-  generateDrawAndFixtures: () => void;
+  // `force` rehace un sorteo ya existente (borrándolo antes). Sin él, la acción
+  // se niega si las clasificatorias ya están sorteadas.
+  generateDrawAndFixtures: (options?: { force?: boolean }) => Promise<void>;
   regenerateWorldCupDrawAndFixtures: () => Promise<void>;
   drawContinental: () => void;
   simulateContinentalMatch: (matchId: string) => Promise<SimulatedMatchOutcome | null>;
