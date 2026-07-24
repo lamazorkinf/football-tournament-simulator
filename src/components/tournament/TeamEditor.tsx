@@ -94,10 +94,10 @@ export function TeamEditor() {
     setIsRefreshing(true);
     try {
       await loadTeamsFromDatabase();
-      alert('Teams refreshed from database!');
+      toast.success('Equipos actualizados desde la base');
     } catch (error) {
-      alert('Error refreshing teams from database');
-      console.error(error);
+      console.error('Error refreshing teams from database:', error);
+      toast.error('No se pudieron actualizar los equipos');
     } finally {
       setIsRefreshing(false);
     }

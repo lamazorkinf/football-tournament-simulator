@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { ChevronDown, Trophy, Plus, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { Button } from './Button';
 
 export function TournamentSelector() {
@@ -15,21 +16,23 @@ export function TournamentSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [newYear, setNewYear] = useState('');
+  const [yearError, setYearError] = useState<string | null>(null);
 
   const currentTournament = tournaments.find(t => t.id === currentTournamentId);
 
   const handleCreateNew = async () => {
     const year = parseInt(newYear, 10);
     if (isNaN(year) || year < 2000 || year > 2100) {
-      alert('Por favor ingresa un año válido (2000-2100)');
+      setYearError('Ingresá un año entre 2000 y 2100');
       return;
     }
 
-    // Check if tournament with this year already exists
-    if (tournaments.some(t => t.year === year)) {
-      alert(`Ya existe un torneo para el año ${year}`);
+    if (tournaments.some((t) => t.year === year)) {
+      setYearError(`Ya existe un torneo para el año ${year}`);
       return;
     }
+
+    setYearError(null);
 
     // try/catch: si la creación falla (p.ej. sin red), sin esto la promesa
     // quedaba sin manejar, el modal no se cerraba y el usuario no recibía
@@ -41,7 +44,7 @@ export function TournamentSelector() {
       setIsOpen(false);
     } catch (error) {
       console.error('Error creating tournament:', error);
-      alert('No se pudo crear el torneo. Revisá la conexión e intentá de nuevo.');
+      toast.error('No se pudo crear el torneo. Revisá la conexión e intentá de nuevo.');
     }
   };
 
@@ -199,17 +202,26 @@ export function TournamentSelector() {
               <input
                 type="number"
                 value={newYear}
-                onChange={(e) => setNewYear(e.target.value)}
+                onChange={(e) => { setNewYear(e.target.value); setYearError(null); }}
                 placeholder="Ej: 2030"
                 min="2000"
                 max="2100"
-                className="w-full px-4 py-2 bg-night border-2 border-grass text-white placeholder:text-grass-soft focus:ring-2 focus:ring-gold focus:border-transparent outline-none mb-4"
+                aria-invalid={yearError !== null}
+                aria-describedby={yearError ? 'year-error' : undefined}
+                className={`w-full px-4 py-2 bg-night border-2 text-white placeholder:text-grass-soft focus:ring-2 focus:ring-gold focus:border-transparent outline-none ${
+                  yearError ? 'border-loss' : 'border-grass'
+                }`}
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateNew();
                   if (e.key === 'Escape') setShowNewModal(false);
                 }}
               />
+              {yearError ? (
+                <p id="year-error" className="text-loss text-sm mt-2 mb-4">{yearError}</p>
+              ) : (
+                <div className="mb-4" />
+              )}
 
               <div className="flex gap-2">
                 <button
