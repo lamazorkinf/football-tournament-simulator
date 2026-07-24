@@ -499,6 +499,29 @@ describe('guards del resto de los sorteos', () => {
     expect(createWorldCupGroups).not.toHaveBeenCalled();
   });
 
+  it('advanceToWorldCup borra el Mundial anterior ANTES de escribir el nuevo', async () => {
+    // Mismo molde que "con force borra el sorteo anterior ANTES de escribir
+    // el nuevo" (clasificatorias), pero para el camino que SÍ sortea: acá no
+    // hay `worldCup` previo en memoria, así que el guard de arriba no frena y
+    // la acción llega hasta el borrado+escritura reales. Sin este test, las
+    // dos líneas de `deleteWorldCupData` que agregó esta rama quedaban sin
+    // ningún test que las ejecutara de verdad.
+    const { cycle, teams } = makeFullyQualifiedCycle();
+    useTournamentStore.setState({
+      currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+    });
+
+    await store().advanceToWorldCup();
+
+    expect(deleteWorldCupData).toHaveBeenCalledWith(cycle.id);
+    expect(createWorldCupGroups).toHaveBeenCalledTimes(1);
+    // Sin este orden, un Mundial huérfano de un intento anterior convive en
+    // la base con los 16 grupos nuevos en vez de ser reemplazado.
+    expect(deleteWorldCupData.mock.invocationCallOrder[0]).toBeLessThan(
+      createWorldCupGroups.mock.invocationCallOrder[0]
+    );
+  });
+
   it('advanceToKnockout no re-genera unos dieciseisavos existentes', async () => {
     // 16 grupos completos de verdad: con `groups: []`, `generateRoundOf32`
     // corta por su propio chequeo de cantidad y el test del guard quedaría
@@ -525,6 +548,36 @@ describe('guards del resto de los sorteos', () => {
     await store().advanceToKnockout();
 
     expect(createKnockoutMatch).not.toHaveBeenCalled();
+  });
+
+  it('advanceToKnockout borra la fase eliminatoria anterior ANTES de escribir la nueva', async () => {
+    // Igual que el espejo de advanceToWorldCup: acá `roundOf32` arranca vacío
+    // (nada que rechace el guard), así que la acción llega hasta el borrado y
+    // la escritura reales de `deleteKnockoutData`/`createKnockoutMatch`.
+    const { groups, teams } = makeGroupsReadyForKnockout();
+    const cycle = setUpTournament(0);
+    const withGroups: Cycle = {
+      ...cycle,
+      worldCup: {
+        groups,
+        knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+        qualifiedTeamIds: [],
+      },
+    };
+    useTournamentStore.setState({
+      currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
+    });
+
+    await store().advanceToKnockout();
+
+    expect(deleteKnockoutData).toHaveBeenCalledWith(withGroups.id);
+    // 16 grupos -> 16 cruces de dieciseisavos (A1-B2, C1-D2, ...).
+    expect(createKnockoutMatch).toHaveBeenCalledTimes(16);
+    // Sin este orden, los dieciseisavos de un intento anterior sobreviven
+    // junto a los nuevos en vez de ser reemplazados.
+    expect(deleteKnockoutData.mock.invocationCallOrder[0]).toBeLessThan(
+      createKnockoutMatch.mock.invocationCallOrder[0]
+    );
   });
 
   it('advanceToWorldCupWithManualDraw tampoco re-sortea un Mundial existente', () => {
