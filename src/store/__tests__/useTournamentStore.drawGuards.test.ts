@@ -187,7 +187,15 @@ describe('candado isDrawing', () => {
   });
 
   it('dos sorteos disparados a la vez producen uno solo', async () => {
-    setUpTournament(0);
+    setUpTournament(20); // ya sorteado: el escenario real es "Rehacer sorteo".
+    // Sin `force`, la primera llamada actualiza el estado local (con el
+    // sorteo) de forma síncrona, antes de llegar a ningún await, así que
+    // para cuando arranca la segunda llamada el guard `isQualifiersDrawn`
+    // ya la rechaza por su cuenta y el test queda decorativo: nunca llega
+    // a ejercitar el candado. Con `force: true` ese guard se saltea a
+    // propósito -como al tocar el botón "Rehacer sorteo"-, así que el
+    // candado `isDrawing` pasa a ser la única defensa posible contra el
+    // doble clic, que es justo lo que este test tiene que probar.
     // El guardado se demora para que las dos llamadas se solapen de verdad,
     // que es lo que pasa con un doble clic sobre un botón que tarda segundos.
     createQualifierGroups.mockImplementation(
@@ -195,11 +203,14 @@ describe('candado isDrawing', () => {
     );
 
     await Promise.all([
-      store().generateDrawAndFixtures(),
-      store().generateDrawAndFixtures(),
+      store().generateDrawAndFixtures({ force: true }),
+      store().generateDrawAndFixtures({ force: true }),
     ]);
 
     expect(createQualifierGroups).toHaveBeenCalledTimes(4); // 4 regiones, no 8
+    // Si el candado no frenara a la segunda llamada, también volvería a
+    // borrar: dos borrados serían tan destructivos como dos escrituras.
+    expect(deleteQualifierData).toHaveBeenCalledTimes(1);
   });
 
   it('libera el candado cuando el sorteo termina', async () => {
