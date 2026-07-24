@@ -14,7 +14,7 @@ describe('ContinentalView', () => {
     render(<ContinentalView cycle={cycle} teams={teams} />);
 
     expect(screen.getByText('Torneos Continentales')).toBeInTheDocument();
-    const playButtons = screen.getAllByRole('button', { name: /play/i });
+    const playButtons = screen.getAllByRole('button', { name: /jugar/i });
     // Europa: 23 cruces R64, todos en la jornada actual (md1).
     expect(playButtons).toHaveLength(cycle.continental.brackets.Europe.roundOf64.length);
 

@@ -5,6 +5,12 @@ import { MatchHistory } from '../MatchHistory';
 import { matchHistoryService, type MatchHistoryEntry, type MatchPage } from '../../../services/matchHistoryService';
 import * as supaLib from '../../../lib/supabase';
 
+// El badge de etapa de cada fila y la opción del filtro muestran el mismo
+// texto, así que hay que acotar al <span> del badge: sin esto las consultas
+// contarían también el <option>, que está siempre presente y haría pasar los
+// tests por el motivo equivocado.
+const BADGE = { selector: 'span' } as const;
+
 const teams: Team[] = [
   { id: 'A', name: 'Local', flag: '🏠', region: 'Europe', skill: 80 },
   { id: 'B', name: 'Visita', flag: '✈️', region: 'Asia', skill: 75 },
@@ -42,12 +48,12 @@ describe('MatchHistory — paginación "Cargar más"', () => {
 
     // Página 1: 2 partidos qualifier + botón "Cargar más".
     const loadMore = await screen.findByRole('button', { name: /cargar más/i });
-    expect(screen.getAllByText('Eliminatoria')).toHaveLength(2);
+    expect(screen.getAllByText('Clasificatorias', BADGE)).toHaveLength(2);
 
     fireEvent.click(loadMore);
 
     // Página 2 appendeada: 3 en total, botón desaparece (hasMore false).
-    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByText('Clasificatorias', BADGE)).toHaveLength(3));
     expect(screen.queryByRole('button', { name: /cargar más/i })).toBeNull();
   });
 });
@@ -93,7 +99,7 @@ describe('MatchHistory — guard de época evita contaminación entre filtros', 
     render(<MatchHistory teams={teams} />);
 
     // Carga inicial (filter='all') visible.
-    await screen.findByText('Eliminatoria');
+    await screen.findByText('Clasificatorias', BADGE);
 
     const select = screen.getByRole('combobox');
     fireEvent.change(select, { target: { value: 'qualifier' } });
@@ -102,8 +108,8 @@ describe('MatchHistory — guard de época evita contaminación entre filtros', 
     fireEvent.change(select, { target: { value: 'world-cup-group' } });
 
     // La carga de 'world-cup-group' resuelve y se muestra.
-    await waitFor(() => expect(screen.getAllByText('Copa del Mundo - Grupos')).toHaveLength(1));
-    expect(screen.queryByText('Eliminatoria')).toBeNull();
+    await waitFor(() => expect(screen.getAllByText('Mundial · Grupos', BADGE)).toHaveLength(1));
+    expect(screen.queryByText('Clasificatorias', BADGE)).toBeNull();
 
     // Ahora resolvemos la promesa vieja (qualifier). Su época ya fue cancelada
     // por el cambio de filtro posterior: no debe pisar la lista actual.
@@ -115,8 +121,8 @@ describe('MatchHistory — guard de época evita contaminación entre filtros', 
 
     // Damos tiempo a que el microtask de la promesa vieja se procese; la lista
     // debe seguir reflejando solo el filtro actual, sin contaminación.
-    await waitFor(() => expect(screen.getAllByText('Copa del Mundo - Grupos')).toHaveLength(1));
-    expect(screen.queryByText('Eliminatoria')).toBeNull();
+    await waitFor(() => expect(screen.getAllByText('Mundial · Grupos', BADGE)).toHaveLength(1));
+    expect(screen.queryByText('Clasificatorias', BADGE)).toBeNull();
     expect(screen.queryByRole('button', { name: /cargar más/i })).toBeNull();
   });
 });
@@ -165,7 +171,7 @@ describe('MatchHistory — loadingMore no queda pegado si el filtro cambia con u
     const select = screen.getByRole('combobox');
     fireEvent.change(select, { target: { value: 'qualifier' } });
 
-    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByText('Clasificatorias', BADGE)).toHaveLength(1));
 
     // Ahora resuelve la promesa vieja del loadMore cancelado.
     resolveLoadMore({
@@ -204,16 +210,16 @@ describe('MatchHistory — callback de tiempo real (subscribeToMatches)', () => 
 
     render(<MatchHistory teams={teams} />);
 
-    // Primera página cargada: 2 partidos qualifier ("Eliminatoria").
-    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(2));
+    // Primera página cargada: 2 partidos qualifier ("Clasificatorias").
+    await waitFor(() => expect(screen.getAllByText('Clasificatorias', BADGE)).toHaveLength(2));
     expect(capturedCb).toBeDefined();
 
     // Caso A (prepend): un partido nuevo (id distinto) debe anteponerse a la lista.
     act(() => capturedCb!(q('nuevo', '2026-01-04T00:00:00Z')));
-    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByText('Clasificatorias', BADGE)).toHaveLength(3));
 
     // Caso B (dedup): un partido con un id ya presente en la lista no debe duplicarse.
     act(() => capturedCb!(q('nuevo', '2026-01-04T00:00:00Z')));
-    await waitFor(() => expect(screen.getAllByText('Eliminatoria')).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByText('Clasificatorias', BADGE)).toHaveLength(3));
   });
 });
