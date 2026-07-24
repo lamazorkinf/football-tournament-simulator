@@ -1421,9 +1421,16 @@ export const useTournamentStore = create<TournamentState>()(
             })
             .catch((error: unknown) => {
               console.error('❌ Error saving World Cup groups to database:', error);
+              // "Intentá de nuevo" era engañoso: el sorteo manual ya quedó en
+              // memoria, así que el guard de "ya sorteado" bloquea cualquier
+              // reintento del mismo camino. El mensaje honesto -mismo criterio
+              // que generateDrawAndFixtures- dice qué pasó de verdad y por
+              // dónde se sale: regenerando el sorteo del Mundial.
               useToastStore
                 .getState()
-                .error('Error al guardar el sorteo manual del Mundial. Intentá de nuevo.');
+                .warning(
+                  'El sorteo manual del Mundial se generó pero no se pudo guardar en la base de datos. Usá "Regenerar sorteo del Mundial" para reintentar el guardado.'
+                );
             });
         }
 
