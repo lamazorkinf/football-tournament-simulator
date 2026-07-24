@@ -435,25 +435,22 @@ export const useTournamentStore = create<TournamentState>()(
           progress.updateProgress('Finalizando...', 6);
           progress.completeProgress();
 
-          // Ask user if they want to switch to the new tournament
-          const shouldSwitch = confirm(
-            `Torneo Mundial ${year} creado exitosamente.\n\n¿Deseas cambiar a este torneo ahora?`
-          );
+          // Se cambia al torneo recién creado sin preguntar: crearlo desde el
+          // selector es una acción explícita, quedarse en el viejo sorprende.
+          // Recién ahora se aplica la regresión de skills al pool global.
+          set({
+            teams: teamsWithTiers,
+            currentTournamentId: tournament.id,
+            currentTournament: tournament,
+          });
 
-          if (shouldSwitch) {
-            // Recién ahora se aplica la regresión de skills al pool global.
-            set({
-              teams: teamsWithTiers,
-              currentTournamentId: tournament.id,
-              currentTournament: tournament
-            });
-
-            if (isSupabaseConfigured()) {
-              teamsService
-                .batchUpdateTeams(teamsWithTiers.map((t) => ({ id: t.id, skill: t.skill })))
-                .catch((error) => console.error('Error saving regressed skills:', error));
-            }
+          if (isSupabaseConfigured()) {
+            teamsService
+              .batchUpdateTeams(teamsWithTiers.map((t) => ({ id: t.id, skill: t.skill })))
+              .catch((error) => console.error('Error saving regressed skills:', error));
           }
+
+          useToastStore.getState().success(`Torneo Mundial ${year} creado`);
         } catch (error) {
           progress.resetProgress();
           throw error;
@@ -553,14 +550,13 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Don't allow deleting if it's the only tournament
         if (state.tournaments.length === 1) {
-          alert('No puedes eliminar el único torneo existente.');
+          useToastStore.getState().warning('No podés eliminar el único torneo existente.');
           return;
         }
 
-        // Confirm deletion
-        if (!confirm(`¿Eliminar el torneo "${tournament.name}"?\n\nEsta acción no se puede deshacer.`)) {
-          return;
-        }
+        // La confirmación ahora vive en TournamentHistory, donde el usuario
+        // ya la vio en el ConfirmDialog retro. Pedirla acá también era el
+        // doble prompt.
 
         // Delete from database
         if (isSupabaseConfigured()) {
@@ -569,8 +565,10 @@ export const useTournamentStore = create<TournamentState>()(
             console.log(`Tournament ${id} deleted from database`);
           } catch (error) {
             console.error('Error deleting tournament:', error);
-            alert('Error al eliminar el torneo de la base de datos.');
-            return;
+            useToastStore.getState().error('Error al eliminar el torneo de la base de datos.');
+            // Relanza para que el ConfirmDialog de TournamentHistory quede
+            // ABIERTO: si se cierra, el usuario cree que el torneo se borró.
+            throw error;
           }
         }
 
@@ -608,9 +606,8 @@ export const useTournamentStore = create<TournamentState>()(
           return;
         }
 
-        if (!confirm(`¿Recalcular rendimientos para el torneo "${tournament.name}"?\n\nEsto eliminará y recreará todos los registros de rendimiento de los equipos para este torneo.`)) {
-          return;
-        }
+        // La confirmación ahora vive en TournamentHistory, con el mismo
+        // ConfirmDialog retro que usa el borrado.
 
         const toast = useToastStore.getState();
 
@@ -1375,7 +1372,9 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (qualifiedTeamIds.length !== 64) {
           console.error(`❌ Expected 64 qualified teams, got ${qualifiedTeamIds.length}`);
-          alert(`Error: Only ${qualifiedTeamIds.length} teams qualified instead of 64.`);
+          useToastStore
+            .getState()
+            .error(`Error: solo ${qualifiedTeamIds.length} equipos clasificados en lugar de 64.`);
           return;
         }
 
@@ -1433,7 +1432,9 @@ export const useTournamentStore = create<TournamentState>()(
           if (!allMatchesPlayed) {
             console.error('❌ Not all qualifier matches are complete');
             progress.resetProgress();
-            alert('Please complete all qualifier matches before advancing to the World Cup!');
+            useToastStore
+              .getState()
+              .warning('Completá todos los partidos de clasificatorias antes de avanzar al Mundial.');
             return;
           }
 
@@ -1499,7 +1500,11 @@ export const useTournamentStore = create<TournamentState>()(
           if (qualifiedTeams.length !== 64) {
             console.error(`❌ Expected 64 qualified teams, got ${qualifiedTeams.length}`);
             progress.resetProgress();
-            alert(`Error: Only ${qualifiedTeams.length} teams qualified instead of 64. Please check the qualifier results.`);
+            useToastStore
+              .getState()
+              .error(
+                `Error: solo ${qualifiedTeams.length} equipos clasificados en lugar de 64. Revisá los resultados de las clasificatorias.`
+              );
             return;
           }
 
@@ -1554,7 +1559,7 @@ export const useTournamentStore = create<TournamentState>()(
           // Check if all group matches are complete
           if (!areGroupsComplete(state.currentTournament.worldCup.groups)) {
             progress.resetProgress();
-            alert('Please complete all World Cup group matches first!');
+            useToastStore.getState().warning('Completá primero todos los partidos de la fase de grupos del Mundial.');
             return;
           }
 
@@ -1580,7 +1585,7 @@ export const useTournamentStore = create<TournamentState>()(
             } catch (error) {
               console.error('❌ Error saving knockout matches:', error);
               progress.resetProgress();
-              alert('Error al guardar los partidos de playoffs. Por favor intenta de nuevo.');
+              useToastStore.getState().error('Error al guardar los partidos de playoffs. Intentá de nuevo.');
               return;
             }
           }
@@ -1615,7 +1620,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (!state.currentTournament?.worldCup) {
           console.error('❌ No World Cup found');
-          alert('No World Cup found to regenerate!');
+          useToastStore.getState().error('No hay Mundial para regenerar.');
           return;
         }
 
@@ -1636,7 +1641,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (hasWorldCupMatchPlayed || hasKnockoutMatchPlayed) {
           console.warn('⚠️ Cannot regenerate - World Cup matches already played');
-          alert('Cannot regenerate World Cup draw after matches have been played!');
+          useToastStore.getState().warning('No se puede regenerar el sorteo del Mundial: ya se jugaron partidos.');
           return;
         }
 
@@ -1651,7 +1656,7 @@ export const useTournamentStore = create<TournamentState>()(
             console.log('✅ World Cup data deleted from database');
           } catch (error: unknown) {
             console.error('❌ Error deleting World Cup data:', error);
-            alert('Error al eliminar datos del Mundial. Por favor, intenta de nuevo.');
+            useToastStore.getState().error('Error al eliminar datos del Mundial. Intentá de nuevo.');
             return;
           }
         }
@@ -1699,7 +1704,9 @@ export const useTournamentStore = create<TournamentState>()(
         // Validate we have exactly 64 teams
         if (qualifiedTeamIds.length !== 64) {
           console.error(`❌ Expected 64 qualified teams, found ${qualifiedTeamIds.length}`);
-          alert(`Error: Se esperaban 64 equipos clasificados pero se encontraron ${qualifiedTeamIds.length}.`);
+          useToastStore
+            .getState()
+            .error(`Error: se esperaban 64 equipos clasificados y se encontraron ${qualifiedTeamIds.length}.`);
           return;
         }
 
@@ -1718,7 +1725,7 @@ export const useTournamentStore = create<TournamentState>()(
             console.log('✅ New World Cup groups and matches saved to database');
           } catch (error: unknown) {
             console.error('❌ Error saving new World Cup groups:', error);
-            alert('Error al guardar los nuevos grupos del Mundial. Por favor, intenta de nuevo.');
+            useToastStore.getState().error('Error al guardar los nuevos grupos del Mundial. Intentá de nuevo.');
             return;
           }
         }
@@ -1758,7 +1765,7 @@ export const useTournamentStore = create<TournamentState>()(
         // Check if any match has been played
         if (state.currentTournament.hasAnyMatchPlayed) {
           console.warn('⚠️ Cannot regenerate - matches already played');
-          alert('Cannot regenerate draw after matches have been played!');
+          useToastStore.getState().warning('No se puede regenerar el sorteo: ya se jugaron partidos.');
           return;
         }
 
@@ -1918,7 +1925,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (!state.currentTournament?.worldCup) {
           console.error('❌ No World Cup found');
-          alert('Error: No hay Mundial para regenerar.');
+          useToastStore.getState().error('No hay Mundial para regenerar.');
           return;
         }
 
@@ -1938,14 +1945,14 @@ export const useTournamentStore = create<TournamentState>()(
           if (hasKnockoutMatchPlayed) {
             console.error('❌ Cannot regenerate - knockout matches already played');
             progress.resetProgress();
-            alert('Error: No se puede regenerar porque ya se han jugado partidos de playoffs.');
+            useToastStore.getState().warning('No se puede regenerar: ya se jugaron partidos de playoffs.');
             return;
           }
 
           // Check if all group matches are complete
           if (!areGroupsComplete(state.currentTournament.worldCup.groups)) {
             progress.resetProgress();
-            alert('Error: Debes completar todos los partidos de la fase de grupos primero.');
+            useToastStore.getState().warning('Completá primero todos los partidos de la fase de grupos.');
             return;
           }
 
@@ -1961,7 +1968,7 @@ export const useTournamentStore = create<TournamentState>()(
             } catch (error) {
               console.error('❌ Error deleting knockout data:', error);
               progress.resetProgress();
-              alert('Error al eliminar datos de playoffs. Por favor intenta de nuevo.');
+              useToastStore.getState().error('Error al eliminar datos de playoffs. Intentá de nuevo.');
               return;
             }
           }
@@ -1986,7 +1993,7 @@ export const useTournamentStore = create<TournamentState>()(
             } catch (error) {
               console.error('❌ Error saving knockout matches:', error);
               progress.resetProgress();
-              alert('Error al guardar los partidos de playoffs. Por favor intenta de nuevo.');
+              useToastStore.getState().error('Error al guardar los partidos de playoffs. Intentá de nuevo.');
               return;
             }
           }

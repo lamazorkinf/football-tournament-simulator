@@ -44,4 +44,19 @@ describe('TournamentHistory', () => {
     await userEvent.click(screen.getByRole('button', { name: /cancelar/i }));
     expect(deleteTournament).not.toHaveBeenCalled();
   });
+
+  it('deja el diálogo abierto si falla el borrado en la base', async () => {
+    const failing = vi.fn().mockRejectedValue(new Error('sin red'));
+    useTournamentStore.setState({ deleteTournament: failing } as never);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<TournamentHistory />);
+    await userEvent.click(screen.getAllByTitle('Eliminar torneo')[0]);
+    await userEvent.click(screen.getByRole('button', { name: /^eliminar$/i }));
+
+    expect(failing).toHaveBeenCalledTimes(1);
+    // El diálogo sigue en pantalla: el borrado no ocurrió.
+    expect(screen.getByRole('button', { name: /^eliminar$/i })).toBeInTheDocument();
+    consoleError.mockRestore();
+  });
 });

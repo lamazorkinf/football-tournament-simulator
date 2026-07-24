@@ -13,6 +13,7 @@ export function TournamentHistory() {
   const { tournaments, selectTournament, deleteTournament, recalculateTournamentPerformances, currentTournamentId } = useTournamentStore();
   const [filter, setFilter] = useState<FilterType>('all');
   const [pendingDelete, setPendingDelete] = useState<Tournament | null>(null);
+  const [pendingRecalc, setPendingRecalc] = useState<Tournament | null>(null);
 
   const filteredTournaments = useMemo(() => {
     return tournaments.filter((t) => {
@@ -79,10 +80,6 @@ export function TournamentHistory() {
 
   const handleDelete = (tournament: Tournament) => {
     setPendingDelete(tournament);
-  };
-
-  const handleRecalculate = (tournamentId: string) => {
-    recalculateTournamentPerformances(tournamentId);
   };
 
   return (
@@ -228,7 +225,7 @@ export function TournamentHistory() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRecalculate(tournament.id)}
+                        onClick={() => setPendingRecalc(tournament)}
                         title="Recalcular rendimientos de equipos"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -277,6 +274,23 @@ export function TournamentHistory() {
         }
         onConfirm={async () => {
           if (pendingDelete) await deleteTournament(pendingDelete.id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={pendingRecalc !== null}
+        onOpenChange={(open) => { if (!open) setPendingRecalc(null); }}
+        title="Recalcular rendimientos"
+        confirmLabel="Recalcular"
+        description={
+          <p>
+            Se eliminan y recrean todos los registros de rendimiento de los equipos
+            para <strong className="text-white">{pendingRecalc?.name}</strong>. Los datos
+            se recalculan a partir de los partidos, así que no se pierde nada.
+          </p>
+        }
+        onConfirm={() => {
+          if (pendingRecalc) recalculateTournamentPerformances(pendingRecalc.id);
         }}
       />
     </div>
