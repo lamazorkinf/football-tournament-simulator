@@ -273,7 +273,7 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
               <EmptyState
                 icon={Lock}
                 title="Playoffs sin generar"
-                description="Se generan los dieciseisavos de final cuando termine la fase de grupos."
+                description="Terminá la fase de grupos y generá los dieciseisavos desde ahí: no se crean solos."
                 action={{ label: 'Ver fase de grupos', onClick: () => setActiveTab('groups') }}
               />
             </CardContent>

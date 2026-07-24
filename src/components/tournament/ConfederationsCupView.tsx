@@ -37,7 +37,7 @@ export function ConfederationsCupView({ cycle, teams, onNavigate }: Confederatio
       <EmptyState
         icon={Lock}
         title="Copa Confederaciones bloqueada"
-        description="Se desbloquea cuando terminen los cuatro torneos continentales y se conozcan los 8 finalistas."
+        description="Cuando terminen los cuatro torneos continentales y se conozcan los 8 finalistas, sorteala desde Progreso: no arranca sola."
         // A Progreso, no a Continental: el sorteo de confederaciones se dispara
         // desde ahí. Mandar a Continental funciona mientras esa fase siga en
         // juego, pero justo cuando termina —el momento más probable para entrar

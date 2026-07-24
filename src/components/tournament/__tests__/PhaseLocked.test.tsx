@@ -17,7 +17,9 @@ describe('Fase bloqueada', () => {
 
     render(<ConfederationsCupView cycle={cycle} teams={teams} onNavigate={onNavigate} />);
 
-    expect(screen.getByText(/se desbloquea/i)).toBeInTheDocument();
+    // Contra el título, no la descripción: el texto explicativo se afina y no
+    // tiene por qué romper el test cada vez.
+    expect(screen.getByText(/copa confederaciones bloqueada/i)).toBeInTheDocument();
 
     // A Progreso, que es donde vive el sorteo de confederaciones. Mandar a
     // Continental deja al usuario en una llave ya jugada apenas esa fase

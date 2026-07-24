@@ -50,8 +50,10 @@ describe('WorldCupViewEnhanced', () => {
     expect(
       screen.getByText('Playoffs sin generar')
     ).toBeInTheDocument();
+    // Contra el título y la acción, no contra el texto explicativo: ese copy se
+    // afina y no tiene por qué romper el test cada vez que se reescribe.
     expect(
-      screen.getByText('Se generan los dieciseisavos de final cuando termine la fase de grupos.')
+      screen.getByRole('button', { name: 'Ver fase de grupos' })
     ).toBeInTheDocument();
 
     // Su acción vuelve a la pestaña de grupos.
