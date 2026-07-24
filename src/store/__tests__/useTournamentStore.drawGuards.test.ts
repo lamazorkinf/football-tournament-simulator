@@ -611,6 +611,43 @@ describe('guards del resto de los sorteos', () => {
     expect(store().currentTournament).toBe(withWorldCup);
   });
 
+  it('advanceToWorldCupWithManualDraw borra el Mundial anterior ANTES de escribir el nuevo', async () => {
+    // Espejo de "advanceToWorldCup borra el Mundial anterior ANTES de
+    // escribir el nuevo": acá no hay `worldCup` previo en memoria, así que el
+    // guard de "ya sorteado" no frena y la acción llega hasta el borrado+
+    // escritura reales. Sin este test, un revert manual que dejara sólo
+    // `createWorldCupGroups` (sin el `deleteWorldCupData` previo) pasaba la
+    // suite igual: el único otro test de este camino prueba el guard, que
+    // corta ANTES de que el borrado se ejecute.
+    const cycle = setUpTournament(0); // torneo sin worldCup
+
+    // 16 grupos de 4 = los 64 que pide la acción.
+    const manualGroups = Array.from({ length: 16 }, (_, g) => ({
+      id: `manual-${g}`,
+      name: `Grupo ${g}`,
+      teamIds: Array.from({ length: 4 }, (_, t) => `m-${g}-${t}`),
+      matches: [],
+      standings: [],
+    }));
+
+    const completed = store().advanceToWorldCupWithManualDraw(manualGroups);
+    expect(completed).toBe(true);
+
+    // La acción es sincrónica y su persistencia es fire-and-forget encadenada
+    // con `.then`: hay que dejar correr la microcola antes de afirmar sobre
+    // los mocks, o `deleteWorldCupData`/`createWorldCupGroups` todavía no se
+    // habrán llamado.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(deleteWorldCupData).toHaveBeenCalledWith(cycle.id);
+    expect(createWorldCupGroups).toHaveBeenCalledTimes(1);
+    // Sin este orden, un Mundial huérfano de un intento anterior convive en
+    // la base con los 16 grupos nuevos en vez de ser reemplazado.
+    expect(deleteWorldCupData.mock.invocationCallOrder[0]).toBeLessThan(
+      createWorldCupGroups.mock.invocationCallOrder[0]
+    );
+  });
+
   it('drawContinental no re-sortea un bracket ya sorteado', () => {
     const { cycle, teams } = makeDrawnContinentalCycle();
     useTournamentStore.setState({
