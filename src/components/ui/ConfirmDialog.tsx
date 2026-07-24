@@ -25,6 +25,14 @@ interface ConfirmDialogProps {
  * existente (regenerar un sorteo, borrar un torneo o un equipo). Las acciones
  * que crean progreso pasan directo con un toast. Confirmar todo equivale a no
  * confirmar nada: el usuario aprende a apretar "Aceptar" sin leer.
+ *
+ * Contrato de errores: si `onConfirm` rechaza, el diálogo queda abierto y el
+ * error se registra en consola, pero NO se le muestra nada al usuario — el
+ * mensaje lo pone el consumidor, que sabe qué falló. Corolario importante: un
+ * consumidor que atrape sus propios errores sin re-lanzarlos hace que
+ * `onConfirm` resuelva bien y el diálogo se cierre, enmascarando como éxito
+ * una acción destructiva que falló. Si querés que el diálogo siga abierto
+ * ante un fallo, dejá que la promesa rechace.
  */
 export function ConfirmDialog({
   open,
@@ -43,6 +51,11 @@ export function ConfirmDialog({
     try {
       await onConfirm();
       onOpenChange(false);
+    } catch (error) {
+      // El diálogo queda ABIERTO a propósito: cerrarlo dejaría al usuario
+      // creyendo que la acción destructiva se completó. El mensaje al usuario
+      // lo pone el consumidor, que es el único que sabe qué falló.
+      console.error('ConfirmDialog: la acción de confirmación falló', error);
     } finally {
       setPending(false);
     }

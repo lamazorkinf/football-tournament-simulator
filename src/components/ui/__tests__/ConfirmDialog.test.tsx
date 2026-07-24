@@ -75,4 +75,52 @@ describe('ConfirmDialog', () => {
     await screen.findByRole('button', { name: /regenerar/i });
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it('mantiene el diálogo abierto y no rompe cuando onConfirm rechaza', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onConfirm = vi.fn().mockRejectedValue(new Error('sin red'));
+    const onOpenChange = vi.fn();
+    render(
+      <ConfirmDialog
+        open
+        onOpenChange={onOpenChange}
+        title="Eliminar torneo"
+        confirmLabel="Eliminar"
+        onConfirm={onConfirm}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /eliminar/i }));
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    // El diálogo NO se cierra: la acción destructiva falló.
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    // El botón vuelve a estar habilitado para reintentar.
+    expect(screen.getByRole('button', { name: /eliminar/i })).not.toBeDisabled();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it('Escape no cierra el diálogo mientras onConfirm está pendiente', async () => {
+    let resolve: () => void = () => {};
+    const onConfirm = vi.fn(() => new Promise<void>((r) => { resolve = r; }));
+    const onOpenChange = vi.fn();
+    render(
+      <ConfirmDialog
+        open
+        onOpenChange={onOpenChange}
+        title="Regenerar sorteo"
+        confirmLabel="Regenerar"
+        onConfirm={onConfirm}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /regenerar/i }));
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+
+    resolve();
+    await screen.findByRole('button', { name: /regenerar/i });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });
