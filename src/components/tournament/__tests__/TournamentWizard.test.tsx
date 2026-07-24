@@ -378,6 +378,25 @@ describe('TournamentWizard — regenerar sorteo del Mundial (ConfirmDialog)', ()
   });
 });
 
+describe('TournamentWizard — rehacer sorteo de clasificatorias (ConfirmDialog)', () => {
+  it('no festeja y deja el diálogo abierto si el guard rechaza', async () => {
+    useTournamentStore.setState({
+      currentTournament: qualifiersCycle(),
+      teams: [],
+      generateDrawAndFixtures: vi.fn(async () => false),
+    });
+    renderWizard();
+
+    await userEvent.click(screen.getByRole('button', { name: /rehacer sorteo/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^rehacer$/i }));
+
+    expect(toast.success).not.toHaveBeenCalled();
+    // El diálogo sigue abierto: no se cierra como si la acción destructiva
+    // hubiera funcionado (mismo contrato que handleRegenerateWorldCupDraw).
+    expect(screen.getByRole('button', { name: /^rehacer$/i })).toBeInTheDocument();
+  });
+});
+
 // 42 grupos: mismo reparto (11+11+10+10) que makeFullyQualifiedCycle en
 // useTournamentStore.drawGuards.test.ts.
 const MANUAL_DRAW_REGION_GROUP_COUNTS: Record<Region, number> = {
