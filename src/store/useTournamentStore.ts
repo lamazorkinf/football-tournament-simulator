@@ -389,9 +389,10 @@ export const useTournamentStore = create<TournamentState>()(
             originalSkills,
           });
 
-          // Se añade el torneo a la lista, pero los skills regresados NO se
-          // aplican todavía al pool global: si el usuario decide no cambiarse,
-          // alterarían las simulaciones del torneo que está jugando ahora.
+          // Se añade el torneo a la lista antes de cambiarse a él, así nunca
+          // hay un instante en que currentTournamentId apunte a un torneo que
+          // no está en `tournaments`. Los skills regresados se aplican al pool
+          // global recién en ese cambio, más abajo.
           // El torneo nuevo conserva su snapshot en originalSkills, que
           // generateDrawAndFixtures restaura cuando se genera su sorteo.
           set((state) => ({
