@@ -45,6 +45,7 @@ import { normalizedQualifiersService } from '../services/normalizedQualifiersSer
 import { normalizedWorldCupService } from '../services/normalizedWorldCupService';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { performDraw, generateGroupMatches, initializeStandings } from '../utils/drawSystem';
+import { isQualifiersDrawn, isContinentalDrawn, isConfederationsDrawn } from '../utils/cycleProgress';
 import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
 import { supabase } from '../lib/supabase';
@@ -213,6 +214,7 @@ export const useTournamentStore = create<TournamentState>()(
         currentTournament: null,
         isSavingMatch: false,
         isBatchProcessing: false,
+        isDrawing: false,
         initStatus: 'loading' as const,
 
       loadTeamsFromDatabase: async () => {
@@ -1357,7 +1359,20 @@ export const useTournamentStore = create<TournamentState>()(
         const state = get();
         if (!state.currentTournament) {
           console.error('❌ No current tournament found');
-          return;
+          return false;
+        }
+
+        if (state.currentTournament.worldCup && state.currentTournament.worldCup.groups.length > 0) {
+          console.warn('⚠️ Cannot advance - World Cup already drawn');
+          useToastStore
+            .getState()
+            .warning('El Mundial ya está sorteado. Usá "Regenerar sorteo del Mundial" si querés rehacerlo.');
+          return false;
+        }
+
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
         }
 
         console.log('🌍 Starting advanceToWorldCupWithManualDraw...');
@@ -1375,7 +1390,7 @@ export const useTournamentStore = create<TournamentState>()(
           useToastStore
             .getState()
             .error(`Error: solo ${qualifiedTeamIds.length} equipos clasificados en lugar de 64.`);
-          return;
+          return false;
         }
 
         const updatedTournament = {
@@ -1388,19 +1403,43 @@ export const useTournamentStore = create<TournamentState>()(
           isQualifiersComplete: true,
         };
 
-        // Save World Cup groups and matches to database
+        // Save World Cup groups and matches to database. Se borra primero
+        // (misma red de seguridad que advanceToWorldCup): el guard de arriba
+        // solo mira la memoria, así que si la base quedó con un Mundial
+        // huérfano de un intento anterior fallido, un sorteo manual→manual
+        // chocaría contra el UNIQUE(tournament_id, name) y uno
+        // automático→manual (o viceversa) duplicaría los 16 grupos sin
+        // chocar, porque "Grupo A" y "Group A" son nombres distintos.
         if (isSupabaseConfigured()) {
           normalizedWorldCupService
-            .createWorldCupGroups(state.currentTournament.id, worldCupGroups)
+            .deleteWorldCupData(state.currentTournament.id)
+            .then(() =>
+              normalizedWorldCupService.createWorldCupGroups(state.currentTournament!.id, worldCupGroups)
+            )
             .then(() => {
               console.log('✅ World Cup groups and matches saved to database');
             })
             .catch((error: unknown) => {
               console.error('❌ Error saving World Cup groups to database:', error);
+              // "Intentá de nuevo" era engañoso: el sorteo manual ya quedó en
+              // memoria, así que el guard de "ya sorteado" bloquea cualquier
+              // reintento del mismo camino. El mensaje honesto -mismo criterio
+              // que generateDrawAndFixtures- dice qué pasó de verdad y por
+              // dónde se sale: regenerando el sorteo del Mundial.
+              useToastStore
+                .getState()
+                .warning(
+                  'El sorteo manual del Mundial se generó pero no se pudo guardar en la base de datos. Usá "Regenerar sorteo del Mundial" para reintentar el guardado.'
+                );
             });
         }
 
         updateTournamentInState(set, get, updatedTournament);
+        // El sorteo manual ya quedó calculado y aplicado al estado local de
+        // forma sincrónica: la persistencia de arriba es fire-and-forget
+        // (best-effort), así que un fallo de red no cambia que el sorteo esté
+        // completo. Mismo criterio que generateDrawAndFixtures.
+        return true;
       },
 
       advanceToWorldCup: async () => {
@@ -1409,11 +1448,28 @@ export const useTournamentStore = create<TournamentState>()(
 
         if (!state.currentTournament) {
           console.error('❌ No current tournament found');
-          return;
+          return false;
+        }
+
+        // El Mundial ya sorteado se rehace desde regenerateWorldCupDrawAndFixtures,
+        // que borra antes de escribir. Volver a pasar por acá duplicaría grupos
+        // y partidos en la base.
+        if (state.currentTournament.worldCup && state.currentTournament.worldCup.groups.length > 0) {
+          console.warn('⚠️ Cannot advance - World Cup already drawn');
+          useToastStore
+            .getState()
+            .warning('El Mundial ya está sorteado. Usá "Regenerar sorteo del Mundial" si querés rehacerlo.');
+          return false;
+        }
+
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
         }
 
         console.log('🌍 Starting advanceToWorldCup...');
 
+        set({ isDrawing: true });
         try {
           progress.startProgress('Avanzando al Mundial', 5);
 
@@ -1435,7 +1491,7 @@ export const useTournamentStore = create<TournamentState>()(
             useToastStore
               .getState()
               .warning('Completá todos los partidos de clasificatorias antes de avanzar al Mundial.');
-            return;
+            return false;
           }
 
             console.log('✅ All qualifier matches complete');
@@ -1505,7 +1561,7 @@ export const useTournamentStore = create<TournamentState>()(
               .error(
                 `Error: solo ${qualifiedTeams.length} equipos clasificados en lugar de 64. Revisá los resultados de las clasificatorias.`
               );
-            return;
+            return false;
           }
 
           progress.updateProgress('Creando sorteo del Mundial…', 3);
@@ -1528,6 +1584,10 @@ export const useTournamentStore = create<TournamentState>()(
           progress.updateProgress('Guardando grupos en base de datos…', 4);
           // Save World Cup groups and matches to database
           if (isSupabaseConfigured()) {
+            // Red de seguridad: si quedó basura de un intento anterior, se va
+            // antes de escribir. Sin esto, los grupos viejos (con otros ids)
+            // conviven con los nuevos.
+            await normalizedWorldCupService.deleteWorldCupData(state.currentTournament.id);
             await normalizedWorldCupService.createWorldCupGroups(state.currentTournament.id, worldCupGroups);
             console.log('✅ World Cup groups and matches saved to database');
           }
@@ -1539,10 +1599,13 @@ export const useTournamentStore = create<TournamentState>()(
           console.log(`📊 Qualified teams by region:`, qualifierSummary);
 
           progress.completeProgress();
+          return true;
         } catch (error) {
           progress.resetProgress();
           console.error('❌ Error in advanceToWorldCup:', error);
           throw error;
+        } finally {
+          set({ isDrawing: false });
         }
       },
 
@@ -1550,8 +1613,22 @@ export const useTournamentStore = create<TournamentState>()(
         const state = get();
         const progress = useProgressStore.getState();
 
-        if (!state.currentTournament?.worldCup) return;
+        if (!state.currentTournament?.worldCup) return false;
 
+        // La UI ya esconde el botón cuando la ronda existe, pero el guard va
+        // acá: es donde se escribe.
+        if (state.currentTournament.worldCup.knockout.roundOf32.length > 0) {
+          console.warn('⚠️ Cannot advance - knockout already generated');
+          useToastStore.getState().warning('Los dieciseisavos ya están generados.');
+          return false;
+        }
+
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
+        }
+
+        set({ isDrawing: true });
         try {
           progress.startProgress('Generando fase eliminatoria', 4);
 
@@ -1560,7 +1637,7 @@ export const useTournamentStore = create<TournamentState>()(
           if (!areGroupsComplete(state.currentTournament.worldCup.groups)) {
             progress.resetProgress();
             useToastStore.getState().warning('Completá primero todos los partidos de la fase de grupos del Mundial.');
-            return;
+            return false;
           }
 
           console.log('🏆 Advancing to knockout stage...');
@@ -1575,6 +1652,7 @@ export const useTournamentStore = create<TournamentState>()(
           // Save knockout matches to database
           if (isSupabaseConfigured()) {
             try {
+              await normalizedWorldCupService.deleteKnockoutData(state.currentTournament.id);
               console.log('💾 Saving knockout matches to database...');
               await Promise.all(
                 roundOf32.map(match =>
@@ -1586,7 +1664,7 @@ export const useTournamentStore = create<TournamentState>()(
               console.error('❌ Error saving knockout matches:', error);
               progress.resetProgress();
               useToastStore.getState().error('Error al guardar los partidos de playoffs. Intentá de nuevo.');
-              return;
+              return false;
             }
           }
 
@@ -1607,10 +1685,13 @@ export const useTournamentStore = create<TournamentState>()(
           console.log('✅ Advanced to knockout stage successfully');
 
           progress.completeProgress();
+          return true;
         } catch (error) {
           progress.resetProgress();
           console.error('❌ Error in advanceToKnockout:', error);
           throw error;
+        } finally {
+          set({ isDrawing: false });
         }
       },
 
@@ -1621,7 +1702,7 @@ export const useTournamentStore = create<TournamentState>()(
         if (!state.currentTournament?.worldCup) {
           console.error('❌ No World Cup found');
           useToastStore.getState().error('No hay Mundial para regenerar.');
-          return;
+          return false;
         }
 
         console.log('✅ Current tournament:', state.currentTournament.id, state.currentTournament.name);
@@ -1642,26 +1723,12 @@ export const useTournamentStore = create<TournamentState>()(
         if (hasWorldCupMatchPlayed || hasKnockoutMatchPlayed) {
           console.warn('⚠️ Cannot regenerate - World Cup matches already played');
           useToastStore.getState().warning('No se puede regenerar el sorteo del Mundial: ya se jugaron partidos.');
-          return;
+          return false;
         }
 
-        console.log('🗑️ Deleting existing World Cup data from database...');
-        // Delete existing World Cup data from database (WAIT for completion)
-        if (isSupabaseConfigured()) {
-          try {
-            await Promise.all([
-              normalizedWorldCupService.deleteWorldCupData(state.currentTournament.id),
-              normalizedWorldCupService.deleteWorldCupMatchHistory(state.currentTournament.id)
-            ]);
-            console.log('✅ World Cup data deleted from database');
-          } catch (error: unknown) {
-            console.error('❌ Error deleting World Cup data:', error);
-            useToastStore.getState().error('Error al eliminar datos del Mundial. Intentá de nuevo.');
-            // Relanza: el ConfirmDialog que disparó esto se cierra al resolver.
-            // Con `return` el usuario veía el toast de error y el de éxito a la
-            // vez, y el diálogo se cerraba como si hubiera funcionado.
-            throw error;
-          }
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
         }
 
         console.log('🎲 Regenerating World Cup draw...');
@@ -1704,13 +1771,18 @@ export const useTournamentStore = create<TournamentState>()(
         console.log(`✅ Best runners-up: ${bestRunnersUp.length}`);
         console.log(`✅ Total qualified teams: ${qualifiedTeamIds.length} (42 first + 22 best second)`);
 
-        // Validate we have exactly 64 teams
+        // Validate we have exactly 64 teams ANTES de tocar la base: sin este
+        // orden, unas clasificatorias parciales dejaban el Mundial ya borrado
+        // de la base (paso de abajo) para cuando se detectaba el problema,
+        // mientras la memoria seguía con el Mundial viejo — el usuario veía
+        // "se esperaban 64…" seguido de "Sorteo del Mundial regenerado" y el
+        // diálogo se cerraba como si hubiera funcionado.
         if (qualifiedTeamIds.length !== 64) {
           console.error(`❌ Expected 64 qualified teams, found ${qualifiedTeamIds.length}`);
           useToastStore
             .getState()
             .error(`Error: se esperaban 64 equipos clasificados y se encontraron ${qualifiedTeamIds.length}.`);
-          return;
+          return false;
         }
 
         const qualifiedTeams = state.teams.filter((team) =>
@@ -1721,46 +1793,72 @@ export const useTournamentStore = create<TournamentState>()(
         const worldCupGroups = createSmartWorldCupDraw(qualifiedTeams);
         console.log(`✅ Created ${worldCupGroups.length} new World Cup groups`);
 
-        // Save new World Cup groups to database BEFORE updating state
-        if (isSupabaseConfigured()) {
-          try {
-            await normalizedWorldCupService.createWorldCupGroups(state.currentTournament.id, worldCupGroups);
-            console.log('✅ New World Cup groups and matches saved to database');
-          } catch (error: unknown) {
-            console.error('❌ Error saving new World Cup groups:', error);
-            useToastStore.getState().error('Error al guardar los nuevos grupos del Mundial. Intentá de nuevo.');
-            throw error;
+        set({ isDrawing: true });
+        try {
+          console.log('🗑️ Deleting existing World Cup data from database...');
+          // Delete existing World Cup data from database (WAIT for completion)
+          if (isSupabaseConfigured()) {
+            try {
+              await Promise.all([
+                normalizedWorldCupService.deleteWorldCupData(state.currentTournament.id),
+                normalizedWorldCupService.deleteWorldCupMatchHistory(state.currentTournament.id)
+              ]);
+              console.log('✅ World Cup data deleted from database');
+            } catch (error: unknown) {
+              console.error('❌ Error deleting World Cup data:', error);
+              useToastStore.getState().error('Error al eliminar datos del Mundial. Intentá de nuevo.');
+              // Relanza: el ConfirmDialog que disparó esto se cierra al resolver.
+              // Con `return` el usuario veía el toast de error y el de éxito a la
+              // vez, y el diálogo se cerraba como si hubiera funcionado.
+              throw error;
+            }
           }
+
+          // Save new World Cup groups to database BEFORE updating state
+          if (isSupabaseConfigured()) {
+            try {
+              await normalizedWorldCupService.createWorldCupGroups(state.currentTournament.id, worldCupGroups);
+              console.log('✅ New World Cup groups and matches saved to database');
+            } catch (error: unknown) {
+              console.error('❌ Error saving new World Cup groups:', error);
+              useToastStore.getState().error('Error al guardar los nuevos grupos del Mundial. Intentá de nuevo.');
+              throw error;
+            }
+          }
+
+          // Update tournament with new groups, recalculated qualifiedTeamIds, and reset knockout
+          const updatedTournament = {
+            ...state.currentTournament,
+            worldCup: {
+              ...state.currentTournament.worldCup,
+              groups: worldCupGroups,
+              knockout: initializeKnockoutBracket(), // Reset knockout bracket
+              qualifiedTeamIds, // Use the recalculated qualified teams
+              champion: undefined,
+              runnerUp: undefined,
+              thirdPlace: undefined,
+              fourthPlace: undefined,
+            },
+          };
+
+          console.log('💾 Updating tournament state...');
+          updateTournamentInState(set, get, updatedTournament);
+          console.log('✅ regenerateWorldCupDrawAndFixtures completed');
+          return true;
+        } finally {
+          set({ isDrawing: false });
         }
-
-        // Update tournament with new groups, recalculated qualifiedTeamIds, and reset knockout
-        const updatedTournament = {
-          ...state.currentTournament,
-          worldCup: {
-            ...state.currentTournament.worldCup,
-            groups: worldCupGroups,
-            knockout: initializeKnockoutBracket(), // Reset knockout bracket
-            qualifiedTeamIds, // Use the recalculated qualified teams
-            champion: undefined,
-            runnerUp: undefined,
-            thirdPlace: undefined,
-            fourthPlace: undefined,
-          },
-        };
-
-        console.log('💾 Updating tournament state...');
-        updateTournamentInState(set, get, updatedTournament);
-        console.log('✅ regenerateWorldCupDrawAndFixtures completed');
       },
 
-      generateDrawAndFixtures: async () => {
-        console.log('🎲 generateDrawAndFixtures called');
+      generateDrawAndFixtures: async (options?: { force?: boolean }) => {
+        const force = options?.force ?? false;
+        console.log('🎲 generateDrawAndFixtures called', { force });
         const state = get();
         const progress = useProgressStore.getState();
 
         if (!state.currentTournament) {
           console.error('❌ No current tournament');
-          return;
+          return false;
         }
 
         console.log('✅ Current tournament:', state.currentTournament.id, state.currentTournament.name);
@@ -1769,13 +1867,30 @@ export const useTournamentStore = create<TournamentState>()(
         if (state.currentTournament.hasAnyMatchPlayed) {
           console.warn('⚠️ Cannot regenerate - matches already played');
           useToastStore.getState().warning('No se puede regenerar el sorteo: ya se jugaron partidos.');
-          return;
+          return false;
+        }
+
+        // Guard de "ya sorteado": sin esto, un segundo sorteo genera partidos
+        // con nanoid nuevos que se SUMAN a los viejos en la base, porque el
+        // upsert por id nunca puede pisarlos.
+        if (!force && isQualifiersDrawn(state.currentTournament)) {
+          console.warn('⚠️ Cannot draw - qualifiers already drawn');
+          useToastStore
+            .getState()
+            .warning('El sorteo de las clasificatorias ya está hecho. Usá "Rehacer sorteo" para generarlo de nuevo.');
+          return false;
+        }
+
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
         }
 
         const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
         const totalSteps = 3 + regions.length + 1;
         let currentStep = 0;
 
+        set({ isDrawing: true });
         try {
           progress.startProgress('Generando sorteo y fixtures', totalSteps);
 
@@ -1887,6 +2002,14 @@ export const useTournamentStore = create<TournamentState>()(
               // la FK (23503). saveTournament hace upsert.
               await adaptiveTournamentService.saveTournament(updatedTournament);
 
+              // Borrado SIEMPRE, no solo con force: los partidos se crean con
+              // nanoid nuevo en cada sorteo, así que el upsert por id no puede
+              // reemplazar a los del sorteo anterior — solo agregarlos. Borrar
+              // primero también limpia el residuo de un intento que se cortó a
+              // mitad. El CASCADE de matches_new.qualifier_group_id arrastra
+              // planteles y partidos.
+              await normalizedQualifiersService.deleteQualifierData(updatedTournament.id);
+
               await Promise.all(
                 regions.map(async (region) => {
                   await normalizedQualifiersService.createQualifierGroups(
@@ -1913,12 +2036,18 @@ export const useTournamentStore = create<TournamentState>()(
           progress.updateProgress('Finalizando…', ++currentStep);
           console.log('✅ generateDrawAndFixtures completed');
           progress.completeProgress();
+          return true;
         } catch (error) {
           progress.resetProgress();
           console.error('❌ Error in generateDrawAndFixtures:', error);
           // No relanzar: handleGenerateDraw no captura, y propagar aquí
           // generaba un "Uncaught (in promise)".
           useToastStore.getState().error('No se pudo generar el sorteo.');
+          return false;
+        } finally {
+          // Sin el finally, un error dejaba el candado tomado para siempre y
+          // ningún sorteo posterior volvía a correr en esa sesión.
+          set({ isDrawing: false });
         }
       },
 
@@ -1929,9 +2058,15 @@ export const useTournamentStore = create<TournamentState>()(
         if (!state.currentTournament?.worldCup) {
           console.error('❌ No World Cup found');
           useToastStore.getState().error('No hay Mundial para regenerar.');
-          return;
+          return false;
         }
 
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
+        }
+
+        set({ isDrawing: true });
         try {
           progress.startProgress('Regenerando fase eliminatoria', 5);
 
@@ -1949,14 +2084,14 @@ export const useTournamentStore = create<TournamentState>()(
             console.error('❌ Cannot regenerate - knockout matches already played');
             progress.resetProgress();
             useToastStore.getState().warning('No se puede regenerar: ya se jugaron partidos de playoffs.');
-            return;
+            return false;
           }
 
           // Check if all group matches are complete
           if (!areGroupsComplete(state.currentTournament.worldCup.groups)) {
             progress.resetProgress();
             useToastStore.getState().warning('Completá primero todos los partidos de la fase de grupos.');
-            return;
+            return false;
           }
 
           console.log('🔄 Regenerating knockout stage...');
@@ -2026,10 +2161,13 @@ export const useTournamentStore = create<TournamentState>()(
           console.log('✅ Knockout stage regenerated successfully');
 
           progress.completeProgress();
+          return true;
         } catch (error) {
           progress.resetProgress();
           console.error('❌ Error in regenerateKnockoutStage:', error);
           throw error;
+        } finally {
+          set({ isDrawing: false });
         }
       },
 
@@ -2373,11 +2511,24 @@ export const useTournamentStore = create<TournamentState>()(
       drawContinental: () => {
         const state = get();
         const cycle = state.currentTournament;
-        if (!cycle) return;
+        if (!cycle) return false;
+
+        if (isContinentalDrawn(cycle)) {
+          console.warn('⚠️ Cannot draw - continental already drawn');
+          useToastStore.getState().warning('Los torneos continentales ya están sorteados.');
+          return false;
+        }
+
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
+        }
+
         const byRegion: Record<Region, Team[]> = { Europe: [], America: [], Africa: [], Asia: [] };
         for (const t of state.teams) byRegion[t.region].push(t);
         const updated = drawContinentalStage(cycle, byRegion);
         updateTournamentInState(set, get, updated);
+        return true;
       },
 
       simulateContinentalMatch: async (matchId: string) => {
@@ -2456,13 +2607,26 @@ export const useTournamentStore = create<TournamentState>()(
       drawConfederations: () => {
         const state = get();
         const cycle = state.currentTournament;
-        if (!cycle) return;
+        if (!cycle) return false;
         if (!cycle.continental.isComplete) {
           console.warn('drawConfederations: la fase continental no está completa.');
-          return;
+          return false;
         }
+
+        if (isConfederationsDrawn(cycle)) {
+          console.warn('⚠️ Cannot draw - confederations already drawn');
+          useToastStore.getState().warning('La Copa Confederaciones ya está sorteada.');
+          return false;
+        }
+
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return false;
+        }
+
         const updated = drawConfederationsStage(cycle, state.teams);
         updateTournamentInState(set, get, updated);
+        return true;
       },
 
       simulateConfederationsMatch: async (matchId: string) => {

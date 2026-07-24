@@ -108,7 +108,11 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
       : 0;
 
   const handleAdvanceToKnockout = async () => {
-    await advanceToKnockout();
+    const completed = await advanceToKnockout();
+    // El store ya avisó el motivo del rechazo con su propio toast: sin esto,
+    // el usuario veía ese aviso seguido de un "generados" contradictorio y la
+    // pestaña igual saltaba a Playoffs aunque no hubiera nada nuevo ahí.
+    if (!completed) return;
     toast.success('Dieciseisavos de final generados');
     setActiveTab('playoffs');
   };
@@ -283,7 +287,12 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
           </>
         }
         onConfirm={async () => {
-          await regenerateKnockoutStage();
+          const completed = await regenerateKnockoutStage();
+          // El store ya avisó el motivo del rechazo con su propio toast.
+          // Lanzar acá (en vez de sólo retornar) es lo que hace que
+          // ConfirmDialog deje el diálogo abierto en vez de cerrarlo como si
+          // la acción destructiva hubiera funcionado.
+          if (!completed) throw new Error('No se pudieron regenerar los playoffs.');
           toast.success('Playoffs regenerados');
         }}
       />
