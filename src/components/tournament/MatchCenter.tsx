@@ -21,7 +21,8 @@ import { isBatchSimulableStage } from './matchBatchSimulable';
 import { buildJornadaResults } from './jornadaResults';
 import { groupIntoJornadas, getCurrentJornada, type JornadaGroup } from '../../core/jornada';
 import { selectLiveMatches } from '../../core/liveSelection';
-import { penaltiesLabel, type PenaltiesScore } from '../../utils/matchLabels';
+import type { PenaltiesScore } from '../../utils/matchLabels';
+import { showMatchResultToast } from '../ui/MatchResultToast';
 import { buildMatchTimeline, hashSeed } from '../../core/liveMatch';
 import type { MatchResult } from '../../store/useMatchResultsStore';
 
@@ -168,22 +169,14 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
       penalties = result.penalties;
     }
 
-    // Toast de resultado (mismo formato para todas las fases)
-    const penales = penaltiesLabel(penalties);
-    toast.success(
-      <div className="flex items-center gap-3">
-        <span>⚽</span>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold">{homeTeam.name}</span>
-            <span className="font-bold text-lg px-2">{homeScore} - {awayScore}</span>
-            <span className="font-semibold">{awayTeam.name}</span>
-          </div>
-          {penales && <span className="text-xs text-gold">{penales}</span>}
-        </div>
-      </div>,
-      { duration: 5000 }
-    );
+    // Mismo aviso que el resto de la app, sea cual sea la fase.
+    showMatchResultToast({
+      homeName: homeTeam.name,
+      awayName: awayTeam.name,
+      homeScore: homeScore ?? 0,
+      awayScore: awayScore ?? 0,
+      penalties,
+    });
   };
 
   // Título de la jornada actual (fase · ronda/jornada).

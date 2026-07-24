@@ -112,6 +112,14 @@ describe('buildJornadaResults', () => {
     expect(results[0].penalties).toBeUndefined();
   });
 
+  it('lleva los ids de los dos equipos, para poder dibujar sus banderas', () => {
+    const j = jornada([ctx(match('m1', 'arg', 'bra'))]);
+
+    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set());
+
+    expect(results[0]).toMatchObject({ homeTeamId: 'arg', awayTeamId: 'bra' });
+  });
+
   it('rotula la etapa de cada partido', () => {
     const j = jornada([ctx(match('m1', 'arg', 'bra'))]);
 

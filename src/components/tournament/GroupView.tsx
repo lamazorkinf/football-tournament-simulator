@@ -3,11 +3,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { ScoreBug } from '../ui/ScoreBug';
+import { showMatchResultToast } from '../ui/MatchResultToast';
 import { MatchDetailModal } from './MatchDetailModal';
 import { WatchLiveButton } from './WatchLiveButton';
 import { ArrowLeft, Play, Info } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { toast } from 'sonner';
 import { useState } from 'react';
 
 interface GroupViewProps {
@@ -28,25 +28,18 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
     const match = group.matches.find((m) => m.id === matchId);
     if (!match) return;
 
-    const homeTeam = getTeam(match.homeTeamId);
-    const awayTeam = getTeam(match.awayTeamId);
+    // El marcador sale del retorno de la acción: la prop `group` está congelada
+    // en el render anterior (isPlayed === false) y releer el store para buscar
+    // el partido actualizado era dar una vuelta larga por el mismo dato.
+    const result = await simulateMatch(matchId, group.id, 'qualifier');
+    if (!result) return;
 
-    // Esperar a que termine: sin await, el toast releía group.matches del render
-    // anterior (isPlayed === false) y nunca se mostraba el resultado.
-    await simulateMatch(matchId, group.id, 'qualifier');
-
-    // Leer el partido actualizado del store (la prop group está congelada).
-    const currentTournament = useTournamentStore.getState().currentTournament;
-    const updatedMatch = currentTournament?.qualifiers[group.region]
-      ?.find((g) => g.id === group.id)
-      ?.matches.find((m) => m.id === matchId);
-
-    if (updatedMatch && updatedMatch.isPlayed) {
-      toast.success(
-        `¡Partido jugado! ${homeTeam?.name} ${updatedMatch.homeScore} - ${updatedMatch.awayScore} ${awayTeam?.name}`,
-        { duration: 3000 }
-      );
-    }
+    showMatchResultToast({
+      homeName: getTeam(match.homeTeamId)?.name ?? match.homeTeamId,
+      awayName: getTeam(match.awayTeamId)?.name ?? match.awayTeamId,
+      homeScore: result.homeScore,
+      awayScore: result.awayScore,
+    });
   };
 
   const totalMatches = group.matches.length;

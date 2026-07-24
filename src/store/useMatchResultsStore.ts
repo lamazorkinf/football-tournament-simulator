@@ -3,6 +3,12 @@ import { create } from 'zustand';
 export interface MatchResult {
   homeTeam: string;
   awayTeam: string;
+  /**
+   * Ids de los equipos: el modal dibuja sus banderas. Opcionales porque el
+   * nombre alcanza para leer el resultado y no todo productor los tiene.
+   */
+  homeTeamId?: string;
+  awayTeamId?: string;
   homeScore: number;
   awayScore: number;
   stage: string;

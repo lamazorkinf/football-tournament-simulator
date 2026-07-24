@@ -3,6 +3,7 @@ import { X, Trophy, Star } from 'lucide-react';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { penaltiesLabel } from '../../utils/matchLabels';
 import { Button } from './Button';
+import { TeamFlag } from './TeamFlag';
 
 export function MatchResultsModal() {
   const { isOpen, results, title, close } = useMatchResultsStore();
@@ -86,8 +87,18 @@ export function MatchResultsModal() {
                   )}
                   <div className="flex items-center justify-between gap-1 sm:gap-0">
                     {/* Home Team */}
-                    <div className={`flex-1 text-right text-xs sm:text-base ${homeWon ? 'font-bold text-led' : draw ? 'font-semibold text-white' : 'text-grass-soft'} pr-1 sm:pr-2 truncate`}>
-                      {result.homeTeam}
+                    <div className="flex flex-1 items-center justify-end gap-2 min-w-0 pr-1 sm:pr-2">
+                      {result.homeTeamId && (
+                        <TeamFlag
+                          teamId={result.homeTeamId}
+                          teamName={result.homeTeam}
+                          size={24}
+                          className="flex-shrink-0"
+                        />
+                      )}
+                      <span className={`text-xs sm:text-base truncate ${homeWon ? 'font-bold text-led' : draw ? 'font-semibold text-white' : 'text-grass-soft'}`}>
+                        {result.homeTeam}
+                      </span>
                     </div>
 
                     {/* Score */}
@@ -100,8 +111,18 @@ export function MatchResultsModal() {
                     </div>
 
                     {/* Away Team */}
-                    <div className={`flex-1 text-left text-xs sm:text-base ${awayWon ? 'font-bold text-led' : draw ? 'font-semibold text-white' : 'text-grass-soft'} pl-1 sm:pl-2 truncate`}>
-                      {result.awayTeam}
+                    <div className="flex flex-1 items-center justify-start gap-2 min-w-0 pl-1 sm:pl-2">
+                      <span className={`text-xs sm:text-base truncate ${awayWon ? 'font-bold text-led' : draw ? 'font-semibold text-white' : 'text-grass-soft'}`}>
+                        {result.awayTeam}
+                      </span>
+                      {result.awayTeamId && (
+                        <TeamFlag
+                          teamId={result.awayTeamId}
+                          teamName={result.awayTeam}
+                          size={24}
+                          className="flex-shrink-0"
+                        />
+                      )}
                     </div>
                   </div>
 

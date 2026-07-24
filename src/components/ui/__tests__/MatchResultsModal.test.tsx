@@ -80,6 +80,26 @@ describe('MatchResultsModal', () => {
     expect(totales).not.toHaveTextContent('11');
   });
 
+  it('dibuja la bandera de cada equipo cuando el resultado trae sus ids', () => {
+    useMatchResultsStore.getState().showResults(
+      [{ ...result('Argentina', 'Brasil'), homeTeamId: 'arg', awayTeamId: 'bra' }],
+      'Jornada 1',
+    );
+    render(<MatchResultsModal />);
+
+    expect(screen.getByAltText('Argentina flag')).toBeInTheDocument();
+    expect(screen.getByAltText('Brasil flag')).toBeInTheDocument();
+  });
+
+  it('sin ids de equipo muestra igual los nombres', () => {
+    useMatchResultsStore.getState().showResults([result('Islandia', 'Malta')], 'Jornada 1');
+    render(<MatchResultsModal />);
+
+    expect(screen.getByText('Islandia')).toBeInTheDocument();
+    expect(screen.getByText('Malta')).toBeInTheDocument();
+    expect(screen.queryByAltText(/flag/)).not.toBeInTheDocument();
+  });
+
   it('sin favoritos respeta el orden de la jornada', () => {
     useMatchResultsStore.getState().showResults(
       [result('Islandia', 'Malta'), result('Gales', 'Chipre')],

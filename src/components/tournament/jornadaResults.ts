@@ -41,6 +41,8 @@ export function buildJornadaResults(
     results.push({
       homeTeam: homeTeam.name,
       awayTeam: awayTeam.name,
+      homeTeamId: homeTeam.id,
+      awayTeamId: awayTeam.id,
       homeScore: outcome ? outcome.homeScore : ctx.match.homeScore ?? 0,
       awayScore: outcome ? outcome.awayScore : ctx.match.awayScore ?? 0,
       stage: STAGE_LABEL[ctx.stage],

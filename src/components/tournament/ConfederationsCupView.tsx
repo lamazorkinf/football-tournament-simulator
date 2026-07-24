@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { ScoreBug } from '../ui/ScoreBug';
 import { EmptyState } from '../ui/EmptyState';
+import { showMatchResultToast } from '../ui/MatchResultToast';
 import { WatchLiveButton } from './WatchLiveButton';
 import { Play, Trophy, Award, Lock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,12 +25,25 @@ export function ConfederationsCupView({ cycle, teams, onNavigate }: Confederatio
   const getTeam = (id: string) => teams.find((t) => t.id === id);
   const confed = cycle.confederationsCup;
 
-  const handlePlay = async (matchId: string) => {
+  // Recibe el partido entero (no sólo el id) para poder nombrar a los dos
+  // equipos en el aviso sin volver a buscarlo entre grupos y playoffs.
+  const handlePlay = async (match: MatchWithPenalties) => {
     if (isSavingMatch) {
       toast.warning('Espera a que se guarde el partido anterior');
       return;
     }
-    await simulateConfederationsMatch(matchId);
+    const result = await simulateConfederationsMatch(match.id);
+    if (!result) {
+      toast.info('No se pudo simular ahora (puede estar fuera de la jornada o la ronda anterior aún no terminó)');
+      return;
+    }
+    showMatchResultToast({
+      homeName: getTeam(match.homeTeamId)?.name ?? match.homeTeamId,
+      awayName: getTeam(match.awayTeamId)?.name ?? match.awayTeamId,
+      homeScore: result.homeScore,
+      awayScore: result.awayScore,
+      penalties: result.penalties,
+    });
   };
 
   if (!isConfederationsDrawn(cycle)) {
@@ -118,7 +132,7 @@ interface ConfedGroupProps {
   teams: Team[];
   cycle: Cycle;
   getTeam: (id: string) => Team | undefined;
-  onPlay: (id: string) => void;
+  onPlay: (match: MatchWithPenalties) => void;
   isSaving: boolean;
 }
 
@@ -144,7 +158,7 @@ interface ConfedMatchProps {
   match: MatchWithPenalties;
   cycle: Cycle;
   getTeam: (id: string) => Team | undefined;
-  onPlay: (id: string) => void;
+  onPlay: (match: MatchWithPenalties) => void;
   isSaving: boolean;
 }
 
@@ -174,7 +188,7 @@ function ConfedMatch({ match, cycle, getTeam, onPlay, isSaving }: ConfedMatchPro
       )}
       {!match.isPlayed && playable && (
         <div className="space-y-1">
-          <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
+          <Button variant="primary" size="sm" onClick={() => onPlay(match)} disabled={isSaving} className="w-full gap-1">
             <Play className="w-3 h-3" /> Jugar
           </Button>
           <WatchLiveButton

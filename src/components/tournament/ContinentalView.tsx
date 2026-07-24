@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
 import { EmptyState } from '../ui/EmptyState';
+import { showMatchResultToast } from '../ui/MatchResultToast';
 import { WatchLiveButton } from './WatchLiveButton';
 import { Play, Trophy, Globe2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -37,12 +38,25 @@ export function ContinentalView({ cycle, teams, onNavigate }: ContinentalViewPro
   const getTeam = (id: string) => teams.find((t) => t.id === id);
   const bracket = cycle.continental.brackets[region];
 
-  const handlePlay = async (matchId: string) => {
+  // Recibe el partido entero (no sólo el id) para poder nombrar a los dos
+  // equipos en el aviso sin volver a buscarlo en el bracket.
+  const handlePlay = async (match: KnockoutMatch) => {
     if (isSavingMatch) {
       toast.warning('Espera a que se guarde el partido anterior');
       return;
     }
-    await simulateContinentalMatch(matchId);
+    const result = await simulateContinentalMatch(match.id);
+    if (!result) {
+      toast.info('No se pudo simular ahora (puede faltar resolver la ronda anterior)');
+      return;
+    }
+    showMatchResultToast({
+      homeName: getTeam(match.homeTeamId)?.name ?? match.homeTeamId,
+      awayName: getTeam(match.awayTeamId)?.name ?? match.awayTeamId,
+      homeScore: result.homeScore,
+      awayScore: result.awayScore,
+      penalties: result.penalties,
+    });
   };
 
   if (!isContinentalDrawn(cycle)) {
@@ -157,7 +171,7 @@ interface RoundColumnProps {
   matches: KnockoutMatch[];
   cycle: Cycle;
   getTeam: (id: string) => Team | undefined;
-  onPlay: (id: string) => void;
+  onPlay: (match: KnockoutMatch) => void;
   isSaving: boolean;
 }
 
@@ -180,7 +194,7 @@ interface BracketMatchProps {
   match: KnockoutMatch;
   cycle: Cycle;
   getTeam: (id: string) => Team | undefined;
-  onPlay: (id: string) => void;
+  onPlay: (match: KnockoutMatch) => void;
   isSaving: boolean;
 }
 
@@ -210,7 +224,7 @@ function BracketMatch({ match, cycle, getTeam, onPlay, isSaving }: BracketMatchP
       )}
       {!match.isPlayed && playable && (
         <div className="space-y-1">
-          <Button variant="primary" size="sm" onClick={() => onPlay(match.id)} disabled={isSaving} className="w-full gap-1">
+          <Button variant="primary" size="sm" onClick={() => onPlay(match)} disabled={isSaving} className="w-full gap-1">
             <Play className="w-3 h-3" /> Jugar
           </Button>
           <WatchLiveButton

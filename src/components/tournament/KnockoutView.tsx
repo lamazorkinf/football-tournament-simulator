@@ -14,7 +14,7 @@ import { useMobileAction } from '../../hooks/useMobileAction';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { matchCardVariants, matchContainerVariants } from './animations';
-import { matchResultToastText } from '../../utils/matchLabels';
+import { showMatchResultToast } from '../ui/MatchResultToast';
 
 interface KnockoutViewProps {
   knockout: KnockoutBracket;
@@ -214,9 +214,13 @@ export const KnockoutView = ({
 
     // Las eliminatorias se definen por penales cuando el partido termina
     // empatado: el marcador solo no alcanza para saber quién pasó.
-    const homeName = teams.find((t) => t.id === match.homeTeamId)?.name ?? match.homeTeamId;
-    const awayName = teams.find((t) => t.id === match.awayTeamId)?.name ?? match.awayTeamId;
-    toast.success(`🏆 ${matchResultToastText(homeName, awayName, result)}`, { duration: 4000 });
+    showMatchResultToast({
+      homeName: teams.find((t) => t.id === match.homeTeamId)?.name ?? match.homeTeamId,
+      awayName: teams.find((t) => t.id === match.awayTeamId)?.name ?? match.awayTeamId,
+      homeScore: result.homeScore,
+      awayScore: result.awayScore,
+      penalties: result.penalties,
+    });
   };
 
   const nextPendingMatch = [
