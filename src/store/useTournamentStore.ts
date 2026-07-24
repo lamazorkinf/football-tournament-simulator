@@ -1719,112 +1719,112 @@ export const useTournamentStore = create<TournamentState>()(
 
         set({ isDrawing: true });
         try {
-        console.log('🗑️ Deleting existing World Cup data from database...');
-        // Delete existing World Cup data from database (WAIT for completion)
-        if (isSupabaseConfigured()) {
-          try {
-            await Promise.all([
-              normalizedWorldCupService.deleteWorldCupData(state.currentTournament.id),
-              normalizedWorldCupService.deleteWorldCupMatchHistory(state.currentTournament.id)
-            ]);
-            console.log('✅ World Cup data deleted from database');
-          } catch (error: unknown) {
-            console.error('❌ Error deleting World Cup data:', error);
-            useToastStore.getState().error('Error al eliminar datos del Mundial. Intentá de nuevo.');
-            // Relanza: el ConfirmDialog que disparó esto se cierra al resolver.
-            // Con `return` el usuario veía el toast de error y el de éxito a la
-            // vez, y el diálogo se cerraba como si hubiera funcionado.
-            throw error;
-          }
-        }
-
-        console.log('🎲 Regenerating World Cup draw...');
-
-        // Recalculate qualified teams from qualifier results
-        // This is more reliable than reading from worldCup.qualifiedTeamIds
-        console.log('📊 Recalculating qualified teams from qualifier results...');
-
-        const qualifiedTeamIds: string[] = [];
-        const allGroups: Group[] = [];
-
-        // Collect all qualifier groups
-        for (const region in state.currentTournament.qualifiers) {
-          const groups = state.currentTournament.qualifiers[region as Region];
-          allGroups.push(...groups);
-        }
-
-        console.log(`📊 Total qualifier groups: ${allGroups.length}`);
-
-        // Get all first-place teams (42 teams from 42 groups)
-        for (const region in state.currentTournament.qualifiers) {
-          const groups = state.currentTournament.qualifiers[region as Region];
-          groups.forEach((group) => {
-            const sorted = sortStandings(group.standings, state.teams, group.matches);
-            if (sorted.length === 0) {
-              console.error(`❌ Group ${group.name} has no standings!`);
-              return;
+          console.log('🗑️ Deleting existing World Cup data from database...');
+          // Delete existing World Cup data from database (WAIT for completion)
+          if (isSupabaseConfigured()) {
+            try {
+              await Promise.all([
+                normalizedWorldCupService.deleteWorldCupData(state.currentTournament.id),
+                normalizedWorldCupService.deleteWorldCupMatchHistory(state.currentTournament.id)
+              ]);
+              console.log('✅ World Cup data deleted from database');
+            } catch (error: unknown) {
+              console.error('❌ Error deleting World Cup data:', error);
+              useToastStore.getState().error('Error al eliminar datos del Mundial. Intentá de nuevo.');
+              // Relanza: el ConfirmDialog que disparó esto se cierra al resolver.
+              // Con `return` el usuario veía el toast de error y el de éxito a la
+              // vez, y el diálogo se cerraba como si hubiera funcionado.
+              throw error;
             }
-            const firstPlace = sorted[0].teamId;
-            qualifiedTeamIds.push(firstPlace);
-          });
-        }
-
-        console.log(`✅ First place teams: ${qualifiedTeamIds.length}`);
-
-        // Get the 22 best second-place teams
-        const bestRunnersUp = getBestRunnersUp(allGroups, 22, state.teams);
-        qualifiedTeamIds.push(...bestRunnersUp);
-
-        console.log(`✅ Best runners-up: ${bestRunnersUp.length}`);
-        console.log(`✅ Total qualified teams: ${qualifiedTeamIds.length} (42 first + 22 best second)`);
-
-        // Validate we have exactly 64 teams
-        if (qualifiedTeamIds.length !== 64) {
-          console.error(`❌ Expected 64 qualified teams, found ${qualifiedTeamIds.length}`);
-          useToastStore
-            .getState()
-            .error(`Error: se esperaban 64 equipos clasificados y se encontraron ${qualifiedTeamIds.length}.`);
-          return;
-        }
-
-        const qualifiedTeams = state.teams.filter((team) =>
-          qualifiedTeamIds.includes(team.id)
-        );
-
-        // Create new World Cup groups
-        const worldCupGroups = createSmartWorldCupDraw(qualifiedTeams);
-        console.log(`✅ Created ${worldCupGroups.length} new World Cup groups`);
-
-        // Save new World Cup groups to database BEFORE updating state
-        if (isSupabaseConfigured()) {
-          try {
-            await normalizedWorldCupService.createWorldCupGroups(state.currentTournament.id, worldCupGroups);
-            console.log('✅ New World Cup groups and matches saved to database');
-          } catch (error: unknown) {
-            console.error('❌ Error saving new World Cup groups:', error);
-            useToastStore.getState().error('Error al guardar los nuevos grupos del Mundial. Intentá de nuevo.');
-            throw error;
           }
-        }
 
-        // Update tournament with new groups, recalculated qualifiedTeamIds, and reset knockout
-        const updatedTournament = {
-          ...state.currentTournament,
-          worldCup: {
-            ...state.currentTournament.worldCup,
-            groups: worldCupGroups,
-            knockout: initializeKnockoutBracket(), // Reset knockout bracket
-            qualifiedTeamIds, // Use the recalculated qualified teams
-            champion: undefined,
-            runnerUp: undefined,
-            thirdPlace: undefined,
-            fourthPlace: undefined,
-          },
-        };
+          console.log('🎲 Regenerating World Cup draw...');
 
-        console.log('💾 Updating tournament state...');
-        updateTournamentInState(set, get, updatedTournament);
-        console.log('✅ regenerateWorldCupDrawAndFixtures completed');
+          // Recalculate qualified teams from qualifier results
+          // This is more reliable than reading from worldCup.qualifiedTeamIds
+          console.log('📊 Recalculating qualified teams from qualifier results...');
+
+          const qualifiedTeamIds: string[] = [];
+          const allGroups: Group[] = [];
+
+          // Collect all qualifier groups
+          for (const region in state.currentTournament.qualifiers) {
+            const groups = state.currentTournament.qualifiers[region as Region];
+            allGroups.push(...groups);
+          }
+
+          console.log(`📊 Total qualifier groups: ${allGroups.length}`);
+
+          // Get all first-place teams (42 teams from 42 groups)
+          for (const region in state.currentTournament.qualifiers) {
+            const groups = state.currentTournament.qualifiers[region as Region];
+            groups.forEach((group) => {
+              const sorted = sortStandings(group.standings, state.teams, group.matches);
+              if (sorted.length === 0) {
+                console.error(`❌ Group ${group.name} has no standings!`);
+                return;
+              }
+              const firstPlace = sorted[0].teamId;
+              qualifiedTeamIds.push(firstPlace);
+            });
+          }
+
+          console.log(`✅ First place teams: ${qualifiedTeamIds.length}`);
+
+          // Get the 22 best second-place teams
+          const bestRunnersUp = getBestRunnersUp(allGroups, 22, state.teams);
+          qualifiedTeamIds.push(...bestRunnersUp);
+
+          console.log(`✅ Best runners-up: ${bestRunnersUp.length}`);
+          console.log(`✅ Total qualified teams: ${qualifiedTeamIds.length} (42 first + 22 best second)`);
+
+          // Validate we have exactly 64 teams
+          if (qualifiedTeamIds.length !== 64) {
+            console.error(`❌ Expected 64 qualified teams, found ${qualifiedTeamIds.length}`);
+            useToastStore
+              .getState()
+              .error(`Error: se esperaban 64 equipos clasificados y se encontraron ${qualifiedTeamIds.length}.`);
+            return;
+          }
+
+          const qualifiedTeams = state.teams.filter((team) =>
+            qualifiedTeamIds.includes(team.id)
+          );
+
+          // Create new World Cup groups
+          const worldCupGroups = createSmartWorldCupDraw(qualifiedTeams);
+          console.log(`✅ Created ${worldCupGroups.length} new World Cup groups`);
+
+          // Save new World Cup groups to database BEFORE updating state
+          if (isSupabaseConfigured()) {
+            try {
+              await normalizedWorldCupService.createWorldCupGroups(state.currentTournament.id, worldCupGroups);
+              console.log('✅ New World Cup groups and matches saved to database');
+            } catch (error: unknown) {
+              console.error('❌ Error saving new World Cup groups:', error);
+              useToastStore.getState().error('Error al guardar los nuevos grupos del Mundial. Intentá de nuevo.');
+              throw error;
+            }
+          }
+
+          // Update tournament with new groups, recalculated qualifiedTeamIds, and reset knockout
+          const updatedTournament = {
+            ...state.currentTournament,
+            worldCup: {
+              ...state.currentTournament.worldCup,
+              groups: worldCupGroups,
+              knockout: initializeKnockoutBracket(), // Reset knockout bracket
+              qualifiedTeamIds, // Use the recalculated qualified teams
+              champion: undefined,
+              runnerUp: undefined,
+              thirdPlace: undefined,
+              fourthPlace: undefined,
+            },
+          };
+
+          console.log('💾 Updating tournament state...');
+          updateTournamentInState(set, get, updatedTournament);
+          console.log('✅ regenerateWorldCupDrawAndFixtures completed');
         } finally {
           set({ isDrawing: false });
         }
