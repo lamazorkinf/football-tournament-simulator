@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { CheckCircle, X } from 'lucide-react';
 import { useProgressStore } from '../../store/useProgressStore';
 import { PixelBar } from './PixelBar';
+import { Spinner } from './Spinner';
 
 export function ProgressModal() {
   const { isOpen, title, currentStep, progress, completedSteps, totalSteps, resetProgress } =
@@ -59,7 +60,7 @@ export function ProgressModal() {
             {/* Spinner */}
             {progress < 100 && (
               <div className="flex-shrink-0">
-                <div className="w-5 h-5 border-2 border-led border-t-transparent animate-spin" />
+                <Spinner size="sm" />
               </div>
             )}
 
