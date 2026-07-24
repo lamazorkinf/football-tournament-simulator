@@ -2,13 +2,14 @@ import { useState } from 'react';
 import type { Cycle, Team, KnockoutMatch, Region } from '../../types';
 import { CYCLE_REGIONS } from '../../core/cycle';
 import { isMatchPlayable } from '../../core/calendar';
-import { continentalRoundLabel } from '../../utils/cycleProgress';
+import { continentalRoundLabel, isContinentalDrawn } from '../../utils/cycleProgress';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
+import { EmptyState } from '../ui/EmptyState';
 import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Trophy, Globe2 } from 'lucide-react';
+import { Play, Trophy, Globe2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const REGION_LABELS: Record<Region, string> = {
@@ -26,9 +27,10 @@ const ROUND_KEYS: { key: 'roundOf64' | 'roundOf32' | 'roundOf16' | 'quarterFinal
 interface ContinentalViewProps {
   cycle: Cycle;
   teams: Team[];
+  onNavigate?: (view: string) => void;
 }
 
-export function ContinentalView({ cycle, teams }: ContinentalViewProps) {
+export function ContinentalView({ cycle, teams, onNavigate }: ContinentalViewProps) {
   const { simulateContinentalMatch, isSavingMatch } = useTournamentStore();
   const [region, setRegion] = useState<Region>(CYCLE_REGIONS[0]);
 
@@ -42,6 +44,17 @@ export function ContinentalView({ cycle, teams }: ContinentalViewProps) {
     }
     await simulateContinentalMatch(matchId);
   };
+
+  if (!isContinentalDrawn(cycle)) {
+    return (
+      <EmptyState
+        icon={Lock}
+        title="Torneos continentales sin sortear"
+        description="Sorteá los cuatro torneos continentales desde Progreso para empezar el ciclo."
+        action={{ label: 'Ir a Progreso', onClick: () => onNavigate?.('wizard') }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

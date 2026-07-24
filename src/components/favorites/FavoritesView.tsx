@@ -3,6 +3,7 @@ import { Star, Search, Trash2 } from 'lucide-react';
 import type { Region, Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { EmptyState } from '../ui/EmptyState';
 import { TeamFlag } from '../ui/TeamFlag';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
@@ -109,9 +110,11 @@ export function FavoritesView() {
               ))}
             </div>
           ) : (
-            <p className="text-center text-grass-soft py-8 text-sm">
-              No hay equipos que coincidan con la búsqueda
-            </p>
+            <EmptyState
+              icon={Search}
+              title="Sin coincidencias"
+              description="Ningún equipo coincide con la búsqueda."
+            />
           )}
         </CardContent>
       </Card>

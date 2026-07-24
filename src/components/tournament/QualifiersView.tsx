@@ -7,6 +7,7 @@ import type { Region, Group } from '../../types';
 import { Globe2, Filter, Trophy } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Card';
+import { EmptyState } from '../ui/EmptyState';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 
 interface QualifiersViewProps {
@@ -55,9 +56,11 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
 
   if (!currentTournament) {
     return (
-      <div className="text-center py-12">
-        <p className="text-grass-soft">No tournament available</p>
-      </div>
+      <EmptyState
+        icon={Globe2}
+        title="Sin torneo activo"
+        description="Creá un torneo desde el selector para ver las clasificatorias."
+      />
     );
   }
 

@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { Trophy, Calendar, Award, Users, Trash2, Eye, RefreshCw } from 'lucide-react';
+import { Trophy, Calendar, Award, Users, Trash2, Eye, RefreshCw, Archive } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { EmptyState } from '../ui/EmptyState';
 import type { Tournament } from '../../types';
 
 type FilterType = 'all' | 'qualifiers' | 'world-cup' | 'completed';
@@ -126,16 +127,20 @@ export function TournamentHistory() {
       {/* Tournament Cards */}
       {filteredTournaments.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Trophy className="w-16 h-16 text-grass-soft mx-auto mb-4" />
-            <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">
-              No hay torneos
-            </p>
-            <p className="text-sm text-grass-soft">
-              {filter === 'all'
-                ? 'Crea tu primer torneo para comenzar'
-                : 'No hay torneos en esta categoría'}
-            </p>
+          <CardContent>
+            {filter === 'all' ? (
+              <EmptyState
+                icon={Archive}
+                title="Sin torneos"
+                description="Creá uno desde el selector de torneos."
+              />
+            ) : (
+              <EmptyState
+                icon={Archive}
+                title="Sin torneos en esta categoría"
+                description="Probá con otro filtro."
+              />
+            )}
           </CardContent>
         </Card>
       ) : (

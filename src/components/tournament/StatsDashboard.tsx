@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { Tournament, Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
-import { TrendingUp, History } from 'lucide-react';
+import { EmptyState } from '../ui/EmptyState';
+import { TrendingUp, History, BarChart3 } from 'lucide-react';
 import { HistoricalStats } from './HistoricalStats';
 
 interface StatsDashboardProps {
@@ -150,9 +151,11 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
           </CardHeader>
           <CardContent>
             {topScorers.length === 0 ? (
-              <p className="text-center text-grass-soft py-8">
-                No hay partidos jugados aún
-              </p>
+              <EmptyState
+                icon={BarChart3}
+                title="Sin partidos jugados"
+                description="Simulá algunos partidos para ver estadísticas."
+              />
             ) : (
               <div className="space-y-3">
                 {topScorers.map((stat, idx) => (
@@ -191,9 +194,11 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
           </CardHeader>
           <CardContent>
             {topAverage.length === 0 ? (
-              <p className="text-center text-grass-soft py-8">
-                No hay suficientes partidos jugados (mín. 3)
-              </p>
+              <EmptyState
+                icon={BarChart3}
+                title="Faltan partidos"
+                description="Se necesitan al menos 3 partidos jugados."
+              />
             ) : (
               <div className="space-y-3">
                 {topAverage.map((stat, idx) => (

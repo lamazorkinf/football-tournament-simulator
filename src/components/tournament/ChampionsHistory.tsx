@@ -11,8 +11,9 @@ import {
 } from '../../services/championsService';
 import { ChampionsPalmares } from './ChampionsPalmares';
 import { ChampionsTimeline } from './ChampionsTimeline';
-import { Trophy, ListOrdered, AlertTriangle } from 'lucide-react';
+import { Trophy, ListOrdered, AlertTriangle, Medal } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
+import { EmptyState } from '../ui/EmptyState';
 
 type Tab = 'palmares' | 'timeline';
 
@@ -117,15 +118,11 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
-            <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">
-              No hay torneos completados
-            </p>
-            <p className="text-sm text-grass-soft mt-2">
-              Los campeones aparecerán aquí cuando completes un torneo
-            </p>
-          </div>
+          <EmptyState
+            icon={Medal}
+            title="Sin torneos completados"
+            description="El palmarés se llena cuando se corone el primer campeón."
+          />
         </CardContent>
       </Card>
     );

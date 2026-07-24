@@ -1,12 +1,14 @@
 import type { Cycle, Team, Match, KnockoutMatch, WorldCupGroup } from '../../types';
 import { isMatchPlayable } from '../../core/calendar';
+import { isConfederationsDrawn } from '../../utils/cycleProgress';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { ScoreBug } from '../ui/ScoreBug';
+import { EmptyState } from '../ui/EmptyState';
 import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Trophy, Award } from 'lucide-react';
+import { Play, Trophy, Award, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 type MatchWithPenalties = Match & { penalties?: { homeScore: number; awayScore: number } };
@@ -14,9 +16,10 @@ type MatchWithPenalties = Match & { penalties?: { homeScore: number; awayScore: 
 interface ConfederationsCupViewProps {
   cycle: Cycle;
   teams: Team[];
+  onNavigate?: (view: string) => void;
 }
 
-export function ConfederationsCupView({ cycle, teams }: ConfederationsCupViewProps) {
+export function ConfederationsCupView({ cycle, teams, onNavigate }: ConfederationsCupViewProps) {
   const { simulateConfederationsMatch, isSavingMatch } = useTournamentStore();
   const getTeam = (id: string) => teams.find((t) => t.id === id);
   const confed = cycle.confederationsCup;
@@ -28,6 +31,17 @@ export function ConfederationsCupView({ cycle, teams }: ConfederationsCupViewPro
     }
     await simulateConfederationsMatch(matchId);
   };
+
+  if (!isConfederationsDrawn(cycle)) {
+    return (
+      <EmptyState
+        icon={Lock}
+        title="Copa Confederaciones bloqueada"
+        description="Se desbloquea cuando terminen los cuatro torneos continentales y se conozcan los 8 finalistas."
+        action={{ label: 'Ir a Continental', onClick: () => onNavigate?.('continental') }}
+      />
+    );
+  }
 
   const knockout: { label: string; match: KnockoutMatch | null }[] = [
     ...confed.knockout.semiFinals.map((m, i) => ({ label: `Semifinal ${i + 1}`, match: m })),
@@ -56,49 +70,39 @@ export function ConfederationsCupView({ cycle, teams }: ConfederationsCupViewPro
         </CardContent>
       </Card>
 
-      {confed.groups.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-grass-soft">
-            El sorteo de la Copa Confederaciones todavía no se realizó.
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {confed.groups.map((group) => (
-              <ConfedGroup
-                key={group.id}
-                group={group}
-                teams={teams}
-                cycle={cycle}
-                getTeam={getTeam}
-                onPlay={handlePlay}
-                isSaving={isSavingMatch}
-              />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {confed.groups.map((group) => (
+          <ConfedGroup
+            key={group.id}
+            group={group}
+            teams={teams}
+            cycle={cycle}
+            getTeam={getTeam}
+            onPlay={handlePlay}
+            isSaving={isSavingMatch}
+          />
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Eliminación</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {knockout.map(({ label, match }) => (
+              <div key={label} className="space-y-2">
+                <h4 className="font-arcade text-[10px] text-gold uppercase">{label}</h4>
+                {match ? (
+                  <ConfedMatch match={match} cycle={cycle} getTeam={getTeam} onPlay={handlePlay} isSaving={isSavingMatch} />
+                ) : (
+                  <p className="text-grass-soft text-xs">Pendiente</p>
+                )}
+              </div>
             ))}
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Eliminación</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {knockout.map(({ label, match }) => (
-                  <div key={label} className="space-y-2">
-                    <h4 className="font-arcade text-[10px] text-gold uppercase">{label}</h4>
-                    {match ? (
-                      <ConfedMatch match={match} cycle={cycle} getTeam={getTeam} onPlay={handlePlay} isSaving={isSavingMatch} />
-                    ) : (
-                      <p className="text-grass-soft text-xs">Pendiente</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

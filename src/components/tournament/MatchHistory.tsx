@@ -3,6 +3,7 @@ import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ScoreBug } from '../ui/ScoreBug';
 import { Skeleton } from '../ui/Skeleton';
+import { EmptyState } from '../ui/EmptyState';
 import { History, Filter, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { matchHistoryService, type MatchHistoryEntry, type MatchCursor } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -250,13 +251,11 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
               ))}
             </div>
           ) : matches.length === 0 ? (
-            <div className="text-center py-12">
-              <History className="w-16 h-16 text-grass-soft mx-auto mb-4" />
-              <p className="text-grass-soft">No hay partidos registrados aún</p>
-              <p className="text-sm text-grass-soft mt-2">
-                Los partidos se guardarán automáticamente cuando simules en el torneo
-              </p>
-            </div>
+            <EmptyState
+              icon={History}
+              title="Sin partidos registrados"
+              description="Los resultados aparecen acá a medida que se juegan."
+            />
           ) : (
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {matches.map((match) => {

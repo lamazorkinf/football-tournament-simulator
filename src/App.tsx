@@ -196,9 +196,9 @@ function App() {
         ) : currentView === 'champions' ? (
           <ChampionsHistory onNavigate={handleNavigate} />
         ) : currentView === 'continental' ? (
-          <ContinentalView cycle={currentTournament} teams={teams} />
+          <ContinentalView cycle={currentTournament} teams={teams} onNavigate={handleNavigate} />
         ) : currentView === 'confederations' ? (
-          <ConfederationsCupView cycle={currentTournament} teams={teams} />
+          <ConfederationsCupView cycle={currentTournament} teams={teams} onNavigate={handleNavigate} />
         ) : currentView === 'favorites' ? (
           <FavoritesView />
         ) : null}

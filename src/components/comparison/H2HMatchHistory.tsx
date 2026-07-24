@@ -1,8 +1,9 @@
 import type { Team } from '../../types';
 import type { HeadToHeadStats } from '../../services/headToHeadService';
 import { getKnockoutRoundName } from '../../services/headToHeadService';
-import { Trophy } from 'lucide-react';
+import { Trophy, GitCompare } from 'lucide-react';
 import { TeamFlag } from '../ui/TeamFlag';
+import { EmptyState } from '../ui/EmptyState';
 
 interface H2HMatchHistoryProps {
   team1: Team;
@@ -13,9 +14,11 @@ interface H2HMatchHistoryProps {
 export function H2HMatchHistory({ team1, team2, h2hStats }: H2HMatchHistoryProps) {
   if (h2hStats.lastFiveResults.length === 0) {
     return (
-      <div className="text-center py-8 text-grass-soft">
-        <p>No hay historial de partidos disponible</p>
-      </div>
+      <EmptyState
+        icon={GitCompare}
+        title="Sin historial"
+        description="Estos equipos todavía no se enfrentaron."
+      />
     );
   }
 

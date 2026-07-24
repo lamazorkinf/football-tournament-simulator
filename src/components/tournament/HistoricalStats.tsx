@@ -4,9 +4,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
 import { PixelBar } from '../ui/PixelBar';
 import { LoadingState } from '../ui/LoadingState';
+import { EmptyState } from '../ui/EmptyState';
 import { matchHistoryService, computeWinRate } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import { Trophy, Award, BarChart3 } from 'lucide-react';
+import { Trophy, Award, BarChart3, History } from 'lucide-react';
 import { getTierColor, getTierIcon, groupTeamsByTier } from '../../core/tiers';
 
 interface HistoricalStatsProps {
@@ -188,9 +189,11 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
               </CardHeader>
               <CardContent>
                 {topScorersHistorical.length === 0 ? (
-                  <p className="text-center text-grass-soft py-8">
-                    No hay partidos jugados aún
-                  </p>
+                  <EmptyState
+                    icon={History}
+                    title="Sin partidos jugados"
+                    description="El historial se llena a medida que se juegan partidos."
+                  />
                 ) : (
                   <div className="space-y-3">
                     {topScorersHistorical.map((stat, idx) => {
@@ -234,9 +237,11 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
               </CardHeader>
               <CardContent>
                 {topAverageHistorical.length === 0 ? (
-                  <p className="text-center text-grass-soft py-8">
-                    No hay suficientes partidos jugados (mín. 3)
-                  </p>
+                  <EmptyState
+                    icon={BarChart3}
+                    title="Faltan partidos"
+                    description="Se necesitan al menos 3 partidos jugados."
+                  />
                 ) : (
                   <div className="space-y-3">
                     {topAverageHistorical.map((stat, idx) => {
