@@ -38,7 +38,13 @@ export function ConfederationsCupView({ cycle, teams, onNavigate }: Confederatio
         icon={Lock}
         title="Copa Confederaciones bloqueada"
         description="Se desbloquea cuando terminen los cuatro torneos continentales y se conozcan los 8 finalistas."
-        action={{ label: 'Ir a Continental', onClick: () => onNavigate?.('continental') }}
+        // A Progreso, no a Continental: el sorteo de confederaciones se dispara
+        // desde ahí. Mandar a Continental funciona mientras esa fase siga en
+        // juego, pero justo cuando termina —el momento más probable para entrar
+        // acá— deja al usuario en una llave ya jugada y sin acción posible.
+        // Progreso sirve para los dos casos: muestra el avance continental y,
+        // cuando corresponde, el botón que desbloquea esta fase.
+        action={{ label: 'Ir a Progreso', onClick: () => onNavigate?.('wizard') }}
       />
     );
   }
