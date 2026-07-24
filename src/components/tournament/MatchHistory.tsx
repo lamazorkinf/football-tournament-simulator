@@ -234,9 +234,19 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-3" aria-busy="true">
-              {Array.from({ length: 6 }, (_, i) => (
-                <Skeleton key={i} className="h-16" />
+            // Mismo contenedor que la lista real (space-y-3 + tope de 600px) y
+            // filas de la misma altura que una fila de partido: el sentido del
+            // skeleton es que al llegar los datos no salte nada. Con filas más
+            // bajas que las reales sería peor que un spinner, porque además
+            // miente sobre la forma de lo que viene.
+            <div
+              className="space-y-3 max-h-[600px] overflow-hidden"
+              aria-busy="true"
+              aria-label="Cargando partidos"
+              role="status"
+            >
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="h-40" />
               ))}
             </div>
           ) : matches.length === 0 ? (
