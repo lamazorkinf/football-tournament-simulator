@@ -18,7 +18,7 @@ export interface LiveMatchdayEntry {
 export interface LiveMatchdaySession {
   /** Título del overlay (ej: 'Jornada 7 — Clasificatorias'). */
   title: string;
-  /** Los ≤12 partidos que se muestran en vivo. */
+  /** Los partidos que se muestran en vivo (hasta LIVE_MATCH_CAP). */
   entries: LiveMatchdayEntry[];
   /** Resumen completo de la jornada (incluye los simulados en segundo plano). */
   allResults: MatchResult[];

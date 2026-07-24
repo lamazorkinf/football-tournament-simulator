@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { X, Trophy } from 'lucide-react';
+import { X, Trophy, Star } from 'lucide-react';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
+import { penaltiesLabel } from '../../utils/matchLabels';
 import { Button } from './Button';
 
 export function MatchResultsModal() {
@@ -22,6 +23,12 @@ export function MatchResultsModal() {
   }, [isOpen, close]);
 
   if (!isOpen) return null;
+
+  // Los partidos de equipos favoritos van arriba de todo. `sort` es estable
+  // (ES2019+), así que dentro de cada bloque se conserva el orden de la jornada.
+  const orderedResults = [...results].sort(
+    (a, b) => Number(Boolean(b.isFavorite)) - Number(Boolean(a.isFavorite)),
+  );
 
   return (
     <div
@@ -49,18 +56,31 @@ export function MatchResultsModal() {
         {/* Results */}
         <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(85vh-80px)]">
           <div className="space-y-2 sm:space-y-3">
-            {results.map((result, index) => {
-              const homeWon = result.homeScore > result.awayScore;
-              const awayWon = result.awayScore > result.homeScore;
-              const draw = result.homeScore === result.awayScore;
+            {orderedResults.map((result, index) => {
+              // Un partido que fue a penales no termina empatado: el ganador es
+              // el que ganó desde el punto, aunque el marcador diga 1-1.
+              const penales = penaltiesLabel(result.penalties);
+              const homeWon = result.penalties
+                ? result.penalties.homeScore > result.penalties.awayScore
+                : result.homeScore > result.awayScore;
+              const awayWon = result.penalties
+                ? result.penalties.awayScore > result.penalties.homeScore
+                : result.awayScore > result.homeScore;
+              const draw = !homeWon && !awayWon;
 
               return (
                 <div
                   key={index}
-                  className="bg-night border-2 border-grass p-2 sm:p-4 hover:border-line transition-colors"
+                  data-testid="match-result"
+                  className={`bg-night border-2 p-2 sm:p-4 transition-colors ${
+                    result.isFavorite ? 'border-gold' : 'border-grass hover:border-line'
+                  }`}
                 >
-                  {result.groupName && (
-                    <div className="text-xs text-grass-soft mb-1 sm:mb-2 font-medium">
+                  {(result.groupName || result.isFavorite) && (
+                    <div className="flex items-center gap-1.5 text-xs text-grass-soft mb-1 sm:mb-2 font-medium">
+                      {result.isFavorite && (
+                        <Star className="w-3.5 h-3.5 text-gold fill-gold flex-shrink-0" aria-label="Equipo favorito" />
+                      )}
                       {result.groupName}
                     </div>
                   )}
@@ -84,6 +104,12 @@ export function MatchResultsModal() {
                       {result.awayTeam}
                     </div>
                   </div>
+
+                  {penales && (
+                    <div className="mt-1 sm:mt-2 text-center font-arcade text-[10px] text-gold uppercase">
+                      {penales}
+                    </div>
+                  )}
                 </div>
               );
             })}

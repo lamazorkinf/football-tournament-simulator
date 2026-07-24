@@ -75,19 +75,35 @@ export interface LiveScoreAt {
   awayScore: number;
   /** Minuto del último gol revelado; null si todavía no hubo goles. */
   lastGoalMinute: number | null;
+  /** Lado del último gol revelado; null si todavía no hubo goles. */
+  lastGoalSide: LiveSide | null;
+  /** Minutos (ascendentes) de los goles revelados de cada equipo. */
+  homeGoalMinutes: number[];
+  awayGoalMinutes: number[];
 }
 
 /**
- * Marcador acumulado de un timeline a un minuto dado. Derivación pura para
- * que N tarjetas compartan un único reloj sin estado propio por partido.
+ * Marcador acumulado de un timeline a un minuto dado, con los minutos de gol
+ * separados por equipo (la tarjeta en vivo los muestra del lado que marcó).
+ * Derivación pura para que N tarjetas compartan un único reloj sin estado
+ * propio por partido.
  */
 export function scoreAtMinute(timeline: LiveTimeline, minute: number): LiveScoreAt {
   let last: LiveGoalEvent | undefined;
+  const homeGoalMinutes: number[] = [];
+  const awayGoalMinutes: number[] = [];
   for (const goal of timeline.goals) {
     if (goal.minute > minute) break;
     last = goal;
+    if (goal.side === 'home') homeGoalMinutes.push(goal.minute);
+    else awayGoalMinutes.push(goal.minute);
   }
-  return last
-    ? { homeScore: last.homeScore, awayScore: last.awayScore, lastGoalMinute: last.minute }
-    : { homeScore: 0, awayScore: 0, lastGoalMinute: null };
+  return {
+    homeScore: last?.homeScore ?? 0,
+    awayScore: last?.awayScore ?? 0,
+    lastGoalMinute: last?.minute ?? null,
+    lastGoalSide: last?.side ?? null,
+    homeGoalMinutes,
+    awayGoalMinutes,
+  };
 }

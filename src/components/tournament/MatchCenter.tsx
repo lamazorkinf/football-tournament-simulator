@@ -18,8 +18,10 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collectAllMatches, type MatchStage, type MatchWithContext } from './matchCenterCollector';
 import { isBatchSimulableStage } from './matchBatchSimulable';
+import { buildJornadaResults } from './jornadaResults';
 import { groupIntoJornadas, getCurrentJornada, type JornadaGroup } from '../../core/jornada';
 import { selectLiveMatches } from '../../core/liveSelection';
+import { penaltiesLabel, type PenaltiesScore } from '../../utils/matchLabels';
 import { buildMatchTimeline, hashSeed } from '../../core/liveMatch';
 import type { MatchResult } from '../../store/useMatchResultsStore';
 
@@ -131,6 +133,8 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     // qualifier/world-cup actualizan el estado y hay que releer el partido.
     let homeScore: number | null | undefined;
     let awayScore: number | null | undefined;
+    // Solo las eliminatorias pueden terminar en penales.
+    let penalties: PenaltiesScore | undefined;
 
     if (stage === 'qualifier' || stage === 'world-cup') {
       await simulateMatch(match.id, groupId, stage === 'qualifier' ? 'qualifier' : 'world-cup');
@@ -161,29 +165,25 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
       }
       homeScore = result.homeScore;
       awayScore = result.awayScore;
+      penalties = result.penalties;
     }
 
     // Toast de resultado (mismo formato para todas las fases)
+    const penales = penaltiesLabel(penalties);
     toast.success(
       <div className="flex items-center gap-3">
         <span>⚽</span>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">{homeTeam.name}</span>
-          <span className="font-bold text-lg px-2">{homeScore} - {awayScore}</span>
-          <span className="font-semibold">{awayTeam.name}</span>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{homeTeam.name}</span>
+            <span className="font-bold text-lg px-2">{homeScore} - {awayScore}</span>
+            <span className="font-semibold">{awayTeam.name}</span>
+          </div>
+          {penales && <span className="text-xs text-gold">{penales}</span>}
         </div>
       </div>,
       { duration: 5000 }
     );
-  };
-
-  // Rótulo de etapa para el modal de resultados.
-  const stageResultLabel: Record<MatchStage, string> = {
-    qualifier: 'Clasificatorias',
-    'world-cup': 'Mundial · Grupos',
-    knockout: 'Mundial · Playoffs',
-    continental: 'Continental',
-    confederations: 'Confederaciones',
   };
 
   // Título de la jornada actual (fase · ronda/jornada).
@@ -223,32 +223,10 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     return outcomes;
   };
 
-  // Construye el resumen COMPLETO de la jornada: outcomes recién simulados +
-  // los partidos ya jugados de la jornada (para no perderlos en el resumen).
-  const buildJornadaResults = (
-    jornada: JornadaGroup,
-    outcomes: MatchdayOutcome[],
-  ): MatchResult[] => {
-    const byId = new Map(outcomes.map((o) => [o.matchId, o]));
-    const results: MatchResult[] = [];
-    for (const ctx of jornada.matches) {
-      const outcome = byId.get(ctx.match.id);
-      const played = ctx.match.isPlayed;
-      if (!outcome && !played) continue; // no jugado y no simulado ahora
-      const homeTeam = getTeam(ctx.match.homeTeamId);
-      const awayTeam = getTeam(ctx.match.awayTeamId);
-      if (!homeTeam || !awayTeam) continue;
-      results.push({
-        homeTeam: homeTeam.name,
-        awayTeam: awayTeam.name,
-        homeScore: outcome ? outcome.homeScore : ctx.match.homeScore ?? 0,
-        awayScore: outcome ? outcome.awayScore : ctx.match.awayScore ?? 0,
-        stage: stageResultLabel[ctx.stage],
-        groupName: ctx.groupName,
-      });
-    }
-    return results;
-  };
+  // Resumen de la jornada con los favoritos marcados (el modal los ordena
+  // primero). Ver core del builder en jornadaResults.ts.
+  const jornadaResults = (jornada: JornadaGroup, outcomes: MatchdayOutcome[]): MatchResult[] =>
+    buildJornadaResults(jornada, outcomes, teams, new Set(favoriteTeamIds));
 
   const handleSimulateMatchday = async () => {
     const jornada = currentJornada;
@@ -267,7 +245,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
 
     try {
       const outcomes = await runJornadaSimulation(toSimulate);
-      const results = buildJornadaResults(jornada, outcomes);
+      const results = jornadaResults(jornada, outcomes);
       showResults(results, `${jornadaTitle} — Resultados`);
       toast.success(`${jornada.label} completada — ${outcomes.length} partidos simulados`);
     } catch (error) {
@@ -331,7 +309,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
 
       if (entries.length === 0) {
         // No se pudo simular nada (fuera de jornada, etc.): mostrar el resumen.
-        const results = buildJornadaResults(jornada, outcomes);
+        const results = jornadaResults(jornada, outcomes);
         showResults(results, `${jornadaTitle} — Resultados`);
         return;
       }
@@ -339,7 +317,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
       openLiveSession({
         title: jornadaTitle,
         entries,
-        allResults: buildJornadaResults(jornada, outcomes),
+        allResults: jornadaResults(jornada, outcomes),
         hiddenCount: outcomes.length - entries.length,
       });
     } catch (error) {

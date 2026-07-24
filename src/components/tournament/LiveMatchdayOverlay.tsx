@@ -131,6 +131,19 @@ function LiveGridCard({
   const score = scoreAtMinute(entry.timeline, playback.minute);
   const justScored = score.lastGoalMinute === playback.minute && playback.phase === 'playing';
   const showPenalties = playback.penaltiesRevealed && entry.timeline.penalties;
+  const hasGoals = score.homeGoalMinutes.length > 0 || score.awayGoalMinutes.length > 0;
+
+  // Los minutos van del lado del equipo que marcó; el del minuto en curso se
+  // resalta para que se note quién acaba de convertir.
+  const minuteList = (minutes: number[]) =>
+    minutes.map((min, i) => (
+      <span
+        key={`${min}-${i}`}
+        className={min === playback.minute && playback.phase === 'playing' ? 'text-gold' : undefined}
+      >
+        {min}'
+      </span>
+    ));
 
   return (
     <div
@@ -170,16 +183,38 @@ function LiveGridCard({
         </div>
       </div>
 
-      {/* Pie: último gol o penales */}
-      <div className="text-[11px] text-grass-soft min-h-4">
+      {/* Pie: los goles de cada equipo de su lado del marcador (+ penales) */}
+      <div className="flex items-start justify-between gap-2 text-[11px] text-grass-soft min-h-4">
+        {score.homeGoalMinutes.length > 0 ? (
+          <span
+            className="flex flex-1 min-w-0 flex-wrap items-center gap-x-1"
+            aria-label={`Goles de ${home?.name ?? entry.homeTeamId}`}
+          >
+            <span aria-hidden="true">⚽</span>
+            {minuteList(score.homeGoalMinutes)}
+          </span>
+        ) : (
+          <span className="flex-1" />
+        )}
+
         {showPenalties ? (
-          <span className="text-gold font-arcade text-[10px]">
+          <span className="text-gold font-arcade text-[10px] flex-shrink-0">
             PEN {entry.timeline.penalties!.homeScore}-{entry.timeline.penalties!.awayScore}
           </span>
-        ) : score.lastGoalMinute !== null ? (
-          <span>⚽ {score.lastGoalMinute}'</span>
+        ) : hasGoals ? null : (
+          <span className="flex-shrink-0">Sin goles</span>
+        )}
+
+        {score.awayGoalMinutes.length > 0 ? (
+          <span
+            className="flex flex-1 min-w-0 flex-wrap items-center justify-end gap-x-1"
+            aria-label={`Goles de ${away?.name ?? entry.awayTeamId}`}
+          >
+            {minuteList(score.awayGoalMinutes)}
+            <span aria-hidden="true">⚽</span>
+          </span>
         ) : (
-          <span>Sin goles</span>
+          <span className="flex-1" />
         )}
       </div>
     </div>

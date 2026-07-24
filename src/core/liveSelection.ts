@@ -4,7 +4,7 @@
  */
 
 /** Máximo de partidos visibles simultáneamente en la grilla en vivo. */
-export const LIVE_MATCH_CAP = 12;
+export const LIVE_MATCH_CAP = 20;
 
 export interface SelectableMatch {
   matchId: string;

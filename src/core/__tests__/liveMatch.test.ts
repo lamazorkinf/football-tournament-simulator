@@ -83,17 +83,30 @@ describe('scoreAtMinute', () => {
   };
 
   it('antes del primer gol devuelve 0-0 sin último minuto', () => {
-    expect(scoreAtMinute(tl, 0)).toEqual({ homeScore: 0, awayScore: 0, lastGoalMinute: null });
-    expect(scoreAtMinute(tl, 9)).toEqual({ homeScore: 0, awayScore: 0, lastGoalMinute: null });
+    expect(scoreAtMinute(tl, 0)).toMatchObject({ homeScore: 0, awayScore: 0, lastGoalMinute: null });
+    expect(scoreAtMinute(tl, 9)).toMatchObject({ homeScore: 0, awayScore: 0, lastGoalMinute: null });
   });
 
   it('en un minuto intermedio acumula solo los goles revelados', () => {
-    expect(scoreAtMinute(tl, 10)).toEqual({ homeScore: 1, awayScore: 0, lastGoalMinute: 10 });
-    expect(scoreAtMinute(tl, 87)).toEqual({ homeScore: 1, awayScore: 1, lastGoalMinute: 40 });
+    expect(scoreAtMinute(tl, 10)).toMatchObject({ homeScore: 1, awayScore: 0, lastGoalMinute: 10 });
+    expect(scoreAtMinute(tl, 87)).toMatchObject({ homeScore: 1, awayScore: 1, lastGoalMinute: 40 });
   });
 
   it('a los 90 coincide con el marcador final del timeline', () => {
-    expect(scoreAtMinute(tl, 90)).toEqual({ homeScore: 2, awayScore: 1, lastGoalMinute: 88 });
+    expect(scoreAtMinute(tl, 90)).toMatchObject({ homeScore: 2, awayScore: 1, lastGoalMinute: 88 });
+  });
+
+  it('separa los minutos de los goles revelados por equipo', () => {
+    expect(scoreAtMinute(tl, 90).homeGoalMinutes).toEqual([10, 88]);
+    expect(scoreAtMinute(tl, 90).awayGoalMinutes).toEqual([40]);
+    expect(scoreAtMinute(tl, 45).homeGoalMinutes).toEqual([10]);
+    expect(scoreAtMinute(tl, 45).awayGoalMinutes).toEqual([40]);
+  });
+
+  it('informa de qué lado fue el último gol revelado', () => {
+    expect(scoreAtMinute(tl, 5).lastGoalSide).toBeNull();
+    expect(scoreAtMinute(tl, 45).lastGoalSide).toBe('away');
+    expect(scoreAtMinute(tl, 90).lastGoalSide).toBe('home');
   });
 
   it('es consistente con cualquier timeline generado', () => {

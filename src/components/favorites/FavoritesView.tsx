@@ -7,6 +7,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { TeamFlag } from '../ui/TeamFlag';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
+import { LIVE_MATCH_CAP } from '../../core/liveSelection';
 
 const REGIONS: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
 
@@ -56,8 +57,9 @@ export function FavoritesView() {
         <CardContent className="space-y-4">
           <p className="text-sm text-grass-soft">
             Los partidos de tus equipos favoritos se muestran siempre en la jornada en vivo.
-            Si tus favoritos generan más de 12 partidos, se priorizan los de mayor suma de habilidad;
-            si generan menos, se completa hasta 12 con los mejores partidos de la jornada.
+            Si tus favoritos generan más de {LIVE_MATCH_CAP} partidos, se priorizan los de mayor suma
+            de habilidad; si generan menos, se completa hasta {LIVE_MATCH_CAP} con los mejores
+            partidos de la jornada.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">

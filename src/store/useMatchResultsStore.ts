@@ -7,6 +7,13 @@ export interface MatchResult {
   awayScore: number;
   stage: string;
   groupName?: string;
+  /** Involucra un equipo favorito: el modal lo ordena primero. */
+  isFavorite?: boolean;
+  /**
+   * Definición por penales, aparte del marcador: no son goles del partido y
+   * no entran en los totales del resumen.
+   */
+  penalties?: { homeScore: number; awayScore: number };
 }
 
 interface MatchResultsState {

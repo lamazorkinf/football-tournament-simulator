@@ -14,6 +14,7 @@ import { useMobileAction } from '../../hooks/useMobileAction';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { matchCardVariants, matchContainerVariants } from './animations';
+import { matchResultToastText } from '../../utils/matchLabels';
 
 interface KnockoutViewProps {
   knockout: KnockoutBracket;
@@ -205,12 +206,17 @@ export const KnockoutView = ({
     const match = allMatches.find((m) => m.id === matchId);
     if (!match) return;
 
-    await simulateKnockoutMatch(matchId);
+    const result = await simulateKnockoutMatch(matchId);
+    if (!result) {
+      toast.info('No se pudo simular ahora (puede faltar resolver la ronda anterior)');
+      return;
+    }
 
-    toast.success(
-      `🏆 ¡Partido de eliminatorias jugado!`,
-      { duration: 2000 }
-    );
+    // Las eliminatorias se definen por penales cuando el partido termina
+    // empatado: el marcador solo no alcanza para saber quién pasó.
+    const homeName = teams.find((t) => t.id === match.homeTeamId)?.name ?? match.homeTeamId;
+    const awayName = teams.find((t) => t.id === match.awayTeamId)?.name ?? match.awayTeamId;
+    toast.success(`🏆 ${matchResultToastText(homeName, awayName, result)}`, { duration: 4000 });
   };
 
   const nextPendingMatch = [

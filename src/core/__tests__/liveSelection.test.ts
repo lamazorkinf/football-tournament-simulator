@@ -22,55 +22,63 @@ function makePool(n: number, top = 100) {
 }
 
 describe('selectLiveMatches', () => {
+  it('la grilla en vivo muestra hasta 20 partidos', () => {
+    const { matches, skills } = makePool(40);
+    expect(selectLiveMatches(matches, skills, new Set())).toHaveLength(20);
+  });
+
   it('con menos partidos que el cap devuelve todos', () => {
     const { matches, skills } = makePool(3);
     expect(selectLiveMatches(matches, skills, new Set())).toHaveLength(3);
   });
 
-  it('sin favoritos: top 12 por suma de skill', () => {
-    const { matches, skills } = makePool(20);
+  it('sin favoritos: los mejores del cap por suma de skill', () => {
+    const { matches, skills } = makePool(LIVE_MATCH_CAP + 8);
     const chosen = selectLiveMatches(matches, skills, new Set());
     expect(chosen).toHaveLength(LIVE_MATCH_CAP);
     expect(chosen.map((c) => c.matchId)).toEqual(
-      matches.slice(0, 12).map((c) => c.matchId),
+      matches.slice(0, LIVE_MATCH_CAP).map((c) => c.matchId),
     );
   });
 
   it('los partidos de favoritos siempre entran aunque tengan poca skill', () => {
-    const { matches, skills } = makePool(20);
+    const { matches, skills } = makePool(LIVE_MATCH_CAP + 8);
     // El peor partido del pool tiene un equipo favorito.
-    const worst = matches[19];
+    const worst = matches[matches.length - 1];
     const chosen = selectLiveMatches(matches, skills, new Set([worst.homeTeamId]));
     expect(chosen.map((c) => c.matchId)).toContain(worst.matchId);
     expect(chosen).toHaveLength(LIVE_MATCH_CAP);
-    // Y desplaza al 12º mejor no-favorito.
-    expect(chosen.map((c) => c.matchId)).not.toContain(matches[11].matchId);
+    // Y desplaza al último no-favorito que entraba por skill.
+    expect(chosen.map((c) => c.matchId)).not.toContain(matches[LIVE_MATCH_CAP - 1].matchId);
     // Favoritos primero en el orden de salida.
     expect(chosen[0].matchId).toBe(worst.matchId);
   });
 
-  it('con más de 12 partidos de favoritos gana la suma de skill entre ellos', () => {
-    const { matches, skills } = makePool(20);
-    // Todos los equipos son favoritos → los 20 partidos son favoritos.
+  it('con más partidos de favoritos que el cap gana la suma de skill entre ellos', () => {
+    const { matches, skills } = makePool(LIVE_MATCH_CAP + 8);
+    // Todos los equipos son favoritos → todos los partidos son favoritos.
     const favorites = new Set(matches.flatMap((x) => [x.homeTeamId, x.awayTeamId]));
     const chosen = selectLiveMatches(matches, skills, favorites);
     expect(chosen).toHaveLength(LIVE_MATCH_CAP);
     expect(chosen.map((c) => c.matchId)).toEqual(
-      matches.slice(0, 12).map((c) => c.matchId),
+      matches.slice(0, LIVE_MATCH_CAP).map((c) => c.matchId),
     );
   });
 
-  it('con menos de 12 partidos de favoritos completa con los mejores del resto', () => {
-    const { matches, skills } = makePool(20);
-    const favs = new Set([matches[15].homeTeamId, matches[18].awayTeamId]);
+  it('con menos partidos de favoritos que el cap completa con los mejores del resto', () => {
+    const { matches, skills } = makePool(LIVE_MATCH_CAP + 8);
+    // Dos favoritos del fondo de la tabla (fuera de los que entran por skill).
+    const first = matches[LIVE_MATCH_CAP + 3];
+    const second = matches[LIVE_MATCH_CAP + 6];
+    const favs = new Set([first.homeTeamId, second.awayTeamId]);
     const chosen = selectLiveMatches(matches, skills, favs);
     expect(chosen).toHaveLength(LIVE_MATCH_CAP);
     // Los 2 favoritos primero (ordenados por skill entre ellos)…
-    expect(chosen[0].matchId).toBe(matches[15].matchId);
-    expect(chosen[1].matchId).toBe(matches[18].matchId);
-    // …y 10 cupos para los mejores no-favoritos.
+    expect(chosen[0].matchId).toBe(first.matchId);
+    expect(chosen[1].matchId).toBe(second.matchId);
+    // …y el resto de los cupos para los mejores no-favoritos.
     expect(chosen.slice(2).map((c) => c.matchId)).toEqual(
-      matches.slice(0, 10).map((c) => c.matchId),
+      matches.slice(0, LIVE_MATCH_CAP - 2).map((c) => c.matchId),
     );
   });
 
