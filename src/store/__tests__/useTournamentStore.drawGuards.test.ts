@@ -1198,6 +1198,69 @@ describe('regenerateKnockoutStage — valor de retorno', () => {
   });
 });
 
+/**
+ * Era la única acción de sorteo sin isDrawing hasta que este lote le agregó
+ * el candado (borraba e insertaba los 16 partidos de dieciseisavos con ids
+ * nuevos usando un insert plano: dos ejecuciones solapadas cuyos borrados
+ * cayeran antes de los inserts dejaban 32 partidos). Espejo de "dos sorteos
+ * disparados a la vez producen uno solo" del describe 'candado isDrawing'
+ * de generateDrawAndFixtures.
+ */
+describe('candado isDrawing — regenerateKnockoutStage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isSupabaseConfigured.mockReturnValue(true);
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  afterEach(() => {
+    useTournamentStore.setState({ isDrawing: false });
+    // Mismo motivo que en el describe de generateDrawAndFixtures: mockImplementation
+    // no lo borra vi.clearAllMocks(), así que sin este reset el delay de este
+    // test se colaría en cualquier otro que reutilice createKnockoutMatch.
+    createKnockoutMatch.mockImplementation(async () => {});
+    deleteKnockoutData.mockImplementation(async () => {});
+  });
+
+  it('dos regeneraciones disparadas a la vez producen una sola', async () => {
+    const { groups, teams } = makeGroupsReadyForKnockout();
+    const cycle = setUpTournament(0);
+    const withGroups: Cycle = {
+      ...cycle,
+      worldCup: {
+        groups,
+        knockout: {
+          roundOf32: [
+            { id: 'ko-old', homeTeamId: 'a', awayTeamId: 'b', homeScore: null, awayScore: null, isPlayed: false, round: 'round-of-32' },
+          ],
+          roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null,
+        },
+        qualifiedTeamIds: [],
+      },
+    };
+    useTournamentStore.setState({
+      currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
+    });
+
+    // El guardado se demora para que las dos llamadas se solapen de verdad,
+    // que es lo que pasa con un doble clic sobre un botón que tarda segundos.
+    createKnockoutMatch.mockImplementation(
+      () => new Promise((resolve) => setTimeout(resolve, 20))
+    );
+
+    const [first, second] = await Promise.all([
+      store().regenerateKnockoutStage(),
+      store().regenerateKnockoutStage(),
+    ]);
+
+    expect(createKnockoutMatch).toHaveBeenCalledTimes(16); // 16 cruces, no 32
+    // Si el candado no frenara a la segunda llamada, también volvería a
+    // borrar: dos borrados serían tan destructivos como dos escrituras.
+    expect(deleteKnockoutData).toHaveBeenCalledTimes(1);
+    expect([first, second].filter(Boolean).length).toBe(1);
+  });
+});
+
 describe('generateDrawAndFixtures — no duplica partidos al re-sortear', () => {
   beforeEach(() => {
     vi.clearAllMocks();
