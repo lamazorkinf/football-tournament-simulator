@@ -124,6 +124,7 @@ export interface TournamentState {
   currentTournament: Cycle | null; // Computed from currentTournamentId
   isSavingMatch: boolean; // Track if a match is being saved to prevent race conditions
   isBatchProcessing: boolean; // Track if batch processing is active to skip individual saves
+  isDrawing: boolean; // Un sorteo en curso: bloquea disparar otro (doble clic)
   initStatus: InitStatus; // Carga inicial desde la DB (única fuente de verdad)
 
   // Actions

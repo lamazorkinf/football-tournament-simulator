@@ -214,6 +214,7 @@ export const useTournamentStore = create<TournamentState>()(
         currentTournament: null,
         isSavingMatch: false,
         isBatchProcessing: false,
+        isDrawing: false,
         initStatus: 'loading' as const,
 
       loadTeamsFromDatabase: async () => {
@@ -1785,10 +1786,16 @@ export const useTournamentStore = create<TournamentState>()(
           return;
         }
 
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return;
+        }
+
         const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
         const totalSteps = 3 + regions.length + 1;
         let currentStep = 0;
 
+        set({ isDrawing: true });
         try {
           progress.startProgress('Generando sorteo y fixtures', totalSteps);
 
@@ -1940,6 +1947,10 @@ export const useTournamentStore = create<TournamentState>()(
           // No relanzar: handleGenerateDraw no captura, y propagar aquí
           // generaba un "Uncaught (in promise)".
           useToastStore.getState().error('No se pudo generar el sorteo.');
+        } finally {
+          // Sin el finally, un error dejaba el candado tomado para siempre y
+          // ningún sorteo posterior volvía a correr en esa sesión.
+          set({ isDrawing: false });
         }
       },
 

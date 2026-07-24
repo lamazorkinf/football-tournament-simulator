@@ -179,3 +179,43 @@ describe('generateDrawAndFixtures — guard de sorteo ya hecho', () => {
     expect(deleteQualifierData).toHaveBeenCalledWith('t-guards');
   });
 });
+
+describe('candado isDrawing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isSupabaseConfigured.mockReturnValue(true);
+  });
+
+  it('dos sorteos disparados a la vez producen uno solo', async () => {
+    setUpTournament(0);
+    // El guardado se demora para que las dos llamadas se solapen de verdad,
+    // que es lo que pasa con un doble clic sobre un botón que tarda segundos.
+    createQualifierGroups.mockImplementation(
+      () => new Promise((resolve) => setTimeout(resolve, 20))
+    );
+
+    await Promise.all([
+      store().generateDrawAndFixtures(),
+      store().generateDrawAndFixtures(),
+    ]);
+
+    expect(createQualifierGroups).toHaveBeenCalledTimes(4); // 4 regiones, no 8
+  });
+
+  it('libera el candado cuando el sorteo termina', async () => {
+    setUpTournament(0);
+
+    await store().generateDrawAndFixtures();
+
+    expect(store().isDrawing).toBe(false);
+  });
+
+  it('libera el candado aunque la persistencia falle', async () => {
+    setUpTournament(0);
+    createQualifierGroups.mockRejectedValue(new Error('sin red'));
+
+    await store().generateDrawAndFixtures();
+
+    expect(store().isDrawing).toBe(false);
+  });
+});
