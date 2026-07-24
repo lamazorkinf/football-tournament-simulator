@@ -114,9 +114,14 @@
   animation: retro-dot 0.75s steps(1) infinite;
 }
 
+/* El estado "apagado" del barrido es `grass`, NO `grass-dark`: con
+   prefers-reduced-motion la animación corre un solo ciclo y los segmentos
+   quedan en su estilo base. Si ese base fuera `grass-dark` (el color de
+   segmento vacío de la barra determinada), la barra indeterminada se vería
+   idéntica a un progreso trabado en 0%. En `grass` se lee como activa. */
 @keyframes pixel-sweep {
   0%, 15%   { background-color: var(--color-led); }
-  16%, 100% { background-color: var(--color-grass-dark); }
+  16%, 100% { background-color: var(--color-grass); }
 }
 .pixel-sweep {
   animation: pixel-sweep 1.6s steps(1) infinite;

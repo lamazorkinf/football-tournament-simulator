@@ -29,7 +29,7 @@ export function PixelBar({ value, max, color = 'led', indeterminate = false }: P
         indeterminate ? (
           <span
             key={i}
-            className="h-3 flex-1 bg-grass-dark pixel-sweep"
+            className="h-3 flex-1 bg-grass pixel-sweep"
             style={{ animationDelay: `${(i * SWEEP_SECONDS) / SEGMENTS}s` }}
           />
         ) : (
