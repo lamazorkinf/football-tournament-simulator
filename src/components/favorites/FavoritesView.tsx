@@ -56,7 +56,7 @@ export function FavoritesView() {
         <CardContent className="space-y-4">
           <p className="text-sm text-grass-soft">
             Los partidos de tus equipos favoritos se muestran siempre en la jornada en vivo.
-            Si tus favoritos generan más de 12 partidos, se priorizan los de mayor suma de skill;
+            Si tus favoritos generan más de 12 partidos, se priorizan los de mayor suma de habilidad;
             si generan menos, se completa hasta 12 con los mejores partidos de la jornada.
           </p>
 

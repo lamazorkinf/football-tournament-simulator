@@ -49,7 +49,7 @@ export function PauseMenu({ isOpen, onClose, currentView, onViewChange }: PauseM
       aria-label="Menú de pausa"
       className="fixed inset-0 z-50 lg:hidden bg-night/95 pause-in flex flex-col px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]"
     >
-      <h2 className="font-arcade text-lg text-gold text-shadow-retro text-center mb-6">⏸ PAUSE</h2>
+      <h2 className="font-arcade text-lg text-gold text-shadow-retro text-center mb-6">⏸ PAUSA</h2>
 
       <div className="mb-6">
         <TournamentSelector />
@@ -85,7 +85,7 @@ export function PauseMenu({ isOpen, onClose, currentView, onViewChange }: PauseM
         onClick={onClose}
         className="mt-6 w-full min-h-12 bg-gold text-night border-4 border-white shadow-hard-btn font-arcade text-xs uppercase active:translate-x-1 active:translate-y-1 active:shadow-none"
       >
-        ▶ RESUME
+        ▶ CONTINUAR
       </button>
     </div>
   );

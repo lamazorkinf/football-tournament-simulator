@@ -103,9 +103,9 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
       return { label: '▶ JUGAR CONFED', onPress: () => onNavigate?.('confederations') };
     }
     if (canAdvanceToQualifiers(c)) return { label: '▶ IR A CLASIFICATORIAS', onPress: handleAdvanceToQualifiers };
-    // Igual que en el StepCard: PRESS START solo si los fixtures aún no existen.
+    // Igual que en el StepCard: EMPEZAR solo si los fixtures aún no existen.
     const qualFixturesExist = Object.values(c.qualifiers).some((groups) => groups.some((g) => g.matches.length > 0));
-    if (canDrawQualifiers(c) && !qualFixturesExist) return { label: '▶ PRESS START', onPress: handleGenerateDraw };
+    if (canDrawQualifiers(c) && !qualFixturesExist) return { label: '▶ EMPEZAR', onPress: handleGenerateDraw };
     if (qualFixturesExist && c.calendar.phase === 'wc-qualifiers' && !getQualifierProgress(c).isComplete) {
       return { label: '▶ JUGAR CLASIFICATORIAS', onPress: () => onNavigate?.('qualifiers') };
     }
@@ -246,7 +246,7 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
       <Card className="overflow-hidden">
         {/* Header */}
         <CardHeader>
-          <p className="font-arcade text-[10px] text-gold mb-2">SELECT MODE</p>
+          <p className="font-arcade text-[10px] text-gold mb-2">ELEGÍ MODO</p>
           <div className="flex items-center gap-3 mb-2">
             <Trophy className="w-8 h-8 text-gold" />
             <h2 className="font-arcade text-base sm:text-xl text-white text-shadow-retro">Progreso del Torneo</h2>
@@ -362,12 +362,12 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                   ⚽ Ir a Clasificatorias
                 </Button>
               ) : canGenerateDraw && qualifierProgress.totalMatches === 0 ? (
-                // PRESS START solo para la GENERACIÓN inicial: sin fixtures aún
+                // EMPEZAR solo para la GENERACIÓN inicial: sin fixtures aún
                 // (totalMatches === 0). Si ya se generaron, este botón
                 // re-sortearía todo (el guard del store solo frena con partidos
                 // jugados), así que se reemplaza por "Ver / Jugar".
                 <Button size="lg" onClick={handleGenerateDraw} className="hidden lg:inline-flex">
-                  ▶ PRESS START
+                  ▶ EMPEZAR
                 </Button>
               ) : qualifierProgress.totalMatches > 0 && !qualifierProgress.isComplete ? (
                 <Button variant="secondary" size="sm" onClick={() => onNavigate?.('qualifiers')} className="gap-2">

@@ -2,10 +2,14 @@ import { Workflow, CalendarDays, Globe2, Award, Menu } from 'lucide-react';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
 
+// Etiquetas cortas a propósito: son 5 columnas y Press Start 2P es una
+// tipografía ancha (~1em por carácter), así que arriba de 7 caracteres se
+// desborda en pantallas de 375px. "JORNADA" usa la misma palabra que el resto
+// de la app para la tanda de partidos.
 const TABS = [
-  { id: 'wizard' as View, icon: Workflow, label: 'HOME' },
-  { id: 'matches' as View, icon: CalendarDays, label: 'MATCH' },
-  { id: 'qualifiers' as View, icon: Globe2, label: 'QUALI' },
+  { id: 'wizard' as View, icon: Workflow, label: 'INICIO' },
+  { id: 'matches' as View, icon: CalendarDays, label: 'JORNADA' },
+  { id: 'qualifiers' as View, icon: Globe2, label: 'CLASIF' },
   { id: 'worldcup' as View, icon: Award, label: 'COPA' },
 ];
 
@@ -51,7 +55,7 @@ export function GameTabBar({ currentView, onViewChange, onStartPress, isPauseOpe
           aria-haspopup="dialog"
         >
           <Menu className={`w-5 h-5 ${isPauseOpen ? 'text-gold' : ''}`} />
-          START
+          MENÚ
         </button>
       </div>
     </nav>
