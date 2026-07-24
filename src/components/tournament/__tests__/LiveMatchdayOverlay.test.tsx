@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import type { Team } from '../../../types';
 import { LiveMatchdayOverlay } from '../LiveMatchdayOverlay';
 import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../../store/useLiveMatchdayStore';
+import { useMatchResultsStore } from '../../../store/useMatchResultsStore';
 import { useTournamentStore } from '../../../store/useTournamentStore';
 
 const teams: Team[] = [
@@ -37,6 +38,7 @@ function openSession(e: LiveMatchdayEntry = entry) {
 
 beforeEach(() => {
   useLiveMatchdayStore.setState({ session: null });
+  useMatchResultsStore.setState({ isOpen: false, results: [], title: '' });
   useTournamentStore.setState({ teams });
 });
 
@@ -60,5 +62,102 @@ describe('LiveMatchdayOverlay', () => {
     expect(screen.queryByLabelText('Goles de Argentina')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Goles de Brasil')).not.toBeInTheDocument();
     expect(screen.getByText('Sin goles')).toBeInTheDocument();
+  });
+
+  describe('pausa', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('frena el reloj y lo reanuda donde estaba', () => {
+      openSession();
+      render(<LiveMatchdayOverlay />);
+      act(() => vi.advanceTimersByTime(20 * 1000));
+      expect(screen.getByText("20'")).toBeInTheDocument();
+
+      act(() => screen.getByRole('button', { name: 'Pausar' }).click());
+      act(() => vi.advanceTimersByTime(30 * 1000));
+      expect(screen.getByText("20'")).toBeInTheDocument();
+
+      act(() => screen.getByRole('button', { name: 'Reanudar' }).click());
+      act(() => vi.advanceTimersByTime(5 * 1000));
+      expect(screen.getByText("25'")).toBeInTheDocument();
+    });
+
+    it('terminada la jornada ya no ofrece pausar', () => {
+      openSession();
+      render(<LiveMatchdayOverlay />);
+      act(() => screen.getByText('Saltar al final').click());
+
+      expect(screen.queryByRole('button', { name: /pausar|reanudar/i })).not.toBeInTheDocument();
+    });
+  });
+
+  it('marca FINAL en la tarjeta cuando el partido terminó', () => {
+    openSession();
+    render(<LiveMatchdayOverlay />);
+    // Acotado a la tarjeta: el reloj del header también dice FINAL.
+    expect(within(screen.getByTestId('live-card')).queryByText('FINAL')).not.toBeInTheDocument();
+
+    act(() => screen.getByText('Saltar al final').click());
+    expect(within(screen.getByTestId('live-card')).getByText('FINAL')).toBeInTheDocument();
+  });
+
+  it('resalta al equipo que va ganando', () => {
+    openSession();
+    render(<LiveMatchdayOverlay />);
+    act(() => screen.getByText('Saltar al final').click());
+
+    // 2-1: gana Argentina.
+    expect(screen.getByText('ARG')).toHaveClass('text-led');
+    expect(screen.getByText('BRA')).not.toHaveClass('text-led');
+  });
+
+  it('en un empate no resalta a ninguno', () => {
+    openSession({
+      ...entry,
+      timeline: {
+        goals: [
+          { minute: 12, side: 'home', homeScore: 1, awayScore: 0 },
+          { minute: 40, side: 'away', homeScore: 1, awayScore: 1 },
+        ],
+        finalHomeScore: 1,
+        finalAwayScore: 1,
+      },
+    });
+    render(<LiveMatchdayOverlay />);
+    act(() => screen.getByText('Saltar al final').click());
+
+    expect(screen.getByText('ARG')).not.toHaveClass('text-led');
+    expect(screen.getByText('BRA')).not.toHaveClass('text-led');
+  });
+
+  it('es un diálogo modal rotulado con el título de la jornada', () => {
+    openSession();
+    render(<LiveMatchdayOverlay />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveAccessibleName(/Continental · Octavos/);
+  });
+
+  it('Escape cierra la sesión y muestra el resumen', () => {
+    openSession();
+    render(<LiveMatchdayOverlay />);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+
+    expect(useLiveMatchdayStore.getState().session).toBeNull();
+    expect(useMatchResultsStore.getState().isOpen).toBe(true);
+  });
+
+  it('bloquea el scroll del fondo mientras está abierto', () => {
+    openSession();
+    const { unmount } = render(<LiveMatchdayOverlay />);
+    expect(document.body.style.overflow).toBe('hidden');
+
+    unmount();
+    expect(document.body.style.overflow).not.toBe('hidden');
   });
 });

@@ -4,7 +4,8 @@ import { RegionView } from './RegionView';
 import { GroupView } from './GroupView';
 import { RunnersUpModal } from './RunnersUpModal';
 import type { Region, Group } from '../../types';
-import { Globe2, Filter, Trophy } from 'lucide-react';
+import { Globe2, Filter, Trophy, Lock } from 'lucide-react';
+import { isQualifiersDrawn } from '../../utils/cycleProgress';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
@@ -14,9 +15,10 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 interface QualifiersViewProps {
   initialRegion?: string;
   initialGroupId?: string;
+  onNavigate?: (view: string) => void;
 }
 
-export function QualifiersView({ initialRegion, initialGroupId }: QualifiersViewProps = {}) {
+export function QualifiersView({ initialRegion, initialGroupId, onNavigate }: QualifiersViewProps = {}) {
   const { teams, currentTournament, simulateMatch } = useTournamentStore();
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>(
     (initialRegion as Region) || 'all'
@@ -61,6 +63,19 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
         icon={Globe2}
         title="Sin torneo activo"
         description="Creá un torneo desde el selector para ver las clasificatorias."
+      />
+    );
+  }
+
+  // Entre que termina Confederaciones y el sorteo de esta fase, los grupos no
+  // existen todavía: sin esto la pantalla mostraba 0/0 sin explicar por qué.
+  if (!isQualifiersDrawn(currentTournament)) {
+    return (
+      <EmptyState
+        icon={Lock}
+        title="Clasificatorias sin sortear"
+        description="Cuando termine la Copa Confederaciones, sorteá las clasificatorias desde Progreso para armar los grupos."
+        action={{ label: 'Ir a Progreso', onClick: () => onNavigate?.('wizard') }}
       />
     );
   }

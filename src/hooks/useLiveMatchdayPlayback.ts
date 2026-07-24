@@ -12,6 +12,9 @@ export interface LiveMatchdayPlaybackState {
   skipToEnd: () => void;
   /** true una vez revelados los penales (o si no había, al terminar). */
   penaltiesRevealed: boolean;
+  /** Reloj frenado: ni corre el minuto ni se revelan los penales. */
+  isPaused: boolean;
+  togglePause: () => void;
 }
 
 /**
@@ -29,6 +32,7 @@ export function useLiveMatchdayPlayback(
   const [phase, setPhase] = useState<LivePhase>('playing');
   const [penaltiesRevealed, setPenaltiesRevealed] = useState(false);
   const [speed, setSpeed] = useState<LiveSpeed>(initialSpeed);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Reset durante el render al cambiar de sesión (patrón React "adjusting
   // state when a prop changes"), igual que useLiveMatchPlayback.
@@ -38,16 +42,17 @@ export function useLiveMatchdayPlayback(
     setMinute(0);
     setPhase('playing');
     setPenaltiesRevealed(false);
+    setIsPaused(false);
   }
 
   // Reloj compartido.
   useEffect(() => {
-    if (!sessionKey || phase !== 'playing') return;
+    if (!sessionKey || phase !== 'playing' || isPaused) return;
     const id = setInterval(() => {
       setMinute((prev) => (prev + 1 >= MATCH_MINUTES ? MATCH_MINUTES : prev + 1));
     }, 1000 / speed);
     return () => clearInterval(id);
-  }, [sessionKey, phase, speed]);
+  }, [sessionKey, phase, speed, isPaused]);
 
   // Transición al llegar a los 90'.
   useEffect(() => {
@@ -59,22 +64,26 @@ export function useLiveMatchdayPlayback(
     }
   }, [minute, sessionKey, phase, hasAnyPenalties]);
 
-  // Ventana de suspenso única para todos los penales de la jornada.
+  // Ventana de suspenso única para todos los penales de la jornada. En pausa
+  // el suspenso también espera: al reanudar arranca de nuevo la ventana.
   useEffect(() => {
-    if (phase !== 'penalties') return;
+    if (phase !== 'penalties' || isPaused) return;
     const id = setTimeout(() => {
       setPenaltiesRevealed(true);
       setPhase('finished');
     }, PENALTY_REVEAL_MS / speed);
     return () => clearTimeout(id);
-  }, [phase, speed]);
+  }, [phase, speed, isPaused]);
 
   const skipToEnd = useCallback(() => {
     if (!sessionKey) return;
     setMinute(MATCH_MINUTES);
     setPenaltiesRevealed(true);
     setPhase('finished');
+    setIsPaused(false);
   }, [sessionKey]);
 
-  return { phase, minute, speed, setSpeed, skipToEnd, penaltiesRevealed };
+  const togglePause = useCallback(() => setIsPaused((p) => !p), []);
+
+  return { phase, minute, speed, setSpeed, skipToEnd, penaltiesRevealed, isPaused, togglePause };
 }

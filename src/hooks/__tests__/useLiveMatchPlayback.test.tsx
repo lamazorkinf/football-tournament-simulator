@@ -75,6 +75,37 @@ describe('useLiveMatchPlayback', () => {
     expect(result.current.penalties).toEqual({ homeScore: 5, awayScore: 4 });
   });
 
+  it('en pausa el reloj no avanza y no revela goles nuevos', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timeline, 1));
+    act(() => vi.advanceTimersByTime(5 * 1000));
+
+    act(() => result.current.togglePause());
+    expect(result.current.isPaused).toBe(true);
+    act(() => vi.advanceTimersByTime(30 * 1000));
+    expect(result.current.minute).toBe(5);
+    // El gol del minuto 10 no se revela mientras el reloj está frenado.
+    expect(result.current.displayHomeScore).toBe(0);
+
+    act(() => result.current.togglePause());
+    act(() => vi.advanceTimersByTime(5 * 1000));
+    expect(result.current.minute).toBe(10);
+    expect(result.current.displayHomeScore).toBe(1);
+  });
+
+  it('un timeline nuevo arranca sin pausa', () => {
+    const { result, rerender } = renderHook(
+      ({ t }: { t: LiveTimeline }) => useLiveMatchPlayback(t, 1),
+      { initialProps: { t: timeline } },
+    );
+    act(() => result.current.togglePause());
+    expect(result.current.isPaused).toBe(true);
+
+    rerender({ t: timelineWithPens });
+    expect(result.current.isPaused).toBe(false);
+    act(() => vi.advanceTimersByTime(5 * 1000));
+    expect(result.current.minute).toBe(5);
+  });
+
   it('al cambiar de timeline (sin desmontar) no pinta un frame con spoiler', () => {
     const first: LiveTimeline = {
       goals: [{ minute: 10, side: 'home', homeScore: 1, awayScore: 0 }],

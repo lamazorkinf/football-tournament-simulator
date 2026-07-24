@@ -36,6 +36,9 @@ export function MatchResultsModal() {
     <div
       className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4"
       onClick={close}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
     >
       <div
         className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-3xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden"

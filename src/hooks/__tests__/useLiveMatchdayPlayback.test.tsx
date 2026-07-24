@@ -63,6 +63,61 @@ describe('useLiveMatchdayPlayback', () => {
     expect(result.current.minute).toBe(5);
   });
 
+  it('en pausa el reloj no avanza, y al reanudar sigue donde estaba', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback('j1', false));
+    act(() => vi.advanceTimersByTime(20 * 1000));
+    expect(result.current.minute).toBe(20);
+
+    act(() => result.current.togglePause());
+    expect(result.current.isPaused).toBe(true);
+    act(() => vi.advanceTimersByTime(30 * 1000));
+    expect(result.current.minute).toBe(20);
+
+    act(() => result.current.togglePause());
+    expect(result.current.isPaused).toBe(false);
+    act(() => vi.advanceTimersByTime(5 * 1000));
+    expect(result.current.minute).toBe(25);
+  });
+
+  it('la pausa también frena el suspenso de los penales', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback('j1', true));
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    expect(result.current.phase).toBe('penalties');
+
+    act(() => result.current.togglePause());
+    act(() => vi.advanceTimersByTime(5000));
+    expect(result.current.phase).toBe('penalties');
+    expect(result.current.penaltiesRevealed).toBe(false);
+
+    act(() => result.current.togglePause());
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.phase).toBe('finished');
+  });
+
+  it('saltar al final desde la pausa termina la jornada', () => {
+    const { result } = renderHook(() => useLiveMatchdayPlayback('j1', true));
+    act(() => result.current.togglePause());
+    act(() => result.current.skipToEnd());
+
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.minute).toBe(90);
+    expect(result.current.isPaused).toBe(false);
+  });
+
+  it('una sesión nueva arranca sin pausa', () => {
+    const { result, rerender } = renderHook(
+      ({ key }: { key: string | null }) => useLiveMatchdayPlayback(key, false),
+      { initialProps: { key: 'j1' as string | null } },
+    );
+    act(() => result.current.togglePause());
+    expect(result.current.isPaused).toBe(true);
+
+    rerender({ key: 'j2' });
+    expect(result.current.isPaused).toBe(false);
+    act(() => vi.advanceTimersByTime(5000));
+    expect(result.current.minute).toBe(5);
+  });
+
   it('limpia timers al desmontar', () => {
     const { unmount } = renderHook(() => useLiveMatchdayPlayback('j1', true));
     unmount();

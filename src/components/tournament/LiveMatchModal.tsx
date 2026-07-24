@@ -5,7 +5,7 @@ import { buildMatchTimeline, hashSeed, type LiveTimeline } from '../../core/live
 import { useLiveMatchPlayback, type LiveSpeed } from '../../hooks/useLiveMatchPlayback';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
-import { Radio, X } from 'lucide-react';
+import { Pause, Play, Radio, X } from 'lucide-react';
 import type { SimulatedMatchOutcome } from '../../types';
 
 const SPEEDS: LiveSpeed[] = [1, 2, 4];
@@ -77,6 +77,23 @@ export function LiveMatchModal() {
     void run();
   }, [activeMatch, simulateMatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch]);
 
+  // Cierre con Escape y bloqueo del scroll del fondo, como el resto de los
+  // modales. El partido ya está simulado y guardado: cerrar antes de los 90'
+  // solo se saltea la reproducción.
+  useEffect(() => {
+    if (!activeMatch) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLiveMatch();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [activeMatch, closeLiveMatch]);
+
   if (!activeMatch) return null;
 
   const home = teams.find((t) => t.id === activeMatch.homeTeamId);
@@ -85,7 +102,12 @@ export function LiveMatchModal() {
     playback.phase === 'finished' ? 'FINAL' : playback.phase === 'penalties' ? 'PENALES' : `${playback.minute}'`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`En vivo — ${home?.name ?? activeMatch.homeTeamId} vs ${away?.name ?? activeMatch.awayTeamId}`}
+    >
       <div className="w-full max-w-lg bg-grass-dark border-4 border-line shadow-hard-panel p-6 space-y-6">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-gold font-arcade text-xs uppercase">
@@ -163,9 +185,18 @@ export function LiveMatchModal() {
                   Cerrar
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" onClick={playback.skipToEnd}>
-                  Saltar al final
-                </Button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={playback.togglePause}
+                    aria-label={playback.isPaused ? 'Reanudar' : 'Pausar'}
+                    className="px-2 py-1 min-h-9 border-2 border-grass text-grass-soft hover:text-white hover:bg-grass/40 transition-colors"
+                  >
+                    {playback.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                  </button>
+                  <Button variant="outline" size="sm" onClick={playback.skipToEnd}>
+                    Saltar al final
+                  </Button>
+                </div>
               )}
             </div>
           </>

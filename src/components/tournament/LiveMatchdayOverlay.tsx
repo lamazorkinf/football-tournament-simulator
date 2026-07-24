@@ -6,7 +6,8 @@ import { useLiveMatchdayPlayback, type LiveMatchdayPlaybackState } from '../../h
 import type { LiveSpeed } from '../../hooks/useLiveMatchPlayback';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
-import { Radio, Star, X } from 'lucide-react';
+import { Pause, Play, Radio, Star, X } from 'lucide-react';
+import { useEffect } from 'react';
 import type { Team } from '../../types';
 
 const SPEEDS: LiveSpeed[] = [1, 2, 4];
@@ -32,6 +33,25 @@ export function LiveMatchdayOverlay() {
     : null;
   const playback = useLiveMatchdayPlayback(sessionKey, hasAnyPenalties);
 
+  // Cierre con Escape y bloqueo del scroll del fondo, como el resto de los
+  // modales. Cerrar en cualquier momento es seguro: los resultados ya están
+  // comprometidos y salir muestra el resumen completo.
+  useEffect(() => {
+    if (!session) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      closeSession();
+      showResults(session.allResults, session.title);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [session, closeSession, showResults]);
+
   if (!session) return null;
 
   const finishAndShowSummary = () => {
@@ -49,7 +69,12 @@ export function LiveMatchdayOverlay() {
       : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 bg-black/90 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`En vivo — ${session.title}`}
+    >
       {/* Header sticky: estado + reloj compartido + controles */}
       <div className="sticky top-0 z-10 bg-grass-dark border-b-4 border-grass px-4 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         <div className="flex flex-wrap items-center justify-between gap-3 max-w-7xl mx-auto">
@@ -76,9 +101,18 @@ export function LiveMatchdayOverlay() {
               ))}
             </div>
             {playback.phase !== 'finished' && (
-              <Button variant="outline" size="sm" onClick={playback.skipToEnd}>
-                Saltar al final
-              </Button>
+              <>
+                <button
+                  onClick={playback.togglePause}
+                  aria-label={playback.isPaused ? 'Reanudar' : 'Pausar'}
+                  className="px-2 py-1 min-h-9 border-2 border-grass text-grass-soft hover:text-white hover:bg-grass/40 transition-colors"
+                >
+                  {playback.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                </button>
+                <Button variant="outline" size="sm" onClick={playback.skipToEnd}>
+                  Saltar al final
+                </Button>
+              </>
             )}
             <button
               onClick={finishAndShowSummary}
@@ -133,6 +167,14 @@ function LiveGridCard({
   const showPenalties = playback.penaltiesRevealed && entry.timeline.penalties;
   const hasGoals = score.homeGoalMinutes.length > 0 || score.awayGoalMinutes.length > 0;
 
+  // Quién va ganando ahora mismo. Con penales manda el punto: un 1-1 que se
+  // definió desde los doce pasos no es empate.
+  const pens = showPenalties ? entry.timeline.penalties! : null;
+  const homeLeads = pens ? pens.homeScore > pens.awayScore : score.homeScore > score.awayScore;
+  const awayLeads = pens ? pens.awayScore > pens.homeScore : score.awayScore > score.homeScore;
+  const teamClass = (leads: boolean) =>
+    `font-arcade text-[10px] uppercase truncate ${leads ? 'text-led' : 'text-white'}`;
+
   // Los minutos van del lado del equipo que marcó; el del minuto en curso se
   // resalta para que se note quién acaba de convertir.
   const minuteList = (minutes: number[]) =>
@@ -147,6 +189,7 @@ function LiveGridCard({
 
   return (
     <div
+      data-testid="live-card"
       className={`bg-grass-dark border-2 p-3 space-y-2 transition-colors ${
         entry.isFavorite ? 'border-gold' : 'border-grass'
       }`}
@@ -158,15 +201,18 @@ function LiveGridCard({
           {entry.region ? `${entry.region} • ` : ''}
           {entry.groupName}
         </span>
+        {/* Con 20 tarjetas, el reloj del header no alcanza para saber si lo que
+            estás viendo es el resultado definitivo. */}
+        {playback.phase === 'finished' && (
+          <span className="ml-auto font-arcade text-[9px] text-gold flex-shrink-0">FINAL</span>
+        )}
       </div>
 
       {/* Equipos + marcador */}
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {home && <TeamFlag teamId={home.id} teamName={home.name} size={24} />}
-          <span className="font-arcade text-[10px] text-white uppercase truncate">
-            {home?.id.toUpperCase() ?? entry.homeTeamId}
-          </span>
+          <span className={teamClass(homeLeads)}>{home?.id.toUpperCase() ?? entry.homeTeamId}</span>
         </div>
         <span
           className={`font-terminal text-2xl tabular-nums whitespace-nowrap px-1 ${
@@ -176,9 +222,7 @@ function LiveGridCard({
           {score.homeScore} - {score.awayScore}
         </span>
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className="font-arcade text-[10px] text-white uppercase truncate">
-            {away?.id.toUpperCase() ?? entry.awayTeamId}
-          </span>
+          <span className={teamClass(awayLeads)}>{away?.id.toUpperCase() ?? entry.awayTeamId}</span>
           {away && <TeamFlag teamId={away.id} teamName={away.name} size={24} />}
         </div>
       </div>

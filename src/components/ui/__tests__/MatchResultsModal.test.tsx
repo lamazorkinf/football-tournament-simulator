@@ -119,6 +119,15 @@ describe('MatchResultsModal', () => {
     expect(screen.getByText('Semifinal')).toBeInTheDocument();
   });
 
+  it('es un diálogo modal rotulado con el título del resumen', () => {
+    useMatchResultsStore.getState().showResults([result('Islandia', 'Malta')], 'Jornada 1');
+    render(<MatchResultsModal />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveAccessibleName(/Jornada 1/);
+  });
+
   it('sin favoritos respeta el orden de la jornada', () => {
     useMatchResultsStore.getState().showResults(
       [result('Islandia', 'Malta'), result('Gales', 'Chipre')],

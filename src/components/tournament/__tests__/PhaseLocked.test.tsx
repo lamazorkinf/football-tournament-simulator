@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { ConfederationsCupView } from '../ConfederationsCupView';
 import { ContinentalView } from '../ContinentalView';
+import { QualifiersView } from '../QualifiersView';
+import { useTournamentStore } from '../../../store/useTournamentStore';
 import type { Region } from '../../../types';
 import {
   makeDrawnContinentalCycle,
@@ -48,6 +50,56 @@ describe('Fase bloqueada', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /ir a progreso/i }));
     expect(onNavigate).toHaveBeenCalledWith('wizard');
+  });
+
+  it('explica el bloqueo cuando las clasificatorias todavía no se sortearon', async () => {
+    // Ciclo con continental sorteada: las clasificatorias todavía no existen.
+    const { cycle, teams } = makeDrawnContinentalCycle();
+    useTournamentStore.setState({ currentTournament: cycle, teams });
+    const onNavigate = vi.fn();
+
+    render(<QualifiersView onNavigate={onNavigate} />);
+
+    expect(screen.getByText(/clasificatorias sin sortear/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /ir a progreso/i }));
+    expect(onNavigate).toHaveBeenCalledWith('wizard');
+  });
+
+  it('NO tapa las clasificatorias ya sorteadas', () => {
+    const { cycle, teams } = makeDrawnContinentalCycle();
+    const sorteadas = {
+      ...cycle,
+      qualifiers: {
+        ...cycle.qualifiers,
+        Europe: [
+          {
+            id: 'g1',
+            name: 'Grupo A',
+            region: 'Europe' as Region,
+            teamIds: [teams[0].id, teams[1].id],
+            matches: [
+              {
+                id: 'm1',
+                homeTeamId: teams[0].id,
+                awayTeamId: teams[1].id,
+                homeScore: null,
+                awayScore: null,
+                isPlayed: false,
+                matchday: 1,
+              },
+            ],
+            standings: [],
+            isDrawComplete: true,
+          },
+        ],
+      },
+    };
+    useTournamentStore.setState({ currentTournament: sorteadas, teams });
+
+    render(<QualifiersView onNavigate={vi.fn()} />);
+
+    expect(screen.queryByText(/clasificatorias sin sortear/i)).not.toBeInTheDocument();
   });
 
   // La dirección peligrosa: que el EmptyState tape datos reales. Con la fase

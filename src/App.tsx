@@ -207,6 +207,7 @@ function App() {
           <QualifiersView
             initialRegion={viewOptions.region}
             initialGroupId={viewOptions.groupId}
+            onNavigate={handleNavigate}
           />
         ) : currentView === 'tournaments' ? (
           <TournamentHistory />

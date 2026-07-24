@@ -17,6 +17,9 @@ export interface LivePlaybackState {
   speed: LiveSpeed;
   setSpeed: (s: LiveSpeed) => void;
   skipToEnd: () => void;
+  /** Reloj frenado: ni corre el minuto ni se revelan los penales. */
+  isPaused: boolean;
+  togglePause: () => void;
 }
 
 export function useLiveMatchPlayback(
@@ -27,6 +30,7 @@ export function useLiveMatchPlayback(
   const [phase, setPhase] = useState<LivePhase>('playing');
   const [penaltiesShown, setPenaltiesShown] = useState(false);
   const [speed, setSpeed] = useState<LiveSpeed>(initialSpeed);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Reset durante el render al recibir un timeline nuevo (patrón React
   // "adjusting state when a prop changes"): evita el frame intermedio donde
@@ -37,16 +41,17 @@ export function useLiveMatchPlayback(
     setMinute(0);
     setPhase('playing');
     setPenaltiesShown(false);
+    setIsPaused(false);
   }
 
   // Reloj: incrementa el minuto mientras se juega.
   useEffect(() => {
-    if (!timeline || phase !== 'playing') return;
+    if (!timeline || phase !== 'playing' || isPaused) return;
     const id = setInterval(() => {
       setMinute((prev) => (prev + 1 >= MATCH_MINUTES ? MATCH_MINUTES : prev + 1));
     }, 1000 / speed);
     return () => clearInterval(id);
-  }, [timeline, phase, speed]);
+  }, [timeline, phase, speed, isPaused]);
 
   // Transición al llegar a los 90'. Reacciona al reloj externo (setInterval
   // de arriba), no es estado derivable en el render.
@@ -58,22 +63,26 @@ export function useLiveMatchPlayback(
     }
   }, [minute, timeline, phase]);
 
-  // Suspenso de penales y cierre.
+  // Suspenso de penales y cierre. En pausa el suspenso también espera: al
+  // reanudar arranca de nuevo la ventana completa.
   useEffect(() => {
-    if (phase !== 'penalties') return;
+    if (phase !== 'penalties' || isPaused) return;
     const id = setTimeout(() => {
       setPenaltiesShown(true);
       setPhase('finished');
     }, PENALTY_REVEAL_MS / speed);
     return () => clearTimeout(id);
-  }, [phase, speed]);
+  }, [phase, speed, isPaused]);
 
   const skipToEnd = useCallback(() => {
     if (!timeline) return;
     setMinute(MATCH_MINUTES);
     setPenaltiesShown(Boolean(timeline.penalties));
     setPhase('finished');
+    setIsPaused(false);
   }, [timeline]);
+
+  const togglePause = useCallback(() => setIsPaused((p) => !p), []);
 
   const revealedGoals = timeline ? timeline.goals.filter((g) => g.minute <= minute) : [];
   const last = revealedGoals[revealedGoals.length - 1];
@@ -88,5 +97,7 @@ export function useLiveMatchPlayback(
     speed,
     setSpeed,
     skipToEnd,
+    isPaused,
+    togglePause,
   };
 }

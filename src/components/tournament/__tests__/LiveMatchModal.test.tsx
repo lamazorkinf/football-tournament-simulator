@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { Team, SimulatedMatchOutcome } from '../../../types';
 import { LiveMatchModal } from '../LiveMatchModal';
 import { useLiveMatchStore } from '../../../store/useLiveMatchStore';
@@ -63,6 +63,55 @@ describe('LiveMatchModal', () => {
     });
     await screen.findByText('Saltar al final');
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('pausa el reloj y lo reanuda', async () => {
+    render(<LiveMatchModal />);
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({
+        matchId: 'm4', homeTeamId: 'h', awayTeamId: 'a', kind: 'continental',
+      });
+    });
+    await screen.findByText('Saltar al final');
+
+    act(() => screen.getByRole('button', { name: 'Pausar' }).click());
+    expect(screen.getByRole('button', { name: 'Reanudar' })).toBeInTheDocument();
+
+    act(() => screen.getByRole('button', { name: 'Reanudar' }).click());
+    expect(screen.getByRole('button', { name: 'Pausar' })).toBeInTheDocument();
+  });
+
+  it('terminado el partido ya no ofrece pausar', async () => {
+    render(<LiveMatchModal />);
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({
+        matchId: 'm5', homeTeamId: 'h', awayTeamId: 'a', kind: 'continental',
+      });
+    });
+    const skip = await screen.findByText('Saltar al final');
+    act(() => skip.click());
+
+    expect(screen.queryByRole('button', { name: /pausar|reanudar/i })).not.toBeInTheDocument();
+  });
+
+  it('es un diálogo modal, se cierra con Escape y bloquea el scroll del fondo', async () => {
+    render(<LiveMatchModal />);
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({
+        matchId: 'm6', homeTeamId: 'h', awayTeamId: 'a', kind: 'continental',
+      });
+    });
+    await screen.findByText('Saltar al final');
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(document.body.style.overflow).toBe('hidden');
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+    expect(useLiveMatchStore.getState().activeMatch).toBeNull();
+    expect(document.body.style.overflow).not.toBe('hidden');
   });
 
   it('descarta el resultado de un partido si se abrió otro antes de resolver', async () => {
