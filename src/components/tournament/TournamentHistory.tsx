@@ -275,8 +275,8 @@ export function TournamentHistory() {
             <p>Esta acción no se puede deshacer.</p>
           </>
         }
-        onConfirm={() => {
-          if (pendingDelete) deleteTournament(pendingDelete.id);
+        onConfirm={async () => {
+          if (pendingDelete) await deleteTournament(pendingDelete.id);
         }}
       />
     </div>

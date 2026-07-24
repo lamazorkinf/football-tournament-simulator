@@ -582,8 +582,8 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
             <p>Esta acción no se puede deshacer.</p>
           </>
         }
-        onConfirm={() => {
-          regenerateWorldCupDrawAndFixtures();
+        onConfirm={async () => {
+          await regenerateWorldCupDrawAndFixtures();
           toast.success('Sorteo del Mundial regenerado');
         }}
       />

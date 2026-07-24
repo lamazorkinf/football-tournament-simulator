@@ -34,6 +34,7 @@ describe('TournamentHistory', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^eliminar$/i }));
     expect(deleteTournament).toHaveBeenCalledTimes(1);
+    expect(deleteTournament).toHaveBeenCalledWith('a');
   });
 
   it('cancelar deja el torneo intacto', async () => {
