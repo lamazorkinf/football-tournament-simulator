@@ -1,10 +1,13 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/utils';
+import { Spinner } from './Spinner';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
+  /** Muestra el indicador de carga, deshabilita y marca aria-busy. */
+  loading?: boolean;
   className?: string;
 }
 
@@ -14,9 +17,10 @@ export function Button({
   size = 'md',
   className,
   disabled,
+  loading = false,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center font-arcade uppercase leading-none border-4 transition-none disabled:opacity-50 disabled:cursor-not-allowed active:translate-x-1 active:translate-y-1 active:shadow-none';
+  const baseStyles = 'inline-flex items-center justify-center gap-2 font-arcade uppercase leading-none border-4 transition-none disabled:opacity-50 disabled:cursor-not-allowed active:translate-x-1 active:translate-y-1 active:shadow-none';
 
   const variantStyles = {
     primary: 'bg-gold text-night border-white shadow-hard-btn hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0_#7a2b0e]',
@@ -35,9 +39,11 @@ export function Button({
   return (
     <button
       className={cn(baseStyles, variantStyles[variant], sizeStyles[size], className)}
-      disabled={disabled}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
     >
+      {loading && <Spinner size="sm" />}
       {children}
     </button>
   );
