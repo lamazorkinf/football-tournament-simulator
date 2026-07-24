@@ -1403,15 +1403,27 @@ export const useTournamentStore = create<TournamentState>()(
           isQualifiersComplete: true,
         };
 
-        // Save World Cup groups and matches to database
+        // Save World Cup groups and matches to database. Se borra primero
+        // (misma red de seguridad que advanceToWorldCup): el guard de arriba
+        // solo mira la memoria, así que si la base quedó con un Mundial
+        // huérfano de un intento anterior fallido, un sorteo manual→manual
+        // chocaría contra el UNIQUE(tournament_id, name) y uno
+        // automático→manual (o viceversa) duplicaría los 16 grupos sin
+        // chocar, porque "Grupo A" y "Group A" son nombres distintos.
         if (isSupabaseConfigured()) {
           normalizedWorldCupService
-            .createWorldCupGroups(state.currentTournament.id, worldCupGroups)
+            .deleteWorldCupData(state.currentTournament.id)
+            .then(() =>
+              normalizedWorldCupService.createWorldCupGroups(state.currentTournament!.id, worldCupGroups)
+            )
             .then(() => {
               console.log('✅ World Cup groups and matches saved to database');
             })
             .catch((error: unknown) => {
               console.error('❌ Error saving World Cup groups to database:', error);
+              useToastStore
+                .getState()
+                .error('Error al guardar el sorteo manual del Mundial. Intentá de nuevo.');
             });
         }
 
