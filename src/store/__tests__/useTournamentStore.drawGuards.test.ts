@@ -74,9 +74,13 @@ vi.mock('../../services/teamsService', () => ({
 
 const { useTournamentStore } = await import('../useTournamentStore');
 const { toCycle } = await import('../../core/cycle');
-const { baseTournament, makeDrawnContinentalCycle, makeDrawnConfedCycle, teamsByRegion } = await import(
-  '../../test/fixtures/cycle'
-);
+const {
+  baseTournament,
+  makeDrawnContinentalCycle,
+  makeDrawnConfedCycle,
+  cycleWithContinentalDone,
+  teamsByRegion,
+} = await import('../../test/fixtures/cycle');
 
 const REGIONS: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
 
@@ -215,6 +219,35 @@ function makeGroupsReadyForKnockout(): { groups: WorldCupGroup[]; teams: Team[] 
     });
   }
   return { groups, teams };
+}
+
+/**
+ * Ciclo SIN sortear (continental todavía vacío) con un plantel real por
+ * región: `drawContinentalStage` exige entre 32 y 64 equipos por confederación
+ * (getContinentalByeCount), así que `makeTeams()` (5 por región) no alcanza.
+ */
+function freshContinentalCycle(): { cycle: Cycle; teams: Team[] } {
+  const byRegion = teamsByRegion();
+  const teams = REGIONS.flatMap((r) => byRegion[r]);
+  return { cycle: toCycle(baseTournament()), teams };
+}
+
+/** Un grupo del Mundial con un partido sin jugar: rompe `areGroupsComplete`. */
+function withUnplayedMatch(group: WorldCupGroup): WorldCupGroup {
+  return {
+    ...group,
+    matches: [
+      {
+        id: `${group.id}-pending`,
+        homeTeamId: group.teamIds[0],
+        awayTeamId: group.teamIds[1],
+        homeScore: null,
+        awayScore: null,
+        isPlayed: false,
+        stage: 'world-cup-group',
+      },
+    ],
+  };
 }
 
 describe('generateDrawAndFixtures — guard de sorteo ya hecho', () => {
@@ -669,6 +702,328 @@ describe('guards del resto de los sorteos', () => {
     store().drawConfederations();
 
     expect(store().currentTournament).toBe(done);
+  });
+});
+
+/**
+ * Espejo de 'generateDrawAndFixtures — valor de retorno' para las otras cinco
+ * acciones de sorteo que devuelven boolean: cada camino de rechazo (guard
+ * temprano) tiene que dar `false`, y el camino feliz `true`. Los tests de UI
+ * mockean estas acciones del store, así que sólo prueban que el handler
+ * ramifica sobre el booleano recibido — nadie prueba, del lado del store, que
+ * el booleano que produce sea el correcto.
+ */
+describe('valor de retorno de advanceToWorldCup, advanceToWorldCupWithManualDraw, advanceToKnockout, drawContinental y drawConfederations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isSupabaseConfigured.mockReturnValue(true);
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  afterEach(() => {
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  describe('advanceToWorldCup', () => {
+    it('devuelve false si no hay torneo actual', async () => {
+      useTournamentStore.setState({ currentTournament: null });
+
+      expect(await store().advanceToWorldCup()).toBe(false);
+    });
+
+    it('devuelve false si el Mundial ya está sorteado', async () => {
+      const { cycle, teams } = makeFullyQualifiedCycle();
+      const withWorldCup: Cycle = {
+        ...cycle,
+        worldCup: {
+          groups: [{ id: 'wc-g1', name: 'Grupo A', teamIds: ['a', 'b', 'c', 'd'], matches: [], standings: [] }],
+          knockout: {
+            roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [],
+            thirdPlace: null, final: null,
+          },
+          qualifiedTeamIds: [],
+        },
+      };
+      useTournamentStore.setState({
+        currentTournament: withWorldCup, tournaments: [withWorldCup], currentTournamentId: withWorldCup.id, teams,
+      });
+
+      expect(await store().advanceToWorldCup()).toBe(false);
+    });
+
+    it('devuelve false si ya hay un sorteo en curso', async () => {
+      const { cycle, teams } = makeFullyQualifiedCycle();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams, isDrawing: true,
+      });
+
+      expect(await store().advanceToWorldCup()).toBe(false);
+    });
+
+    it('devuelve false si las clasificatorias no están completas', async () => {
+      // 20 partidos por grupo, ninguno jugado: allMatchesPlayed queda en false.
+      setUpTournament(20);
+
+      expect(await store().advanceToWorldCup()).toBe(false);
+    });
+
+    it('devuelve true cuando el sorteo se completa de verdad', async () => {
+      const { cycle, teams } = makeFullyQualifiedCycle();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+      });
+
+      expect(await store().advanceToWorldCup()).toBe(true);
+    });
+  });
+
+  describe('advanceToWorldCupWithManualDraw', () => {
+    const manualGroups = (count = 16): WorldCupGroup[] =>
+      Array.from({ length: count }, (_, g) => ({
+        id: `manual-${g}`,
+        name: `Grupo ${g}`,
+        teamIds: Array.from({ length: 4 }, (_, t) => `m-${g}-${t}`),
+        matches: [],
+        standings: [],
+      }));
+
+    it('devuelve false si no hay torneo actual', () => {
+      useTournamentStore.setState({ currentTournament: null });
+
+      expect(store().advanceToWorldCupWithManualDraw(manualGroups())).toBe(false);
+    });
+
+    it('devuelve false si el Mundial ya está sorteado', () => {
+      const cycle = setUpTournament(0);
+      const withWorldCup: Cycle = {
+        ...cycle,
+        worldCup: {
+          groups: [{ id: 'wc-g1', name: 'Grupo A', teamIds: ['a', 'b', 'c', 'd'], matches: [], standings: [] }],
+          knockout: {
+            roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [],
+            thirdPlace: null, final: null,
+          },
+          qualifiedTeamIds: [],
+        },
+      };
+      useTournamentStore.setState({ currentTournament: withWorldCup, tournaments: [withWorldCup] });
+
+      expect(store().advanceToWorldCupWithManualDraw(manualGroups())).toBe(false);
+    });
+
+    it('devuelve false si ya hay un sorteo en curso', () => {
+      setUpTournament(0);
+      useTournamentStore.setState({ isDrawing: true });
+
+      expect(store().advanceToWorldCupWithManualDraw(manualGroups())).toBe(false);
+    });
+
+    it('devuelve false si no llegan 64 equipos', () => {
+      setUpTournament(0);
+
+      expect(store().advanceToWorldCupWithManualDraw(manualGroups(1))).toBe(false);
+    });
+
+    it('devuelve true aunque la persistencia falle: la acción es sincrónica y fire-and-forget', async () => {
+      setUpTournament(0);
+      createWorldCupGroups.mockRejectedValue(new Error('network down'));
+
+      const result = store().advanceToWorldCupWithManualDraw(manualGroups());
+
+      // El sorteo ya quedó calculado y aplicado en memoria antes de que la
+      // persistencia (fire-and-forget, encadenada con `.then`) siquiera
+      // arranque: un fallo de red no puede cambiar un `true` ya devuelto.
+      expect(result).toBe(true);
+
+      // Deja correr la microcola del `.then().catch()` para no dejar un
+      // rechazo sin drenar colgando al final del test.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  });
+
+  describe('advanceToKnockout', () => {
+    it('devuelve false si no hay Mundial', async () => {
+      const cycle = setUpTournament(0);
+      useTournamentStore.setState({ currentTournament: { ...cycle, worldCup: null } });
+
+      expect(await store().advanceToKnockout()).toBe(false);
+    });
+
+    it('devuelve false si los dieciseisavos ya están generados', async () => {
+      const { groups, teams } = makeGroupsReadyForKnockout();
+      const cycle = setUpTournament(0);
+      const withKnockout: Cycle = {
+        ...cycle,
+        worldCup: {
+          groups,
+          knockout: {
+            roundOf32: [
+              { id: 'ko-1', homeTeamId: 'a', awayTeamId: 'b', homeScore: null, awayScore: null, isPlayed: false, round: 'round-of-32' },
+            ],
+            roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null,
+          },
+          qualifiedTeamIds: [],
+        },
+      };
+      useTournamentStore.setState({
+        currentTournament: withKnockout, tournaments: [withKnockout], currentTournamentId: withKnockout.id, teams,
+      });
+
+      expect(await store().advanceToKnockout()).toBe(false);
+    });
+
+    it('devuelve false si ya hay un sorteo en curso', async () => {
+      const { groups, teams } = makeGroupsReadyForKnockout();
+      const cycle = setUpTournament(0);
+      const withGroups: Cycle = {
+        ...cycle,
+        worldCup: {
+          groups,
+          knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+          qualifiedTeamIds: [],
+        },
+      };
+      useTournamentStore.setState({
+        currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams, isDrawing: true,
+      });
+
+      expect(await store().advanceToKnockout()).toBe(false);
+    });
+
+    it('devuelve false si la fase de grupos no está completa', async () => {
+      const { groups, teams } = makeGroupsReadyForKnockout();
+      const incompleteGroups = groups.map((g, i) => (i === 0 ? withUnplayedMatch(g) : g));
+      const cycle = setUpTournament(0);
+      const withGroups: Cycle = {
+        ...cycle,
+        worldCup: {
+          groups: incompleteGroups,
+          knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+          qualifiedTeamIds: [],
+        },
+      };
+      useTournamentStore.setState({
+        currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
+      });
+
+      expect(await store().advanceToKnockout()).toBe(false);
+    });
+
+    it('devuelve true cuando los dieciseisavos se generan de verdad', async () => {
+      const { groups, teams } = makeGroupsReadyForKnockout();
+      const cycle = setUpTournament(0);
+      const withGroups: Cycle = {
+        ...cycle,
+        worldCup: {
+          groups,
+          knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+          qualifiedTeamIds: [],
+        },
+      };
+      useTournamentStore.setState({
+        currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
+      });
+
+      expect(await store().advanceToKnockout()).toBe(true);
+    });
+
+    it('devuelve false si falla la persistencia (a diferencia de generateDrawAndFixtures, acá NO cuenta como completado)', async () => {
+      const { groups, teams } = makeGroupsReadyForKnockout();
+      const cycle = setUpTournament(0);
+      const withGroups: Cycle = {
+        ...cycle,
+        worldCup: {
+          groups,
+          knockout: { roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null },
+          qualifiedTeamIds: [],
+        },
+      };
+      useTournamentStore.setState({
+        currentTournament: withGroups, tournaments: [withGroups], currentTournamentId: withGroups.id, teams,
+      });
+      createKnockoutMatch.mockRejectedValue(new Error('network down'));
+
+      expect(await store().advanceToKnockout()).toBe(false);
+    });
+  });
+
+  describe('drawContinental', () => {
+    it('devuelve false si no hay torneo actual', () => {
+      useTournamentStore.setState({ currentTournament: null });
+
+      expect(store().drawContinental()).toBe(false);
+    });
+
+    it('devuelve false si continental ya está sorteado', () => {
+      const { cycle, teams } = makeDrawnContinentalCycle();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+      });
+
+      expect(store().drawContinental()).toBe(false);
+    });
+
+    it('devuelve false si ya hay un sorteo en curso', () => {
+      const { cycle, teams } = freshContinentalCycle();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams, isDrawing: true,
+      });
+
+      expect(store().drawContinental()).toBe(false);
+    });
+
+    it('devuelve true cuando el sorteo se completa de verdad', () => {
+      const { cycle, teams } = freshContinentalCycle();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+      });
+
+      expect(store().drawContinental()).toBe(true);
+    });
+  });
+
+  describe('drawConfederations', () => {
+    it('devuelve false si no hay torneo actual', () => {
+      useTournamentStore.setState({ currentTournament: null });
+
+      expect(store().drawConfederations()).toBe(false);
+    });
+
+    it('devuelve false si la fase continental no está completa', () => {
+      const { cycle, teams } = freshContinentalCycle();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+      });
+
+      expect(store().drawConfederations()).toBe(false);
+    });
+
+    it('devuelve false si confederaciones ya está sorteado', () => {
+      const { cycle, teams } = makeDrawnConfedCycle();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+      });
+
+      expect(store().drawConfederations()).toBe(false);
+    });
+
+    it('devuelve false si ya hay un sorteo en curso', () => {
+      const { cycle, teams } = cycleWithContinentalDone();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams, isDrawing: true,
+      });
+
+      expect(store().drawConfederations()).toBe(false);
+    });
+
+    it('devuelve true cuando el sorteo se completa de verdad', () => {
+      const { cycle, teams } = cycleWithContinentalDone();
+      useTournamentStore.setState({
+        currentTournament: cycle, tournaments: [cycle], currentTournamentId: cycle.id, teams,
+      });
+
+      expect(store().drawConfederations()).toBe(true);
+    });
   });
 });
 
