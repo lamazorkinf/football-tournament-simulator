@@ -74,7 +74,7 @@ vi.mock('../../services/teamsService', () => ({
 
 const { useTournamentStore } = await import('../useTournamentStore');
 const { toCycle } = await import('../../core/cycle');
-const { baseTournament, makeDrawnContinentalCycle, makeDrawnConfedCycle } = await import(
+const { baseTournament, makeDrawnContinentalCycle, makeDrawnConfedCycle, teamsByRegion } = await import(
   '../../test/fixtures/cycle'
 );
 
@@ -632,5 +632,79 @@ describe('guards del resto de los sorteos', () => {
     store().drawConfederations();
 
     expect(store().currentTournament).toBe(done);
+  });
+});
+
+describe('generateDrawAndFixtures — no duplica partidos al re-sortear', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isSupabaseConfigured.mockReturnValue(true);
+    useTournamentStore.setState({ isDrawing: false });
+  });
+
+  afterEach(() => {
+    useTournamentStore.setState({ isDrawing: false });
+    // Restaura el doble a su no-op original (el definido en el vi.hoisted de
+    // arriba): mockImplementation no lo borra `vi.clearAllMocks()`, así que
+    // sin este reset el Map de este test se colaría en cualquier otro test
+    // del archivo que corra después y comparta el mismo mock hoisted.
+    createQualifierGroups.mockImplementation(async () => {});
+    deleteQualifierData.mockImplementation(async () => {});
+  });
+
+  it('dos sorteos seguidos (con force) dejan 840 partidos en la base, no 1680', async () => {
+    // Doble de la persistencia real: `delete` limpia todos los partidos del
+    // torneo (acá el único que existe, así que `clear()` alcanza) y `create`
+    // los agrega — el mismo contrato que el upsert-por-id real, que solo
+    // puede sumar porque cada partido nace con un nanoid() nuevo en cada
+    // sorteo. Si el store no borrara antes de escribir, el segundo sorteo
+    // dejaría el doble de entradas en este Map.
+    const matchesById = new Map<string, Match>();
+    deleteQualifierData.mockImplementation(async () => {
+      matchesById.clear();
+    });
+    createQualifierGroups.mockImplementation(
+      // Params opcionales: el mock hoisted arriba se tipa como `() =>
+      // Promise<void>` (sin argumentos), así que una implementación con
+      // parámetros obligatorios no sería asignable.
+      async (_tournamentId?: string, _region?: Region, groups: Group[] = []) => {
+        for (const group of groups) {
+          for (const match of group.matches) {
+            matchesById.set(match.id, match);
+          }
+        }
+      }
+    );
+
+    // teamsByRegion() da 55+55+55+45 = 210 equipos, es decir 11+11+11+9 = 42
+    // grupos de 5 (createQualifierGroups agrupa de a 5 por región). Cada
+    // grupo de 5 sortea un round-robin ida y vuelta completo de 20 partidos
+    // (FIXTURE_TEMPLATE). 42 * 20 = 840: el mismo número que cita la
+    // descripción del bug real (1680 = el doble, por no borrar antes de
+    // escribir).
+    const byRegion = teamsByRegion();
+    const teams = REGIONS.flatMap((r) => byRegion[r]);
+    const cycle: Cycle = {
+      ...toCycle(baseTournament()),
+      id: 't-count',
+      qualifiers: { Europe: [], America: [], Africa: [], Asia: [] },
+      calendar: { phase: 'wc-qualifiers', matchday: 1 },
+    };
+    useTournamentStore.setState({
+      teams,
+      tournaments: [cycle],
+      currentTournamentId: cycle.id,
+      currentTournament: cycle,
+      isBatchProcessing: false,
+    });
+
+    const first = await store().generateDrawAndFixtures();
+    expect(first).toBe(true);
+    expect(matchesById.size).toBe(840);
+
+    const second = await store().generateDrawAndFixtures({ force: true });
+    expect(second).toBe(true);
+
+    expect(matchesById.size).toBe(840);
   });
 });
