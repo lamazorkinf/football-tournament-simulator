@@ -62,43 +62,33 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
     const hasOriginalSkills = currentTournament.originalSkills &&
       Object.keys(currentTournament.originalSkills).length > 0;
 
-    const message = hasOriginalSkills
-      ? '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.\n\nℹ️ Las habilidades se ajustan a la línea de base de este Mundial (ya incluye lo acumulado en torneos anteriores). No se pierde la progresión histórica.'
-      : '¿Generar sorteo y fixtures para todas las clasificatorias?\n\nEsto asignará equipos a las posiciones y creará todos los partidos.';
+    // await: sin esto el toast de éxito se mostraba de inmediato, aunque el
+    // sorteo aún no hubiera terminado (o hubiera fallado).
+    await generateDrawAndFixtures();
 
-    if (confirm(message)) {
-      // await: sin esto el toast de éxito se mostraba de inmediato, aunque el
-      // sorteo aún no hubiera terminado (o hubiera fallado).
-      await generateDrawAndFixtures();
-      const successMsg = hasOriginalSkills
-        ? '✅ Sorteo generado (habilidades en la base de este Mundial)'
-        : '✅ Sorteo y fixtures generados correctamente';
-      toast.success(successMsg);
-    }
+    toast.success(
+      hasOriginalSkills
+        ? 'Sorteo generado — habilidades en la base de este Mundial'
+        : 'Sorteo y fixtures generados'
+    );
   };
 
   const handleDrawContinental = () => {
-    if (confirm('¿Sortear los 4 torneos continentales?\n\nSe generarán los brackets (byes + bombos) y comenzará la fase continental.')) {
-      drawContinental();
-      toast.success('🌍 ¡Torneos continentales sorteados!');
-      onNavigate?.('continental');
-    }
+    drawContinental();
+    toast.success('Torneos continentales sorteados');
+    onNavigate?.('continental');
   };
 
   const handleDrawConfederations = () => {
-    if (confirm('¿Sortear la Copa Confederaciones con los 8 finalistas continentales?')) {
-      drawConfederations();
-      toast.success('🏆 ¡Copa Confederaciones sorteada!');
-      onNavigate?.('confederations');
-    }
+    drawConfederations();
+    toast.success('Copa Confederaciones sorteada');
+    onNavigate?.('confederations');
   };
 
   const handleAdvanceToQualifiers = () => {
-    if (confirm('¿Avanzar a las Clasificatorias del Mundial?\n\nLa Copa Confederaciones quedará cerrada.')) {
-      advanceToQualifiers();
-      toast.success('⚽ ¡Fase de Clasificatorias habilitada!');
-      onNavigate?.('qualifiers');
-    }
+    advanceToQualifiers();
+    toast.success('Fase de Clasificatorias habilitada');
+    onNavigate?.('qualifiers');
   };
 
   const mobileAction = (() => {
@@ -175,15 +165,11 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
     currentTournament.worldCup.knockout.roundOf32.length === 0 &&
     canAdvanceToKnockout(currentTournament.worldCup.groups);
 
-  const handleAdvanceToWorldCup = () => {
-    if (
-      confirm(
-        '¿Avanzar a la fase de Copa del Mundo con sorteo AUTOMÁTICO?\n\nLos 64 equipos clasificados (42 primeros + 22 mejores segundos) se distribuirán en 16 grupos del Mundial automáticamente.'
-      )
-    ) {
-      advanceToWorldCup();
-      toast.success('🏆 ¡Avanzado a Copa del Mundo con 64 equipos clasificados!');
-    }
+  const handleAdvanceToWorldCup = async () => {
+    // await: advanceToWorldCup es async — sin esto el toast de éxito se
+    // mostraba antes de que el avance terminara (o fallara).
+    await advanceToWorldCup();
+    toast.success('Avanzado a Copa del Mundo con 64 equipos clasificados');
   };
 
   const handleManualDraw = () => {
@@ -241,14 +227,8 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   const handleRegenerateWorldCupDraw = () => setConfirmRegenWorldCup(true);
 
   const handleAdvanceToKnockout = async () => {
-    if (
-      confirm(
-        '¿Generar Dieciseisavos de Final?\n\nLos 32 equipos clasificados (2 por grupo) avanzarán a la fase de eliminación directa.'
-      )
-    ) {
-      await advanceToKnockout();
-      toast.success('⚡ ¡Dieciseisavos de Final generados!');
-    }
+    await advanceToKnockout();
+    toast.success('Dieciseisavos de final generados');
   };
 
   // Determine tournament phase

@@ -111,15 +111,8 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
       : 0;
 
   const handleAdvanceToKnockout = async () => {
-    if (
-      !confirm(
-        '¿Generar Dieciseisavos de Final?\n\nLos 32 equipos clasificados (2 por grupo) avanzarán a la fase de eliminación directa.'
-      )
-    ) {
-      return;
-    }
     await advanceToKnockout();
-    toast.success('⚡ ¡Dieciseisavos de Final generados!');
+    toast.success('Dieciseisavos de final generados');
     setActiveTab('playoffs');
   };
 

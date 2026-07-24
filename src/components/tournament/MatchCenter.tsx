@@ -265,19 +265,11 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
       return;
     }
 
-    const confirmed = confirm(
-      `⚽ Simular Jornada Completa\n\n` +
-      `${jornada.phaseLabel} · ${jornada.label}\n` +
-      `Partidos a simular: ${toSimulate.length}\n\n` +
-      `Se simulan todos los partidos de la jornada (todas las regiones), sin importar los filtros.`
-    );
-    if (!confirmed) return;
-
     try {
       const outcomes = await runJornadaSimulation(toSimulate);
       const results = buildJornadaResults(jornada, outcomes);
       showResults(results, `${jornadaTitle} — Resultados`);
-      toast.success(`✅ ${jornada.label} completada — ${outcomes.length} partidos simulados`);
+      toast.success(`${jornada.label} completada — ${outcomes.length} partidos simulados`);
     } catch (error) {
       console.error('Error simulating matchday:', error);
       toast.error('Error al simular la jornada');
@@ -508,27 +500,31 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant="primary"
-                onClick={handleSimulateMatchday}
-                disabled={!canSimulateJornada}
-                className="gap-2 hidden lg:inline-flex"
-                title="Simular toda la jornada actual (resultado directo)"
-              >
-                <Play className="w-4 h-4" />
-                <span>{isBatchProcessing ? 'Simulando...' : 'Simular Jornada'}</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSimulateMatchdayLive}
-                disabled={!canSimulateJornada}
-                className="gap-2 hidden lg:inline-flex"
-                title="Ver la jornada en vivo (hasta 12 partidos simultáneos)"
-              >
-                <Radio className="w-4 h-4" />
-                <span>Jornada en vivo</span>
-              </Button>
+            <div className="hidden lg:block space-y-2">
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="primary"
+                  onClick={handleSimulateMatchday}
+                  disabled={!canSimulateJornada}
+                  loading={isBatchProcessing}
+                  className="gap-2"
+                >
+                  {!isBatchProcessing && <Play className="w-4 h-4" />}
+                  <span>{isBatchProcessing ? 'Simulando…' : 'Simular Jornada'}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSimulateMatchdayLive}
+                  disabled={!canSimulateJornada}
+                  className="gap-2"
+                >
+                  <Radio className="w-4 h-4" />
+                  <span>Jornada en vivo</span>
+                </Button>
+              </div>
+              <p className="text-xs text-grass-soft">
+                Se simula la jornada completa, de todas las regiones, sin importar los filtros.
+              </p>
             </div>
           </div>
         </CardContent>
