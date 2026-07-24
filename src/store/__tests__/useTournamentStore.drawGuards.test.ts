@@ -216,17 +216,62 @@ describe('candado isDrawing', () => {
   it('libera el candado cuando el sorteo termina', async () => {
     setUpTournament(0);
 
+    // isDrawing arranca en `false`, así que mirar sólo el valor final no
+    // alcanza: ese test queda en verde aunque el candado nunca se tome.
+    // createQualifierGroups corre en medio de la acción (una vez por región,
+    // durante la persistencia), así que sirve de sonda para registrar si el
+    // candado estaba tomado en ese momento.
+    const isDrawingDuringDraw: boolean[] = [];
+    createQualifierGroups.mockImplementation(async () => {
+      isDrawingDuringDraw.push(store().isDrawing);
+    });
+
     await store().generateDrawAndFixtures();
 
+    expect(isDrawingDuringDraw.length).toBeGreaterThan(0);
+    expect(isDrawingDuringDraw.every((isDrawing) => isDrawing === true)).toBe(true);
     expect(store().isDrawing).toBe(false);
   });
 
-  it('libera el candado aunque la persistencia falle', async () => {
-    setUpTournament(0);
-    createQualifierGroups.mockRejectedValue(new Error('sin red'));
+  it('libera el candado aunque el sorteo explote antes de la persistencia', async () => {
+    const cycle = setUpTournament(0);
+
+    // El error tiene que nacer AFUERA del try de persistencia: ese lo atrapa
+    // su propio catch interno, que a propósito no relanza, así que nunca
+    // llega al catch externo que protege el finally. Para forzarlo ahí se
+    // corrompen las clasificatorias sacándoles una región completa: el bucle
+    // que arma los fixtures explota al leer los grupos de esa región, mucho
+    // antes de llegar al bloque de persistencia.
+    const qualifiersSinAsia: Partial<Cycle['qualifiers']> = { ...cycle.qualifiers };
+    delete qualifiersSinAsia.Asia;
+    const corrupted: Cycle = {
+      ...cycle,
+      qualifiers: qualifiersSinAsia as Cycle['qualifiers'],
+    };
+    useTournamentStore.setState({
+      currentTournament: corrupted,
+      tournaments: [corrupted],
+    });
+
+    // Acá el error se dispara antes de la persistencia, así que la sonda del
+    // test anterior (el mock de createQualifierGroups) nunca llegaría a
+    // correr. En su lugar se usa el único console.error que imprime el catch
+    // externo: para cuando se ejecuta, el finally todavía no liberó el
+    // candado.
+    const isDrawingOnError: boolean[] = [];
+    const consoleError = vi.spyOn(console, 'error').mockImplementation((...args) => {
+      if (String(args[0]).includes('Error in generateDrawAndFixtures')) {
+        isDrawingOnError.push(store().isDrawing);
+      }
+    });
 
     await store().generateDrawAndFixtures();
 
+    // Confirma que de verdad se tomó el atajo: nunca llegó a persistir nada.
+    expect(createQualifierGroups).not.toHaveBeenCalled();
+    expect(isDrawingOnError).toEqual([true]);
     expect(store().isDrawing).toBe(false);
+
+    consoleError.mockRestore();
   });
 });
