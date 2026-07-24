@@ -11,7 +11,8 @@ import {
 } from '../../services/championsService';
 import { ChampionsPalmares } from './ChampionsPalmares';
 import { ChampionsTimeline } from './ChampionsTimeline';
-import { Trophy, ListOrdered, Loader, AlertTriangle } from 'lucide-react';
+import { Trophy, ListOrdered, AlertTriangle } from 'lucide-react';
+import { LoadingState } from '../ui/LoadingState';
 
 type Tab = 'palmares' | 'timeline';
 
@@ -79,11 +80,7 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader className="w-8 h-8 animate-spin text-gold" />
-      </div>
-    );
+    return <LoadingState label="Cargando campeones…" />;
   }
 
   if (error) {

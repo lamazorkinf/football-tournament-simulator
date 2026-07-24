@@ -3,6 +3,7 @@ import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
 import { PixelBar } from '../ui/PixelBar';
+import { LoadingState } from '../ui/LoadingState';
 import { matchHistoryService, computeWinRate } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { Trophy, Award, BarChart3 } from 'lucide-react';
@@ -115,11 +116,8 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
   if (loading) {
     return (
       <Card>
-        <CardContent className="py-12">
-          <div className="text-center">
-            <div className="animate-spin h-12 w-12 border-b-2 border-led mx-auto mb-4"></div>
-            <p className="text-grass-soft">Loading historical statistics...</p>
-          </div>
+        <CardContent>
+          <LoadingState label="Cargando estadísticas históricas…" />
         </CardContent>
       </Card>
     );

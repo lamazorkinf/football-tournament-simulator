@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ScoreBug } from '../ui/ScoreBug';
+import { Skeleton } from '../ui/Skeleton';
 import { History, Filter, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { matchHistoryService, type MatchHistoryEntry, type MatchCursor } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -233,9 +234,10 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin h-12 w-12 border-b-2 border-gold mx-auto"></div>
-              <p className="text-grass-soft mt-4">Cargando partidos...</p>
+            <div className="space-y-3" aria-busy="true">
+              {Array.from({ length: 6 }, (_, i) => (
+                <Skeleton key={i} className="h-16" />
+              ))}
             </div>
           ) : matches.length === 0 ? (
             <div className="text-center py-12">

@@ -3,6 +3,7 @@ import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { PixelBar } from '../ui/PixelBar';
+import { LoadingState } from '../ui/LoadingState';
 import { ArrowLeft, Target, TrendingUp, Calendar } from 'lucide-react';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamSelector } from './TeamSelector';
@@ -138,11 +139,8 @@ export function TeamComparison() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardContent className="pt-12 pb-12">
-            <div className="text-center">
-              <div className="animate-spin h-12 w-12 border-b-2 border-led mx-auto mb-4"></div>
-              <p className="text-grass-soft">Cargando estadísticas...</p>
-            </div>
+          <CardContent>
+            <LoadingState label="Cargando estadísticas…" />
           </CardContent>
         </Card>
       </div>

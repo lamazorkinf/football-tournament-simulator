@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, TrendingUp, TrendingDown, Minus, Activity, BarChart3 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
+import { LoadingState } from '../ui/LoadingState';
 import { TeamTournamentHistory } from './TeamTournamentHistory';
 import { db } from '../../lib/supabaseNormalized';
 import { isSupabaseConfigured, escapeOrValue } from '../../lib/supabase';
@@ -447,10 +448,7 @@ export function TeamProfileModal({ team, onClose }: TeamProfileModalProps) {
           </div>
 
           {loading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin h-12 w-12 border-b-2 border-led mx-auto"></div>
-              <p className="mt-4 text-grass-soft">Cargando perfil...</p>
-            </div>
+            <LoadingState label="Cargando perfil…" />
           ) : (
             <div className="p-6 space-y-6">
               {/* Skill Evolution Graph */}

@@ -30,7 +30,9 @@ import { GameTabBar } from './components/ui/GameTabBar';
 import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { ConnectionError } from './components/ui/ConnectionError';
+import { PixelBar } from './components/ui/PixelBar';
 import { MobileActionProvider } from './hooks/useMobileAction';
+import { Trophy } from 'lucide-react';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
 
@@ -110,9 +112,16 @@ function App() {
     return (
       <>
         <Scanlines />
-        <div className="min-h-screen flex items-center justify-center bg-night">
-          <div className="text-center">
-            <p className="font-arcade text-gold blink text-sm">LOADING…</p>
+        <div className="min-h-screen flex items-center justify-center bg-night px-6">
+          <div className="w-full max-w-xs text-center space-y-6">
+            <Trophy className="w-16 h-16 text-gold mx-auto" />
+            <p className="font-arcade text-sm text-gold text-shadow-retro">
+              FOOTBALL SIM
+            </p>
+            <PixelBar value={0} max={100} indeterminate />
+            <p className="font-arcade text-[10px] text-grass-soft uppercase">
+              Cargando torneo…
+            </p>
           </div>
         </div>
       </>
