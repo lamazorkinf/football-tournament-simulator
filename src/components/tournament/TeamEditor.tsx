@@ -178,9 +178,9 @@ export function TeamEditor() {
         </div>
 
         <div className="text-sm bg-black/40 border-2 border-gold p-3">
-          <p className="font-semibold text-gold mb-1">💡 Tips:</p>
+          <p className="font-semibold text-gold mb-1">💡 Consejos:</p>
           <ul className="space-y-1 text-grass-soft">
-            <li>• El skill va de 30 a 100</li>
+            <li>• La habilidad va de 30 a 100</li>
             <li>• Mover equipos entre regiones afecta la composición de los grupos</li>
             <li>• Los cambios se aplican al instante pero no afectan partidos ya jugados</li>
           </ul>

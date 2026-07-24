@@ -279,7 +279,7 @@ export function EngineSettings() {
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-grass-soft">
-              Multiplica el Factor K según la etapa del partido: cuánto mueve el skill cada torneo.
+              Multiplica el Factor K según la etapa del partido: cuánto mueve la habilidad cada torneo.
               Las clasificatorias pesan menos (muchos partidos) y el knockout del Mundial, más.
               Los cruces por penales cuentan como empate para el Elo.
             </p>
