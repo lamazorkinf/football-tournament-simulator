@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Database, Sliders, Users } from 'lucide-react';
+import { Database, Settings, Sliders, Users } from 'lucide-react';
 import { ExportImport } from '../tournament/ExportImport';
 import { EngineSettings } from './EngineSettings';
 import { TeamEditor } from '../tournament/TeamEditor';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Tabs } from '../ui/Tabs';
+import { ViewHeader } from '../ui/ViewHeader';
 import { useConfigStore } from '../../store/useConfigStore';
 
 type SettingsTab = 'teams' | 'elo' | 'data';
@@ -24,12 +25,11 @@ export function SettingsHub() {
     <div className="space-y-6">
       {/* Header */}
       <Card className="overflow-hidden">
-        <CardHeader>
-          <h2 className="font-arcade text-lg text-white text-shadow-retro">Configuración</h2>
-          <p className="text-grass-soft text-sm mt-1">
-            Gestiona equipos, parámetros ELO y datos del torneo
-          </p>
-        </CardHeader>
+        <ViewHeader
+          icon={Settings}
+          title="Configuración"
+          subtitle="Gestiona equipos, parámetros ELO y datos del torneo"
+        />
 
         {/* Tabs */}
         <Tabs items={tabs} value={activeTab} onChange={(id) => setActiveTab(id as typeof activeTab)} />

@@ -6,8 +6,9 @@ import { RunnersUpModal } from './RunnersUpModal';
 import type { Region, Group } from '../../types';
 import { Globe2, Filter, Trophy } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Card, CardHeader } from '../ui/Card';
+import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
+import { ViewHeader } from '../ui/ViewHeader';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 
 interface QualifiersViewProps {
@@ -109,17 +110,11 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
     <div className="space-y-6">
       {/* Header with Filter */}
       <Card className="overflow-hidden">
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <Globe2 className="w-8 h-8 text-gold" />
-              <div>
-                <h2 className="font-arcade text-base sm:text-lg text-white text-shadow-retro">Clasificatorias</h2>
-                <p className="text-grass-soft text-sm mt-1">
-                  {currentTournament.name}
-                </p>
-              </div>
-            </div>
+        <ViewHeader
+          icon={Globe2}
+          title="Clasificatorias"
+          subtitle={currentTournament.name}
+          actions={
             <Button
               variant="secondary"
               onClick={() => setShowRunnersUpModal(true)}
@@ -129,8 +124,8 @@ export function QualifiersView({ initialRegion, initialGroupId }: QualifiersView
               <span className="hidden sm:inline">Clasificación Segundos Lugares</span>
               <span className="sm:hidden">Segundos</span>
             </Button>
-          </div>
-        </CardHeader>
+          }
+        />
 
         {/* Region Filter */}
         <div className="px-6 py-4">

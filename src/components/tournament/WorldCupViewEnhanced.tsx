@@ -6,10 +6,11 @@ import { KnockoutView } from './KnockoutView';
 import { areGroupsComplete } from '../../core/knockout';
 import { toast } from 'sonner';
 import { Button } from '../ui/Button';
-import { Card, CardHeader, CardContent } from '../ui/Card';
+import { Card, CardContent } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { Tabs } from '../ui/Tabs';
+import { ViewHeader } from '../ui/ViewHeader';
 
 type WorldCupTab = 'groups' | 'playoffs';
 
@@ -32,17 +33,11 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
       <div className="space-y-6">
         {/* Header */}
         <Card className="overflow-hidden">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-gold" />
-              <div>
-                <h2 className="font-arcade text-lg text-white text-shadow-retro">Copa del Mundo</h2>
-                <p className="text-grass-soft text-sm mt-1">
-                  {currentTournament.name}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
+          <ViewHeader
+            icon={Trophy}
+            title="Copa del Mundo"
+            subtitle={currentTournament.name}
+          />
         </Card>
 
         {/* Coming Soon Message */}
@@ -124,17 +119,11 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
     <div className="space-y-6">
       {/* Header */}
       <Card className="overflow-hidden">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-gold" />
-            <div>
-              <h2 className="font-arcade text-lg text-white text-shadow-retro">Copa del Mundo</h2>
-              <p className="text-grass-soft text-sm mt-1">
-                {currentTournament.name}
-              </p>
-            </div>
-          </div>
-        </CardHeader>
+        <ViewHeader
+          icon={Trophy}
+          title="Copa del Mundo"
+          subtitle={currentTournament.name}
+        />
 
         {/* Tabs */}
         <Tabs

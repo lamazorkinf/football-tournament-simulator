@@ -1,6 +1,7 @@
 import type { Tournament, Team, Region } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { ViewHeader } from '../ui/ViewHeader';
 import { Trophy, Award, Target, TrendingUp, ChevronRight, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -26,18 +27,9 @@ export function TournamentOverview({ tournament, teams, onNavigate }: Tournament
   return (
     <div className="space-y-6">
       {/* Tournament Progress Timeline */}
-      <Card className="bg-grass border-gold">
+      <Card className="bg-grass border-gold overflow-hidden">
+        <ViewHeader icon={Trophy} title="Progreso del Torneo" subtitle={tournament.name} />
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-gold" />
-              <div>
-                <h2 className="font-arcade text-lg text-white text-shadow-retro">Tournament Progress</h2>
-                <p className="text-sm text-white/70">{tournament.name}</p>
-              </div>
-            </div>
-          </div>
-
           {/* Stage Timeline */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Qualifiers Stage */}

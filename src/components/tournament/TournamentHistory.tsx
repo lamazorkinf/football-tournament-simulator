@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Trophy, Calendar, Award, Users, Trash2, Eye, RefreshCw, Archive } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Card, CardHeader, CardContent } from '../ui/Card';
+import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
+import { ViewHeader } from '../ui/ViewHeader';
 import type { Tournament } from '../../types';
 
 type FilterType = 'all' | 'qualifiers' | 'world-cup' | 'completed';
@@ -87,17 +88,11 @@ export function TournamentHistory() {
     <div className="space-y-6">
       {/* Header */}
       <Card className="overflow-hidden">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-gold" />
-            <div>
-              <h2 className="font-arcade text-lg text-white text-shadow-retro">Historial de Torneos</h2>
-              <p className="text-grass-soft text-sm mt-1">
-                Visualiza y gestiona todos tus torneos
-              </p>
-            </div>
-          </div>
-        </CardHeader>
+        <ViewHeader
+          icon={Trophy}
+          title="Historial de Torneos"
+          subtitle="Visualiza y gestiona todos tus torneos"
+        />
 
         {/* Filter Tabs */}
         <div className="px-6 py-4">

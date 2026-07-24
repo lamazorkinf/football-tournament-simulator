@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { Region, Group, Team } from '../../types';
 import { Card, CardContent } from '../ui/Card';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Globe2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { sortStandings } from '../../core/scheduler';
 import { TeamFlag } from '../ui/TeamFlag';
 import { GroupDetailModal } from './GroupDetailModal';
+import { ViewHeader } from '../ui/ViewHeader';
 
 interface RegionViewProps {
   region: Region;
@@ -17,16 +18,6 @@ interface RegionViewProps {
 export function RegionView({ region, groups, teams, onSimulateMatch }: RegionViewProps) {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 
-  const getRegionIcon = (region: Region) => {
-    const icons: Record<Region, string> = {
-      Europe: '🇪🇺',
-      America: '🌎',
-      Africa: '🌍',
-      Asia: '🌏',
-    };
-    return icons[region];
-  };
-
   const getTeam = (teamId: string) => teams.find((t) => t.id === teamId);
 
   // Sort groups by name
@@ -35,17 +26,13 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
   return (
     <>
       {/* Region Header */}
-      <div className="bg-grass-dark border-4 border-line shadow-hard-panel p-6 mb-6">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">{getRegionIcon(region)}</span>
-          <div>
-            <h2 className="font-arcade text-lg text-white text-shadow-retro">{region}</h2>
-            <p className="text-grass-soft">
-              {groups.length} {groups.length === 1 ? 'grupo' : 'grupos'} • Top 2 clasifican
-            </p>
-          </div>
-        </div>
-      </div>
+      <Card className="overflow-hidden mb-6">
+        <ViewHeader
+          icon={Globe2}
+          title={region}
+          subtitle={`${groups.length} ${groups.length === 1 ? 'grupo' : 'grupos'} • Top 2 clasifican`}
+        />
+      </Card>
 
       {/* Grid of Groups */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">

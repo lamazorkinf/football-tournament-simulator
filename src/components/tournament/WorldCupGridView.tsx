@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { sortStandings } from '../../core/scheduler';
 import { TeamFlag } from '../ui/TeamFlag';
 import { GroupDetailModal } from './GroupDetailModal';
+import { ViewHeader } from '../ui/ViewHeader';
 
 interface WorldCupGridViewProps {
   groups: WorldCupGroup[];
@@ -20,16 +21,12 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3">
-          <Trophy className="w-8 h-8 text-gold" />
-          <div>
-            <h2 className="font-arcade text-lg text-white text-shadow-retro">World Cup Group Stage</h2>
-            <p className="text-grass-soft">
-              {groups.length} groups • Top 2 from each group advance
-            </p>
-          </div>
-        </div>
+      <Card className="overflow-hidden">
+        <ViewHeader
+          icon={Trophy}
+          title="Fase de Grupos del Mundial"
+          subtitle={`${groups.length} ${groups.length === 1 ? 'grupo' : 'grupos'} • Top 2 de cada grupo avanza`}
+        />
       </Card>
 
       {/* Grid of Groups */}
