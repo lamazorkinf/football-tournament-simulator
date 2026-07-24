@@ -74,7 +74,10 @@ export function ContinentalView({ cycle, teams, onNavigate }: ContinentalViewPro
               <button
                 key={r}
                 onClick={() => setRegion(r)}
-                className={`px-4 py-2 min-h-11 lg:min-h-0 font-arcade text-[10px] uppercase border-2 transition-colors ${
+                // Sin `uppercase`: "América" y "África" son nombres propios y no
+                // se pueden reescribir sin acento, y Press Start 2P dibuja las
+                // mayúsculas acentuadas a altura de minúscula (se leería AMéRICA).
+                className={`px-4 py-2 min-h-11 lg:min-h-0 font-arcade text-[10px] border-2 transition-colors ${
                   region === r
                     ? 'bg-grass text-white border-line'
                     : 'text-grass-soft border-grass hover:bg-grass/40 hover:text-white'

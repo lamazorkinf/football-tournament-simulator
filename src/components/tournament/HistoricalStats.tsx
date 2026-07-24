@@ -148,7 +148,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
         items={[
           { id: 'overview', label: 'Resumen', icon: BarChart3 },
           { id: 'teams', label: 'Mejores Equipos', icon: Trophy },
-          { id: 'tiers', label: 'Análisis por Nivel', icon: Award },
+          { id: 'tiers', label: 'Por Nivel', icon: Award },
         ]}
         value={selectedView}
         onChange={(id) => setSelectedView(id as 'overview' | 'teams' | 'tiers')}

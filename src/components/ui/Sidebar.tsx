@@ -26,9 +26,9 @@ const SECTIONS: { title: string; items: { id: View; icon: LucideIcon; label: str
     ],
   },
   {
-    title: 'Análisis',
+    title: 'Datos',
     items: [
-      { id: 'stats', icon: BarChart3, label: 'Estadísticas' },
+      { id: 'stats', icon: BarChart3, label: 'Rendimiento' },
       { id: 'comparison', icon: GitCompare, label: 'Comparar' },
       { id: 'favorites', icon: Star, label: 'Favoritos' },
     ],
@@ -43,7 +43,7 @@ const SECTIONS: { title: string; items: { id: View; icon: LucideIcon; label: str
   },
 ];
 
-const FOOTER_ITEM = { id: 'settings' as View, icon: Settings, label: 'Configuración' };
+const FOOTER_ITEM = { id: 'settings' as View, icon: Settings, label: 'Ajustes' };
 
 export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews }: SidebarProps) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();

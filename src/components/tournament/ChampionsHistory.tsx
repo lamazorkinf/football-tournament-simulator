@@ -152,8 +152,8 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
       {/* Selector de pestaña */}
       <Tabs
         items={[
-          { id: 'palmares', label: 'Palmarés', icon: Trophy },
-          { id: 'timeline', label: 'Cronología', icon: ListOrdered },
+          { id: 'palmares', label: 'Copas', icon: Trophy },
+          { id: 'timeline', label: 'Por Fecha', icon: ListOrdered },
         ]}
         value={tab}
         onChange={(id) => setTab(id as 'palmares' | 'timeline')}

@@ -8,12 +8,12 @@ const MENU_ITEMS = [
   { id: 'favorites' as View, icon: Star, label: 'Favoritos' },
   { id: 'continental' as View, icon: Globe2, label: 'Continental' },
   { id: 'confederations' as View, icon: Award, label: 'Confederaciones' },
-  { id: 'stats' as View, icon: BarChart3, label: 'Estadísticas' },
+  { id: 'stats' as View, icon: BarChart3, label: 'Rendimiento' },
   { id: 'comparison' as View, icon: GitCompare, label: 'Comparar' },
   { id: 'champions' as View, icon: Medal, label: 'Campeones' },
   { id: 'history' as View, icon: History, label: 'Historial' },
   { id: 'tournaments' as View, icon: Archive, label: 'Torneos' },
-  { id: 'settings' as View, icon: Settings, label: 'Configuración' },
+  { id: 'settings' as View, icon: Settings, label: 'Ajustes' },
 ];
 
 interface PauseMenuProps {

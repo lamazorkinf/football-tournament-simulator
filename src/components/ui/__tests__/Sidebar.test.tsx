@@ -22,7 +22,7 @@ describe('Sidebar', () => {
     render(<Sidebar currentView="wizard" onViewChange={vi.fn()} tournamentYear={2026} />);
 
     expect(screen.getByText('Ciclo actual')).toBeInTheDocument();
-    expect(screen.getByText('Análisis')).toBeInTheDocument();
+    expect(screen.getByText('Datos')).toBeInTheDocument();
     expect(screen.getByText('Archivo')).toBeInTheDocument();
   });
 

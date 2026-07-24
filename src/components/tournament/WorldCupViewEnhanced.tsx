@@ -48,7 +48,7 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
                 <Trophy className="w-10 h-10 text-gold" />
               </div>
               <h3 className="font-arcade text-sm text-white text-shadow-retro uppercase mb-3">
-                Próximamente
+                En camino
               </h3>
               <p className="text-grass-soft mb-6">
                 La fase de Copa del Mundo estará disponible una vez que se completen

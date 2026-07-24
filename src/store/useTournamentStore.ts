@@ -137,7 +137,7 @@ async function loadCycleFromDatabase(id: string): Promise<Cycle | null> {
 }
 
 /**
- * Crea el torneo inicial (World Cup 2026) cuando la DB está vacía.
+ * Crea el torneo inicial (Mundial 2026) cuando la DB está vacía.
  */
 async function createFirstTournament(set: any, get: any): Promise<void> {
   const teamsWithTiers = updateTeamsTiers(get().teams);
@@ -156,7 +156,7 @@ async function createFirstTournament(set: any, get: any): Promise<void> {
 
   const tournament: Cycle = toCycle({
     id: nanoid(),
-    name: 'World Cup 2026',
+    name: 'Mundial 2026',
     year: 2026,
     qualifiers,
     worldCup: null,
@@ -380,7 +380,7 @@ export const useTournamentStore = create<TournamentState>()(
           progress.updateProgress('Inicializando torneo…', 3);
           const tournament: Cycle = toCycle({
             id: nanoid(),
-            name: `World Cup ${year}`,
+            name: `Mundial ${year}`,
             year,
             qualifiers,
             worldCup: null,
