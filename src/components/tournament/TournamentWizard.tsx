@@ -246,7 +246,7 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
       <Card className="overflow-hidden">
         {/* Header */}
         <CardHeader>
-          <p className="font-arcade text-[10px] text-gold mb-2">ELEGÍ MODO</p>
+          <p className="font-arcade text-[10px] text-gold mb-2">MODO DE JUEGO</p>
           <div className="flex items-center gap-3 mb-2">
             <Trophy className="w-8 h-8 text-gold" />
             <h2 className="font-arcade text-base sm:text-xl text-white text-shadow-retro">Progreso del Torneo</h2>

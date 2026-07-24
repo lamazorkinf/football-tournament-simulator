@@ -56,7 +56,7 @@ export function GameTabBar({ currentView, onViewChange, onStartPress, isPauseOpe
           aria-haspopup="dialog"
         >
           <Menu className={`w-5 h-5 ${isPauseOpen ? 'text-gold' : ''}`} />
-          MENÚ
+          PAUSA
         </button>
       </div>
     </nav>

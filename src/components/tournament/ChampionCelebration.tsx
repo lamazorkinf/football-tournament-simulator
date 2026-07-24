@@ -60,7 +60,10 @@ export const ChampionCelebration = ({
 
         <div className="relative z-10 text-center space-y-4">
           <Trophy className="w-24 h-24 mx-auto animate-bounce text-gold" />
-          <h1 className="font-arcade text-xl text-gold blink">CAMPEÓN DEL MUNDO</h1>
+          {/* Sin acentos a propósito: Press Start 2P dibuja las mayúsculas
+              acentuadas a altura de minúscula, así que "CAMPEÓN" se vería
+              "CAMPEóN" y partiría la palabra al medio. */}
+          <h1 className="font-arcade text-xl text-gold blink">GANADOR DEL MUNDIAL</h1>
           <div className="flex items-center justify-center gap-4">
             <TeamFlag teamId={champion.id} teamName={champion.name} size={64} />
             <div className="text-left">
