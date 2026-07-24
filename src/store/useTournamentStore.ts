@@ -2041,6 +2041,12 @@ export const useTournamentStore = create<TournamentState>()(
           return;
         }
 
+        if (state.isDrawing) {
+          console.warn('⛔ Ya hay un sorteo en curso');
+          return;
+        }
+
+        set({ isDrawing: true });
         try {
           progress.startProgress('Regenerando fase eliminatoria', 5);
 
@@ -2139,6 +2145,8 @@ export const useTournamentStore = create<TournamentState>()(
           progress.resetProgress();
           console.error('❌ Error in regenerateKnockoutStage:', error);
           throw error;
+        } finally {
+          set({ isDrawing: false });
         }
       },
 
