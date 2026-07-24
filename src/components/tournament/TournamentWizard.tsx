@@ -19,6 +19,8 @@ import {
   isConfederationsDrawn,
   continentalRoundLabel,
   confedRoundLabel,
+  getQualifiersDrawStatus,
+  isQualifiersDrawn,
 } from '../../utils/cycleProgress';
 import { sortStandings, getBestRunnersUp } from '../../core/scheduler';
 import { Button } from '../ui/Button';
@@ -56,6 +58,7 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
   const [confirmRegenWorldCup, setConfirmRegenWorldCup] = useState(false);
+  const [confirmRedrawQualifiers, setConfirmRedrawQualifiers] = useState(false);
 
   const handleGenerateDraw = async () => {
     if (!currentTournament) return;
@@ -71,6 +74,11 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
         ? 'Sorteo generado — habilidades en la base de este Mundial'
         : 'Sorteo y fixtures generados'
     );
+  };
+
+  const handleRedrawQualifiers = async () => {
+    await generateDrawAndFixtures({ force: true });
+    toast.success('Sorteo de clasificatorias rehecho');
   };
 
   const handleDrawContinental = () => {
@@ -103,8 +111,9 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
       return { label: '▶ JUGAR CONFED', onPress: () => onNavigate?.('confederations') };
     }
     if (canAdvanceToQualifiers(c)) return { label: '▶ IR A CLASIFICATORIAS', onPress: handleAdvanceToQualifiers };
-    // Igual que en el StepCard: EMPEZAR solo si los fixtures aún no existen.
-    const qualFixturesExist = Object.values(c.qualifiers).some((groups) => groups.some((g) => g.matches.length > 0));
+    // EMPEZAR solo si los fixtures aún no existen; el helper es el mismo que
+    // usa el StepCard y el guard del store.
+    const qualFixturesExist = isQualifiersDrawn(c);
     if (canDrawQualifiers(c) && !qualFixturesExist) return { label: '▶ EMPEZAR', onPress: handleGenerateDraw };
     if (qualFixturesExist && c.calendar.phase === 'wc-qualifiers' && !getQualifierProgress(c).isComplete) {
       return { label: '▶ JUGAR CLASIFICATORIAS', onPress: () => onNavigate?.('qualifiers') };
@@ -119,6 +128,14 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   // render". Por eso son tolerantes a currentTournament nulo.
   const qualifierProgress = useMemo(
     () => (currentTournament ? getQualifierProgress(currentTournament) : null),
+    [currentTournament]
+  );
+
+  // Una sola fuente para "¿ya hay fixtures?": antes la condición estaba escrita
+  // dos veces (botón móvil y botón de escritorio) con formas distintas, que es
+  // justamente cómo se cuela un re-sorteo.
+  const qualifiersDrawStatus = useMemo(
+    () => (currentTournament ? getQualifiersDrawStatus(currentTournament) : null),
     [currentTournament]
   );
 
@@ -144,6 +161,11 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
 
   // Check if actions are available
   const canGenerateDraw = canDrawQualifiers(currentTournament);
+  const qualifiersDrawn = isQualifiersDrawn(currentTournament);
+  const qualifiersPartial = qualifiersDrawStatus?.state === 'partial';
+  // Rehacer solo mientras no se haya jugado nada: con partidos jugados, ni el
+  // guard del store lo permite.
+  const canRedrawQualifiers = qualifiersDrawn && !currentTournament.hasAnyMatchPlayed;
   const canStartWorldCup = canAdvanceToWorldCup(currentTournament);
   const canRegenerateWorldCup =
     currentTournament.worldCup &&
@@ -356,25 +378,50 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                 value: `${qualifierProgress.playedMatches}/${qualifierProgress.totalMatches}`,
               },
             ]}
+            notice={
+              qualifiersDrawStatus?.state === 'partial' ? (
+                <>
+                  Sorteo incompleto:{' '}
+                  {qualifiersDrawStatus.regionsMissing > 0
+                    ? qualifiersDrawStatus.regionsMissing === 1
+                      ? 'falta una región entera'
+                      : `faltan ${qualifiersDrawStatus.regionsMissing} regiones enteras`
+                    : `faltan partidos en ${qualifiersDrawStatus.groupsMissing} de ${qualifiersDrawStatus.totalGroups} grupos`}
+                  . Rehacé el sorteo para completarlo.
+                </>
+              ) : undefined
+            }
             actions={
               canAdvanceQual ? (
                 <Button variant="primary" size="lg" onClick={handleAdvanceToQualifiers} className="gap-2">
                   ⚽ Ir a Clasificatorias
                 </Button>
-              ) : canGenerateDraw && qualifierProgress.totalMatches === 0 ? (
-                // EMPEZAR solo para la GENERACIÓN inicial: sin fixtures aún
-                // (totalMatches === 0). Si ya se generaron, este botón
-                // re-sortearía todo (el guard del store solo frena con partidos
-                // jugados), así que se reemplaza por "Ver / Jugar".
-                <Button size="lg" onClick={handleGenerateDraw} className="hidden lg:inline-flex">
-                  ▶ EMPEZAR
-                </Button>
-              ) : qualifierProgress.totalMatches > 0 && !qualifierProgress.isComplete ? (
-                <Button variant="secondary" size="sm" onClick={() => onNavigate?.('qualifiers')} className="gap-2">
-                  <Globe2 className="w-4 h-4" />
-                  Ver / Jugar
-                </Button>
-              ) : null
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {canGenerateDraw && !qualifiersDrawn && (
+                    // EMPEZAR solo para la GENERACIÓN inicial. Una vez sorteado,
+                    // el store rechaza esta acción sin `force`.
+                    <Button size="lg" onClick={handleGenerateDraw} className="hidden lg:inline-flex">
+                      ▶ EMPEZAR
+                    </Button>
+                  )}
+                  {qualifiersDrawn && !qualifierProgress.isComplete && (
+                    <Button variant="secondary" size="sm" onClick={() => onNavigate?.('qualifiers')} className="gap-2">
+                      <Globe2 className="w-4 h-4" />
+                      Ver / Jugar
+                    </Button>
+                  )}
+                  {canRedrawQualifiers && (
+                    <Button
+                      variant={qualifiersPartial ? 'primary' : 'outline'}
+                      size="sm"
+                      onClick={() => setConfirmRedrawQualifiers(true)}
+                    >
+                      Rehacer sorteo
+                    </Button>
+                  )}
+                </div>
+              )
             }
           />
 
@@ -567,6 +614,21 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
           toast.success('Sorteo del Mundial regenerado');
         }}
       />
+
+      <ConfirmDialog
+        open={confirmRedrawQualifiers}
+        onOpenChange={setConfirmRedrawQualifiers}
+        variant="danger"
+        title="Rehacer sorteo de clasificatorias"
+        confirmLabel="Rehacer"
+        description={
+          <>
+            <p>Se eliminan todos los grupos y partidos actuales de las clasificatorias y se sortean de nuevo desde cero.</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </>
+        }
+        onConfirm={handleRedrawQualifiers}
+      />
     </div>
   );
 }
@@ -580,6 +642,7 @@ interface StepCardProps {
   status: 'complete' | 'in-progress' | 'pending' | 'locked';
   progress: number;
   stats: { label: string; value: string }[];
+  notice?: React.ReactNode;
   actions?: React.ReactNode;
 }
 
@@ -591,6 +654,7 @@ function StepCard({
   status,
   progress,
   stats,
+  notice,
   actions,
 }: StepCardProps) {
   const getStatusIcon = () => {
@@ -679,6 +743,12 @@ function StepCard({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {notice && (
+            <div className="mb-4 border-2 border-gold bg-night/60 p-3 text-sm text-gold">
+              {notice}
             </div>
           )}
 
