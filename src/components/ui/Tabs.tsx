@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -22,6 +23,8 @@ interface TabsProps {
  * implementaciones a mano tenía.
  */
 export function Tabs({ items, value, onChange, className }: TabsProps) {
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
     event.preventDefault();
@@ -31,7 +34,12 @@ export function Tabs({ items, value, onChange, className }: TabsProps) {
 
     const delta = event.key === 'ArrowRight' ? 1 : -1;
     const next = (index + delta + items.length) % items.length;
-    onChange(items[next].id);
+    const nextId = items[next].id;
+    onChange(nextId);
+    // El foco acompaña a la pestaña activa (patrón ARIA): si se queda atrás,
+    // el lector de pantalla sigue anunciando la anterior y el Tab siguiente
+    // sale del tablist desde el botón equivocado.
+    tabRefs.current[nextId]?.focus();
   };
 
   return (
@@ -45,6 +53,9 @@ export function Tabs({ items, value, onChange, className }: TabsProps) {
         return (
           <button
             key={id}
+            ref={(el) => {
+              tabRefs.current[id] = el;
+            }}
             role="tab"
             aria-selected={active}
             tabIndex={active ? 0 : -1}

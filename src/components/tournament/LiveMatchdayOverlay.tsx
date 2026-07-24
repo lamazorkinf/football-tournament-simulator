@@ -3,6 +3,7 @@ import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { scoreAtMinute } from '../../core/liveMatch';
 import { useLiveMatchdayPlayback, type LiveMatchdayPlaybackState } from '../../hooks/useLiveMatchdayPlayback';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { LiveSpeed } from '../../hooks/useLiveMatchPlayback';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
@@ -32,6 +33,7 @@ export function LiveMatchdayOverlay() {
     ? `${session.title} ${session.entries.map((e) => e.matchId).join(',')}`
     : null;
   const playback = useLiveMatchdayPlayback(sessionKey, hasAnyPenalties);
+  const trapRef = useFocusTrap<HTMLDivElement>(Boolean(session));
 
   // Cierre con Escape y bloqueo del scroll del fondo, como el resto de los
   // modales. Cerrar en cualquier momento es seguro: los resultados ya están
@@ -74,6 +76,8 @@ export function LiveMatchdayOverlay() {
       role="dialog"
       aria-modal="true"
       aria-label={`En vivo — ${session.title}`}
+      ref={trapRef}
+      tabIndex={-1}
     >
       {/* Header sticky: estado + reloj compartido + controles */}
       <div className="sticky top-0 z-10 bg-grass-dark border-b-4 border-grass px-4 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">

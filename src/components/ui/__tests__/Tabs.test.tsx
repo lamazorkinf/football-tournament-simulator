@@ -37,6 +37,28 @@ describe('Tabs', () => {
     expect(onChange).toHaveBeenCalledWith('cronologia');
   });
 
+  it('mueve el foco a la pestaña que activa', async () => {
+    render(<Tabs items={ITEMS} value="palmares" onChange={vi.fn()} />);
+
+    screen.getByRole('tab', { name: 'Palmarés' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+
+    // Sin esto el foco queda en la pestaña vieja: un lector de pantalla sigue
+    // anunciando la anterior y el siguiente Tab sale del tablist por el lugar
+    // equivocado.
+    expect(screen.getByRole('tab', { name: 'Cronología' })).toHaveFocus();
+  });
+
+  it('con un value inexistente no mueve el foco', async () => {
+    render(<Tabs items={ITEMS} value="inexistente" onChange={vi.fn()} />);
+
+    const primera = screen.getByRole('tab', { name: 'Palmarés' });
+    primera.focus();
+    await userEvent.keyboard('{ArrowRight}');
+
+    expect(primera).toHaveFocus();
+  });
+
   // Con solo dos pestañas, ArrowRight y ArrowLeft desde la primera caen las dos
   // en la segunda, así que el test de arriba no distingue "cicla al último" de
   // "cicla al siguiente". Con tres, los dos destinos son distintos.

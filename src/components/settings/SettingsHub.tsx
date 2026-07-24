@@ -27,7 +27,9 @@ export function SettingsHub() {
       <Card className="overflow-hidden">
         <ViewHeader
           icon={Settings}
-          title="Configuración"
+          // Igual que en el nav: la pantalla a la que se entra por "Ajustes"
+          // no puede llamarse distinto al llegar.
+          title="Ajustes"
           subtitle="Gestiona equipos, parámetros ELO y datos del torneo"
         />
 

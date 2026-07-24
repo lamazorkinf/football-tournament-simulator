@@ -114,6 +114,28 @@ describe('LiveMatchModal', () => {
     expect(document.body.style.overflow).not.toBe('hidden');
   });
 
+  it('encierra el foco mientras el partido se reproduce', async () => {
+    render(
+      <>
+        <button>Fondo</button>
+        <LiveMatchModal />
+      </>,
+    );
+    act(() => {
+      useLiveMatchStore.getState().openLiveMatch({
+        matchId: 'm7', homeTeamId: 'h', awayTeamId: 'a', kind: 'continental',
+      });
+    });
+    await screen.findByText('Saltar al final');
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    screen.getByText('Fondo').focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
   it('descarta el resultado de un partido si se abrió otro antes de resolver', async () => {
     let resolveA!: (v: SimulatedMatchOutcome | null) => void;
     const pendingA = new Promise<SimulatedMatchOutcome | null>((r) => { resolveA = r; });

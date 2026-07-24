@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MatchResultsModal } from '../MatchResultsModal';
 import { useMatchResultsStore, type MatchResult } from '../../../store/useMatchResultsStore';
 
@@ -126,6 +126,23 @@ describe('MatchResultsModal', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveAccessibleName(/Jornada 1/);
+  });
+
+  it('encierra el foco: al abrir queda adentro y el Tab no se escapa al fondo', () => {
+    useMatchResultsStore.getState().showResults([result('Islandia', 'Malta')], 'Jornada 1');
+    render(
+      <>
+        <button>Fondo</button>
+        <MatchResultsModal />
+      </>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    screen.getByText('Fondo').focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
   });
 
   it('sin favoritos respeta el orden de la jornada', () => {

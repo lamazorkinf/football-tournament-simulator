@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { X, Trophy, Star } from 'lucide-react';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { penaltiesLabel } from '../../utils/matchLabels';
 import { regionLabel } from '../../utils/regionLabels';
 import { Button } from './Button';
@@ -8,6 +9,7 @@ import { TeamFlag } from './TeamFlag';
 
 export function MatchResultsModal() {
   const { isOpen, results, title, close } = useMatchResultsStore();
+  const trapRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   // Cierre con Escape y bloqueo del scroll del body mientras está abierto.
   useEffect(() => {
@@ -39,6 +41,8 @@ export function MatchResultsModal() {
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      ref={trapRef}
+      tabIndex={-1}
     >
       <div
         className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-3xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden"

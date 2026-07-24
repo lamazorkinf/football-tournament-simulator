@@ -3,6 +3,7 @@ import { useLiveMatchStore } from '../../store/useLiveMatchStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { buildMatchTimeline, hashSeed, type LiveTimeline } from '../../core/liveMatch';
 import { useLiveMatchPlayback, type LiveSpeed } from '../../hooks/useLiveMatchPlayback';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
 import { Pause, Play, Radio, X } from 'lucide-react';
@@ -24,6 +25,7 @@ export function LiveMatchModal() {
   const startedRef = useRef<string | null>(null);
 
   const playback = useLiveMatchPlayback(timeline, 1);
+  const trapRef = useFocusTrap<HTMLDivElement>(Boolean(activeMatch));
 
   // Reset durante el render al cambiar de partido: evita el frame donde el
   // timeline del partido anterior se mostraría con los equipos del nuevo.
@@ -107,6 +109,8 @@ export function LiveMatchModal() {
       role="dialog"
       aria-modal="true"
       aria-label={`En vivo — ${home?.name ?? activeMatch.homeTeamId} vs ${away?.name ?? activeMatch.awayTeamId}`}
+      ref={trapRef}
+      tabIndex={-1}
     >
       <div className="w-full max-w-lg bg-grass-dark border-4 border-line shadow-hard-panel p-6 space-y-6">
         <div className="flex items-center justify-between">

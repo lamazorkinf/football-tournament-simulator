@@ -152,6 +152,23 @@ describe('LiveMatchdayOverlay', () => {
     expect(useMatchResultsStore.getState().isOpen).toBe(true);
   });
 
+  it('encierra el foco mientras la jornada está en vivo', () => {
+    openSession();
+    render(
+      <>
+        <button>Fondo</button>
+        <LiveMatchdayOverlay />
+      </>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    screen.getByText('Fondo').focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
   it('bloquea el scroll del fondo mientras está abierto', () => {
     openSession();
     const { unmount } = render(<LiveMatchdayOverlay />);
