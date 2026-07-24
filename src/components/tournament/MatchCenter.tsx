@@ -451,7 +451,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 onChange={(e) => setSelectedRegion(e.target.value as Region | 'all')}
                 className="px-3 py-2 min-h-11 lg:min-h-0 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
               >
-                <option value="all">All Regions</option>
+                <option value="all">Todas las regiones</option>
                 {regions.map((region) => (
                   <option key={region} value={region}>
                     {region}
@@ -465,10 +465,10 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 onChange={(e) => setSelectedStage(e.target.value as MatchStage | 'all')}
                 className="px-3 py-2 min-h-11 lg:min-h-0 bg-night border-2 border-grass text-sm text-white focus:outline-none focus:border-gold max-w-full truncate"
               >
-                <option value="all">All Stages</option>
-                <option value="qualifier">Qualifiers</option>
-                <option value="world-cup">World Cup</option>
-                <option value="knockout">Knockout</option>
+                <option value="all">Todas las etapas</option>
+                <option value="qualifier">Eliminatorias</option>
+                <option value="world-cup">Copa Mundial</option>
+                <option value="knockout">Mundial</option>
                 <option value="continental">Continental</option>
                 <option value="confederations">Confederaciones</option>
               </select>
@@ -632,7 +632,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 flex-wrap min-w-0">
                     <Eye className="w-5 h-5 text-gold flex-shrink-0" />
-                    <span className="truncate">Preview del Próximo Partido</span>
+                    <span className="truncate">Vista Previa del Próximo Partido</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-auto space-y-4">
@@ -708,7 +708,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 className="fixed inset-4 bg-grass-dark border-4 border-line shadow-hard-panel z-50 overflow-auto lg:hidden"
               >
                 <div className="sticky top-0 bg-grass-dark border-b-4 border-grass p-4 flex items-center justify-between">
-                  <h3 className="font-arcade text-sm text-white text-shadow-retro">Preview del Partido</h3>
+                  <h3 className="font-arcade text-sm text-white text-shadow-retro">Vista Previa del Partido</h3>
                   <button
                     onClick={() => setShowMobilePreview(false)}
                     className="p-2 text-grass-soft hover:bg-grass/40 transition-colors"
@@ -778,9 +778,9 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
       confederations: 'bg-black/40 text-gold border border-gold',
     };
     const labels: Record<MatchStage, string> = {
-      qualifier: 'Qualifier',
-      'world-cup': 'World Cup',
-      knockout: 'Knockout',
+      qualifier: 'Eliminatorias',
+      'world-cup': 'Copa Mundial',
+      knockout: 'Mundial',
       continental: 'Continental',
       confederations: 'Confederaciones',
     };
@@ -864,7 +864,7 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
               title={!bothTeamsKnown ? 'Equipos por definir (falta resolver la ronda anterior)' : undefined}
             >
               <Play className="w-3 h-3" />
-              {disabled ? '...' : !bothTeamsKnown ? 'Por definir' : 'Play'}
+              {disabled ? '…' : !bothTeamsKnown ? 'Por definir' : 'Jugar'}
             </Button>
             <WatchLiveButton
               matchId={matchCtx.match.id}

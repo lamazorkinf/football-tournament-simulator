@@ -43,7 +43,7 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
 
     if (updatedMatch && updatedMatch.isPlayed) {
       toast.success(
-        `Match played! ${homeTeam?.name} ${updatedMatch.homeScore} - ${updatedMatch.awayScore} ${awayTeam?.name}`,
+        `¡Partido jugado! ${homeTeam?.name} ${updatedMatch.homeScore} - ${updatedMatch.awayScore} ${awayTeam?.name}`,
         { duration: 3000 }
       );
     }
@@ -60,7 +60,7 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={onBack} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
-            Back to Regions
+            Volver a regiones
           </Button>
         </div>
 
@@ -73,10 +73,10 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
           <CardContent className="py-12">
             <div className="text-center">
               <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">
-                ⚽ Draw not yet completed
+                ⚽ Sorteo aún no realizado
               </p>
               <p className="text-sm text-grass-soft">
-                Please generate the draw and fixtures to assign teams to this group
+                Generá el sorteo y los fixtures para asignar equipos a este grupo
               </p>
             </div>
           </CardContent>
@@ -103,11 +103,11 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <Button variant="ghost" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Back to Regions</span>
-          <span className="sm:hidden">Back</span>
+          <span className="hidden sm:inline">Volver a regiones</span>
+          <span className="sm:hidden">Volver</span>
         </Button>
         <div className="text-sm text-grass-soft">
-          {playedMatches} / {totalMatches} matches played
+          {playedMatches} / {totalMatches} partidos jugados
         </div>
       </div>
 
@@ -119,7 +119,7 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Standings</h3>
+            <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Posiciones</h3>
           </div>
           <StandingsTable
             standings={group.standings}
@@ -132,7 +132,7 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Matches</CardTitle>
+          <CardTitle>Partidos</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -201,7 +201,7 @@ function MatchCard({ match, getTeam, groupId, onSimulate, onViewDetails }: Match
             className="gap-1 sm:gap-2"
           >
             <Info className="w-3 h-3" />
-            <span className="hidden sm:inline">Details</span>
+            <span className="hidden sm:inline">Detalles</span>
           </Button>
         ) : (
           <Button
@@ -214,7 +214,7 @@ function MatchCard({ match, getTeam, groupId, onSimulate, onViewDetails }: Match
             className="gap-1 sm:gap-2"
           >
             <Play className="w-3 h-3" />
-            <span className="hidden sm:inline">Play</span>
+            <span className="hidden sm:inline">Jugar</span>
           </Button>
         )}
         {!match.isPlayed && (

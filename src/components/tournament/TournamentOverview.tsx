@@ -34,33 +34,33 @@ export function TournamentOverview({ tournament, teams, onNavigate }: Tournament
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Qualifiers Stage */}
             <StageCard
-              title="Qualifiers"
+              title="Clasificatorias"
               icon={Target}
               isActive={currentStage === 'qualifiers'}
               isComplete={tournament.isQualifiersComplete}
               progress={qualifierStats.progress}
-              subtitle={`${qualifierStats.playedMatches}/${qualifierStats.totalMatches} matches`}
+              subtitle={`${qualifierStats.playedMatches}/${qualifierStats.totalMatches} partidos`}
             />
 
             {/* World Cup Stage */}
             <StageCard
-              title="World Cup"
+              title="Copa Mundial"
               icon={Award}
               isActive={currentStage === 'worldcup'}
               isComplete={worldCupStats?.isComplete || false}
               progress={worldCupStats?.progress || 0}
-              subtitle={worldCupStats ? `${worldCupStats.playedMatches}/${worldCupStats.totalMatches} matches` : 'Not started'}
+              subtitle={worldCupStats ? `${worldCupStats.playedMatches}/${worldCupStats.totalMatches} partidos` : 'Sin iniciar'}
               isLocked={!tournament.worldCup}
             />
 
             {/* Knockout Stage */}
             <StageCard
-              title="Knockout"
+              title="Eliminatorias"
               icon={Trophy}
               isActive={currentStage === 'knockout'}
               isComplete={knockoutStats?.isComplete || false}
               progress={knockoutStats?.progress || 0}
-              subtitle={knockoutStats ? `${knockoutStats.playedMatches}/${knockoutStats.totalMatches} matches` : 'Not started'}
+              subtitle={knockoutStats ? `${knockoutStats.playedMatches}/${knockoutStats.totalMatches} partidos` : 'Sin iniciar'}
               isLocked={!knockoutStats}
             />
           </div>
@@ -80,7 +80,7 @@ export function TournamentOverview({ tournament, teams, onNavigate }: Tournament
                 <TrendingUp className="w-6 h-6 text-night" />
               </div>
               <div className="flex-1">
-                <h3 className="font-arcade text-xs text-gold uppercase mb-2">Next Step</h3>
+                <h3 className="font-arcade text-xs text-gold uppercase mb-2">Próximo Paso</h3>
                 <p className="text-white mb-4">{nextStep.message}</p>
                 <Button
                   variant="primary"
@@ -99,7 +99,7 @@ export function TournamentOverview({ tournament, teams, onNavigate }: Tournament
       {/* Regional Progress */}
       <Card>
         <CardHeader>
-          <CardTitle>Regional Progress</CardTitle>
+          <CardTitle>Progreso Regional</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -116,7 +116,7 @@ export function TournamentOverview({ tournament, teams, onNavigate }: Tournament
                     <div>
                       <h4 className="font-semibold text-white">{region.name}</h4>
                       <p className="text-xs text-grass-soft">
-                        {region.playedMatches}/{region.totalMatches} matches • {region.groupsComplete}/{region.totalGroups} groups
+                        {region.playedMatches}/{region.totalMatches} partidos • {region.groupsComplete}/{region.totalGroups} grupos
                       </p>
                     </div>
                   </div>
@@ -154,22 +154,22 @@ export function TournamentOverview({ tournament, teams, onNavigate }: Tournament
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          label="Teams"
+          label="Equipos"
           value={teams.length}
           icon="🏟️"
         />
         <StatCard
-          label="Total Matches"
+          label="Partidos Totales"
           value={qualifierStats.totalMatches + (worldCupStats?.totalMatches || 0) + (knockoutStats?.totalMatches || 0)}
           icon="⚽"
         />
         <StatCard
-          label="Completed"
+          label="Completados"
           value={qualifierStats.playedMatches + (worldCupStats?.playedMatches || 0) + (knockoutStats?.playedMatches || 0)}
           icon="✅"
         />
         <StatCard
-          label="Remaining"
+          label="Restantes"
           value={
             (qualifierStats.totalMatches - qualifierStats.playedMatches) +
             ((worldCupStats?.totalMatches || 0) - (worldCupStats?.playedMatches || 0)) +
@@ -237,13 +237,13 @@ function StageCard({ title, icon: Icon, isActive, isComplete, progress, subtitle
       {isComplete && (
         <div className="mt-2 flex items-center gap-1 text-led text-sm font-medium">
           <CheckCircle2 className="w-4 h-4" />
-          Complete
+          Completo
         </div>
       )}
 
       {isLocked && (
         <div className="mt-2 text-grass-soft text-sm">
-          🔒 Locked
+          🔒 Bloqueado
         </div>
       )}
     </div>
@@ -359,8 +359,8 @@ function getNextStep(tournament: Tournament, qualifierStats: any, worldCupStats:
   // Check if tournament is complete
   if (tournament.worldCup?.champion) {
     return {
-      message: '🏆 Tournament complete! Congratulations to the champion!',
-      buttonText: 'View Results',
+      message: '🏆 ¡Torneo completo! ¡Felicitaciones al campeón!',
+      buttonText: 'Ver Resultados',
       action: 'worldcup',
     };
   }
@@ -368,8 +368,8 @@ function getNextStep(tournament: Tournament, qualifierStats: any, worldCupStats:
   // Check knockout stage
   if (knockoutStats && knockoutStats.playedMatches < knockoutStats.totalMatches) {
     return {
-      message: `Continue the knockout stage. ${knockoutStats.totalMatches - knockoutStats.playedMatches} matches remaining until we crown a champion!`,
-      buttonText: 'Continue Knockout',
+      message: `Continuá con las eliminatorias. Faltan ${knockoutStats.totalMatches - knockoutStats.playedMatches} partidos para coronar un campeón.`,
+      buttonText: 'Continuar Eliminatorias',
       action: 'worldcup',
     };
   }
@@ -377,8 +377,8 @@ function getNextStep(tournament: Tournament, qualifierStats: any, worldCupStats:
   // Check World Cup groups
   if (worldCupStats && worldCupStats.playedMatches < worldCupStats.totalMatches) {
     return {
-      message: `Complete the World Cup group stage. ${worldCupStats.totalMatches - worldCupStats.playedMatches} matches remaining.`,
-      buttonText: 'Continue World Cup',
+      message: `Completá la fase de grupos del Mundial. Faltan ${worldCupStats.totalMatches - worldCupStats.playedMatches} partidos.`,
+      buttonText: 'Continuar Mundial',
       action: 'worldcup',
     };
   }
@@ -386,8 +386,8 @@ function getNextStep(tournament: Tournament, qualifierStats: any, worldCupStats:
   // Check if ready for World Cup
   if (tournament.isQualifiersComplete && !tournament.worldCup) {
     return {
-      message: 'Qualifiers complete! Ready to advance to the World Cup stage.',
-      buttonText: 'Advance to World Cup',
+      message: '¡Clasificatorias completas! Listo para avanzar al Mundial.',
+      buttonText: 'Avanzar al Mundial',
       action: 'qualifiers',
     };
   }
@@ -395,8 +395,8 @@ function getNextStep(tournament: Tournament, qualifierStats: any, worldCupStats:
   // Check if ready for knockout
   if (worldCupStats?.isComplete && knockoutStats === null) {
     return {
-      message: 'World Cup groups complete! Ready to advance to the knockout stage.',
-      buttonText: 'View World Cup',
+      message: '¡Grupos del Mundial completos! Listo para avanzar a las eliminatorias.',
+      buttonText: 'Ver Mundial',
       action: 'worldcup',
     };
   }
@@ -405,15 +405,15 @@ function getNextStep(tournament: Tournament, qualifierStats: any, worldCupStats:
   const remainingMatches = qualifierStats.totalMatches - qualifierStats.playedMatches;
   if (remainingMatches > 0) {
     return {
-      message: `Complete the qualifier stage. ${remainingMatches} matches remaining across all regions.`,
-      buttonText: 'View Qualifiers',
+      message: `Completá la fase de clasificatorias. Faltan ${remainingMatches} partidos en todas las regiones.`,
+      buttonText: 'Ver Clasificatorias',
       action: 'qualifiers',
     };
   }
 
   return {
-    message: 'Tournament ready to begin!',
-    buttonText: 'Start Tournament',
+    message: '¡El torneo está listo para empezar!',
+    buttonText: 'Iniciar Torneo',
     action: 'qualifiers',
   };
 }

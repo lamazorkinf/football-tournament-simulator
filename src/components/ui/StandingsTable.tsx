@@ -51,35 +51,35 @@ export function StandingsTable({
   return (
     <div className={cn('overflow-x-auto', className)}>
       <table className="min-w-full divide-y-2 divide-grass">
-        <caption className="sr-only">Team standings table</caption>
+        <caption className="sr-only">Tabla de posiciones</caption>
         <thead className="bg-grass-dark sticky top-0">
           <tr>
-            <th className={cn(thBase, 'text-left')} title="Position">
+            <th className={cn(thBase, 'text-left')} title="Posición">
               Pos
             </th>
-            <th className={cn(thBase, 'px-3 sm:px-6 text-left')}>Team</th>
-            <th className={thBase} title="Played">
+            <th className={cn(thBase, 'px-3 sm:px-6 text-left')}>Equipo</th>
+            <th className={thBase} title="Jugados">
+              PJ
+            </th>
+            <th className={cn(thBase, 'hidden sm:table-cell')} title="Ganados">
+              G
+            </th>
+            <th className={cn(thBase, 'hidden sm:table-cell')} title="Empatados">
+              E
+            </th>
+            <th className={cn(thBase, 'hidden sm:table-cell')} title="Perdidos">
               P
             </th>
-            <th className={cn(thBase, 'hidden sm:table-cell')} title="Won">
-              W
-            </th>
-            <th className={cn(thBase, 'hidden sm:table-cell')} title="Drawn">
-              D
-            </th>
-            <th className={cn(thBase, 'hidden sm:table-cell')} title="Lost">
-              L
-            </th>
-            <th className={cn(thBase, 'hidden md:table-cell')} title="Goals For">
+            <th className={cn(thBase, 'hidden md:table-cell')} title="Goles a favor">
               GF
             </th>
-            <th className={cn(thBase, 'hidden md:table-cell')} title="Goals Against">
-              GA
+            <th className={cn(thBase, 'hidden md:table-cell')} title="Goles en contra">
+              GC
             </th>
-            <th className={thBase} title="Goal Difference">
-              GD
+            <th className={thBase} title="Diferencia de goles">
+              DG
             </th>
-            <th className={thBase} title="Points">
+            <th className={thBase} title="Puntos">
               Pts
             </th>
           </tr>
@@ -161,7 +161,7 @@ export function StandingsTable({
                       <span className="text-white tabular-nums">
                         {standing.won}-{standing.drawn}-{standing.lost}
                       </span>
-                      {' · '}GF:GA:{' '}
+                      {' · '}GF:GC:{' '}
                       <span className="text-white tabular-nums">
                         {standing.goalsFor}:{standing.goalsAgainst}
                       </span>

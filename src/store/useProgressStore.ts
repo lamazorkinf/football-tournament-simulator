@@ -46,7 +46,7 @@ export const useProgressStore = create<ProgressState>((set) => ({
     set({
       isOpen: true,
       title,
-      currentStep: 'Iniciando...',
+      currentStep: 'Iniciando…',
       progress: 0,
       totalSteps,
       completedSteps: 0,

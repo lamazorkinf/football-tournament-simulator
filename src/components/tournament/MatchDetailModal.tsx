@@ -64,9 +64,9 @@ export function MatchDetailModal({
             </button>
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-5 h-5" />
-              <h2 className="font-arcade text-sm text-white text-shadow-retro">Match Details</h2>
+              <h2 className="font-arcade text-sm text-white text-shadow-retro">Detalle del Partido</h2>
             </div>
-            <p className="text-white/70 text-sm">Full Time Result</p>
+            <p className="text-white/70 text-sm">Resultado Final</p>
           </div>
 
           {/* Score Display */}
@@ -81,7 +81,7 @@ export function MatchDetailModal({
                 />
                 <h3 className="font-bold text-lg mt-3 mb-1 text-white">{homeTeam.name}</h3>
                 <p className="text-sm text-grass-soft">
-                  Skill: {homeTeam.skill.toFixed(1)}
+                  Habilidad: {homeTeam.skill.toFixed(1)}
                 </p>
               </div>
 
@@ -125,7 +125,7 @@ export function MatchDetailModal({
                 />
                 <h3 className="font-bold text-lg mt-3 mb-1 text-white">{awayTeam.name}</h3>
                 <p className="text-sm text-grass-soft">
-                  Skill: {awayTeam.skill.toFixed(1)}
+                  Habilidad: {awayTeam.skill.toFixed(1)}
                 </p>
               </div>
             </div>
@@ -135,16 +135,16 @@ export function MatchDetailModal({
               {homeWon ? (
                 <span className="inline-flex items-center gap-1 px-4 py-2 bg-black/40 text-led border border-led font-semibold text-sm">
                   <Users className="w-4 h-4" />
-                  {homeTeam.name} wins!
+                  ¡Ganó {homeTeam.name}!
                 </span>
               ) : draw ? (
                 <span className="inline-flex items-center gap-1 px-4 py-2 bg-black/40 text-grass-soft border border-grass font-semibold text-sm">
-                  Draw
+                  Empate
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-4 py-2 bg-black/40 text-led border border-led font-semibold text-sm">
                   <Users className="w-4 h-4" />
-                  {awayTeam.name} wins!
+                  ¡Ganó {awayTeam.name}!
                 </span>
               )}
             </div>
@@ -152,14 +152,14 @@ export function MatchDetailModal({
 
           {/* Stats Grid */}
           <div className="p-6 space-y-4">
-            <h3 className="font-arcade text-[10px] text-gold uppercase mb-3">Match Statistics</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-3">Estadísticas del Partido</h3>
 
             {/* Skill Changes - Only show if available */}
             {(homeSkillChange !== 0 || awaySkillChange !== 0) && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-night border-2 border-grass p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-grass-soft">Skill Change</span>
+                    <span className="text-sm font-medium text-grass-soft">Cambio de Habilidad</span>
                     {homeSkillChange !== 0 && (
                       homeSkillChange > 0 ? (
                         <TrendingUp className="w-5 h-5 text-led" />
@@ -177,7 +177,7 @@ export function MatchDetailModal({
 
                 <div className="bg-night border-2 border-grass p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-grass-soft">Skill Change</span>
+                    <span className="text-sm font-medium text-grass-soft">Cambio de Habilidad</span>
                     {awaySkillChange !== 0 && (
                       awaySkillChange > 0 ? (
                         <TrendingUp className="w-5 h-5 text-led" />
@@ -197,7 +197,7 @@ export function MatchDetailModal({
 
             {/* Goal Timeline (simulated) */}
             <div className="bg-night p-4">
-              <h4 className="font-arcade text-[10px] text-gold uppercase mb-3">Goal Timeline</h4>
+              <h4 className="font-arcade text-[10px] text-gold uppercase mb-3">Línea de Tiempo de Goles</h4>
               <div className="space-y-2">
                 {goals.map((goal, idx) => {
                   const team = goal.isHome ? homeTeam : awayTeam;
@@ -223,11 +223,11 @@ export function MatchDetailModal({
 
             {/* Info Box */}
             <div className="bg-black/40 border-2 border-gold p-4 text-sm">
-              <p className="font-medium mb-1 text-gold">About Skill Changes</p>
+              <p className="font-medium mb-1 text-gold">Sobre los cambios de habilidad</p>
               <p className="text-grass-soft">
-                Team skills are updated after each match using an ELO-style rating system.
-                Winners gain skill points, while losers lose points. The magnitude depends on the
-                expected outcome vs. actual result.
+                La habilidad de los equipos se actualiza después de cada partido con un sistema
+                de rating estilo ELO. Los ganadores suman puntos y los perdedores los pierden.
+                La magnitud depende de qué tan esperado era el resultado.
               </p>
             </div>
           </div>
@@ -235,7 +235,7 @@ export function MatchDetailModal({
           {/* Footer */}
           <div className="p-6 border-t-4 border-grass">
             <Button variant="outline" onClick={onClose} className="w-full">
-              Close
+              Cerrar
             </Button>
           </div>
         </motion.div>

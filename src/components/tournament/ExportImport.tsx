@@ -98,7 +98,7 @@ export function ExportImport() {
         setImportSuccess(true);
       } catch (error) {
         setImportError(
-          error instanceof Error ? error.message : 'Failed to import tournament'
+          error instanceof Error ? error.message : 'No se pudo importar el torneo'
         );
       } finally {
         setIsImporting(false);
@@ -134,39 +134,39 @@ export function ExportImport() {
         <CardHeader className="bg-grass text-white">
           <CardTitle className="text-white flex items-center gap-2">
             <FileJson className="w-6 h-6" />
-            Export Tournament
+            Exportar Torneo
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Full Tournament Export</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Exportación Completa del Torneo</h3>
             <p className="text-sm text-grass-soft mb-4">
-              Export complete tournament data including teams, groups, matches, and results.
-              Use this to backup your progress or share with others.
+              Exportá todos los datos del torneo: equipos, grupos, partidos y resultados.
+              Usalo para respaldar tu progreso o compartirlo con otros.
             </p>
             <Button variant="primary" onClick={handleExport} className="gap-2">
               <Download className="w-4 h-4" />
-              Export Complete Tournament
+              Exportar Torneo Completo
             </Button>
           </div>
 
           <div className="border-t-2 border-grass pt-4">
-            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Teams Only Export</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Exportación Solo de Equipos</h3>
             <p className="text-sm text-grass-soft mb-4">
-              Export only team data with current skill ratings and regional assignments.
+              Exportá solo los datos de los equipos, con su habilidad y región actuales.
             </p>
             <Button variant="outline" onClick={exportTeamsOnly} className="gap-2">
               <Download className="w-4 h-4" />
-              Export Teams Data
+              Exportar Datos de Equipos
             </Button>
           </div>
 
           <div className="bg-black/40 border-2 border-gold p-4 text-sm">
-            <p className="text-gold font-medium mb-1">💡 Export Tips:</p>
+            <p className="text-gold font-medium mb-1">💡 Consejos para exportar:</p>
             <ul className="text-grass-soft space-y-1">
-              <li>• Exports are saved as JSON files</li>
-              <li>• Files include timestamp for easy identification</li>
-              <li>• Keep backups before making major changes</li>
+              <li>• Las exportaciones se guardan como archivos JSON</li>
+              <li>• Los archivos incluyen la fecha para identificarlos fácilmente</li>
+              <li>• Hacé un respaldo antes de cambios grandes</li>
             </ul>
           </div>
         </CardContent>
@@ -176,15 +176,15 @@ export function ExportImport() {
         <CardHeader className="bg-grass text-white">
           <CardTitle className="text-white flex items-center gap-2">
             <Upload className="w-6 h-6" />
-            Import Tournament
+            Importar Torneo
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Load Tournament Data</h3>
+            <h3 className="font-arcade text-[10px] text-gold uppercase mb-2">Cargar Datos de un Torneo</h3>
             <p className="text-sm text-grass-soft mb-4">
-              Import a previously exported tournament file. It is added to the database as a new
-              tournament and selected right away.
+              Importá un archivo de torneo exportado previamente. Se agrega a la base de datos
+              como un torneo nuevo y queda seleccionado de inmediato.
             </p>
 
             <div className="border-2 border-dashed border-grass p-8 text-center hover:border-gold transition-colors">
@@ -202,9 +202,9 @@ export function ExportImport() {
               >
                 <Upload className="w-12 h-12 text-grass-soft" />
                 <span className="text-sm font-medium text-white">
-                  {isImporting ? 'Importing…' : 'Click to select a file'}
+                  {isImporting ? 'Importando…' : 'Hacé clic para elegir un archivo'}
                 </span>
-                <span className="text-xs text-grass-soft">JSON files only</span>
+                <span className="text-xs text-grass-soft">Solo archivos JSON</span>
               </label>
             </div>
 
@@ -212,7 +212,7 @@ export function ExportImport() {
               <div className="mt-4 bg-black/40 border-2 border-loss p-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-loss flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-loss">Import Failed</p>
+                  <p className="font-medium text-loss">No se pudo importar</p>
                   <p className="text-sm text-grass-soft">{importError}</p>
                 </div>
               </div>
@@ -224,9 +224,9 @@ export function ExportImport() {
                   <span className="text-night text-xs">✓</span>
                 </div>
                 <div>
-                  <p className="font-medium text-led">Import Successful!</p>
+                  <p className="font-medium text-led">¡Importación exitosa!</p>
                   <p className="text-sm text-grass-soft">
-                    Tournament saved to the database and selected.
+                    El torneo se guardó en la base de datos y quedó seleccionado.
                   </p>
                 </div>
               </div>
@@ -234,11 +234,11 @@ export function ExportImport() {
           </div>
 
           <div className="bg-black/40 border-2 border-gold p-4 text-sm">
-            <p className="text-gold font-medium mb-1">⚠️ Warning:</p>
+            <p className="text-gold font-medium mb-1">⚠️ Advertencia:</p>
             <ul className="text-grass-soft space-y-1">
-              <li>• The imported tournament is added alongside your existing ones</li>
-              <li>• It gets a fresh id, so it never overwrites a tournament you already have</li>
-              <li>• Only import files from trusted sources</li>
+              <li>• El torneo importado se agrega junto a los que ya tenés</li>
+              <li>• Recibe un id nuevo, así que nunca sobrescribe un torneo existente</li>
+              <li>• Importá solo archivos de fuentes confiables</li>
             </ul>
           </div>
         </CardContent>
@@ -246,28 +246,28 @@ export function ExportImport() {
 
       <Card>
         <CardHeader>
-          <CardTitle>File Information</CardTitle>
+          <CardTitle>Información del Archivo</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-grass-soft mb-1">Teams Count</p>
+              <p className="text-grass-soft mb-1">Cantidad de Equipos</p>
               <p className="font-semibold text-lg text-led font-terminal tabular-nums">{teams.length}</p>
             </div>
             <div>
-              <p className="text-grass-soft mb-1">Tournament Status</p>
+              <p className="text-grass-soft mb-1">Estado del Torneo</p>
               <p className="font-semibold text-lg text-led font-terminal tabular-nums">
-                {currentTournament?.worldCup ? 'World Cup' : 'Qualifiers'}
+                {currentTournament?.worldCup ? 'Mundial' : 'Clasificatorias'}
               </p>
             </div>
             <div>
-              <p className="text-grass-soft mb-1">Regions</p>
+              <p className="text-grass-soft mb-1">Regiones</p>
               <p className="font-semibold text-lg text-led font-terminal tabular-nums">
                 {Object.keys(currentTournament?.qualifiers || {}).length}
               </p>
             </div>
             <div>
-              <p className="text-grass-soft mb-1">Stored Tournaments</p>
+              <p className="text-grass-soft mb-1">Torneos Guardados</p>
               <p className="font-semibold text-lg text-led font-terminal tabular-nums">
                 {tournaments.length}
               </p>

@@ -77,7 +77,7 @@ export function TeamSelector({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grass-soft" />
         <input
           type="text"
-          placeholder="Buscar equipo..."
+          placeholder="Buscar equipo…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2 bg-night border-2 border-grass text-white placeholder:text-grass-soft focus:outline-none focus:border-gold"
@@ -122,7 +122,7 @@ export function TeamSelector({
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-bold text-gold font-terminal tabular-nums">{Math.round(team.skill)}</div>
-                  <div className="text-xs text-grass-soft">Skill</div>
+                  <div className="text-xs text-grass-soft">Habilidad</div>
                 </div>
               </button>
             ))}

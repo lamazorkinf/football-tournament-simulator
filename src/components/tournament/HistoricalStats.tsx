@@ -105,9 +105,9 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
         <CardContent className="py-12">
           <div className="text-center text-grass-soft">
             <BarChart3 className="w-16 h-16 mx-auto mb-4 text-grass-soft/40" />
-            <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">Supabase Not Configured</p>
+            <p className="font-arcade text-xs text-white text-shadow-retro uppercase mb-2">Supabase sin configurar</p>
             <p className="text-sm">
-              Configure Supabase to view historical statistics across tournaments.
+              Configurá Supabase para ver estadísticas históricas de todos los torneos.
             </p>
           </div>
         </CardContent>
@@ -146,9 +146,9 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
       {/* View Selector */}
       <Tabs
         items={[
-          { id: 'overview', label: 'Overview', icon: BarChart3 },
-          { id: 'teams', label: 'Top Teams', icon: Trophy },
-          { id: 'tiers', label: 'Tier Analysis', icon: Award },
+          { id: 'overview', label: 'Resumen', icon: BarChart3 },
+          { id: 'teams', label: 'Mejores Equipos', icon: Trophy },
+          { id: 'tiers', label: 'Análisis por Nivel', icon: Award },
         ]}
         value={selectedView}
         onChange={(id) => setSelectedView(id as 'overview' | 'teams' | 'tiers')}
@@ -357,16 +357,16 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                 <CardHeader className={getTierColor(tier)}>
                   <CardTitle className="flex items-center gap-2">
                     <span className="text-2xl">{getTierIcon(tier)}</span>
-                    {tier} Tier
+                    Nivel {tier}
                     <span className="ml-auto text-sm font-normal">
-                      {tierTeams.length} teams
+                      {tierTeams.length} equipos
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 mt-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-grass-soft">Skill Range:</span>
+                      <span className="text-grass-soft">Rango de habilidad:</span>
                       <span className="font-terminal text-white tabular-nums">
                         {tier === 'Elite' && '80-100'}
                         {tier === 'Strong' && '65-79'}
@@ -376,7 +376,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-grass-soft">Average Skill:</span>
+                        <span className="text-grass-soft">Habilidad promedio:</span>
                         <span className="font-terminal text-led tabular-nums">
                           {tierTeams.length > 0 ? avgSkill.toFixed(1) : '0'}
                         </span>
@@ -384,7 +384,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
                       <PixelBar value={avgSkill} max={100} color="led" />
                     </div>
                     <div className="mt-4">
-                      <p className="text-xs text-grass-soft mb-2">Top Teams:</p>
+                      <p className="text-xs text-grass-soft mb-2">Mejores equipos:</p>
                       <div className="space-y-1">
                         {tierTeams
                           .sort((a, b) => b.skill - a.skill)

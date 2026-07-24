@@ -8,6 +8,7 @@ import { useTournamentStore } from '../../store/useTournamentStore';
 import { teamsService } from '../../services/teamsService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { Search, Edit2, Save, X, Trash2, RefreshCw } from 'lucide-react';
+import { EmptyState } from '../ui/EmptyState';
 import { toast } from 'sonner';
 
 const REGIONS: Region[] = [
@@ -108,7 +109,7 @@ export function TeamEditor() {
       <Card>
         <CardHeader className="bg-grass text-white">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-white">Team Editor</CardTitle>
+            <CardTitle className="text-white">Editor de Equipos</CardTitle>
             <div className="flex gap-2">
               <Button
                 variant="primary"
@@ -118,7 +119,7 @@ export function TeamEditor() {
                 className="gap-2"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh from DB'}
+                {isRefreshing ? 'Actualizando…' : 'Actualizar desde la base'}
               </Button>
             </div>
           </div>
@@ -129,7 +130,7 @@ export function TeamEditor() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-grass-soft w-5 h-5" />
             <input
               type="text"
-              placeholder="Search teams..."
+              placeholder="Buscar equipo…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
@@ -141,7 +142,7 @@ export function TeamEditor() {
             onChange={(e) => setSelectedRegion(e.target.value as Region | 'All')}
             className="px-4 py-2 bg-night border-2 border-grass text-white focus:outline-none focus:border-gold"
           >
-            <option value="All">All Regions ({teams.length})</option>
+            <option value="All">Todas las regiones ({teams.length})</option>
             {REGIONS.map((region) => (
               <option key={region} value={region}>
                 {region} ({teamsByRegion[region] || 0})
@@ -153,7 +154,11 @@ export function TeamEditor() {
         <div className="bg-night border-2 border-grass p-4 max-h-[500px] overflow-y-auto">
           <div className="space-y-2">
             {filteredTeams.length === 0 ? (
-              <p className="text-center text-grass-soft py-8">No teams found</p>
+              <EmptyState
+                icon={Search}
+                title="Sin coincidencias"
+                description="Ningún equipo coincide con la búsqueda."
+              />
             ) : (
               filteredTeams.map((team) => (
                 <TeamRow
@@ -175,9 +180,9 @@ export function TeamEditor() {
         <div className="text-sm bg-black/40 border-2 border-gold p-3">
           <p className="font-semibold text-gold mb-1">💡 Tips:</p>
           <ul className="space-y-1 text-grass-soft">
-            <li>• Skill ratings range from 30 to 100</li>
-            <li>• Moving teams between regions will affect group composition</li>
-            <li>• Changes take effect immediately but won't affect completed matches</li>
+            <li>• El skill va de 30 a 100</li>
+            <li>• Mover equipos entre regiones afecta la composición de los grupos</li>
+            <li>• Los cambios se aplican al instante pero no afectan partidos ya jugados</li>
           </ul>
         </div>
       </CardContent>
@@ -238,7 +243,7 @@ function TeamRow({
             <div className="flex gap-2">
               <Button variant="primary" size="sm" onClick={onSave} className="gap-1">
                 <Save className="w-4 h-4" />
-                Save
+                Guardar
               </Button>
               <Button variant="ghost" size="sm" onClick={onCancel} className="gap-1">
                 <X className="w-4 h-4" />
@@ -247,7 +252,7 @@ function TeamRow({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-grass-soft mb-1">Skill</label>
+              <label className="block text-xs text-grass-soft mb-1">Habilidad</label>
               <input
                 type="number"
                 min="30"
@@ -263,7 +268,7 @@ function TeamRow({
               />
             </div>
             <div>
-              <label className="block text-xs text-grass-soft mb-1">Region</label>
+              <label className="block text-xs text-grass-soft mb-1">Región</label>
               <select
                 value={editForm.region}
                 onChange={(e) =>
@@ -295,7 +300,7 @@ function TeamRow({
               <span className="text-sm text-grass-soft md:hidden">{team.region}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-grass-soft">Skill:</span>
+              <span className="text-sm text-grass-soft">Habilidad:</span>
               <div className="flex items-center gap-2">
                 <div className="w-20 bg-black/40 border border-grass h-2">
                   <div
@@ -312,7 +317,7 @@ function TeamRow({
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={onEdit} className="gap-2 flex-1 sm:flex-none">
             <Edit2 className="w-4 h-4" />
-            Edit
+            Editar
           </Button>
           <Button
             variant="outline"

@@ -301,7 +301,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
 
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       <div className={`flex items-center justify-end gap-1 ${homeResultClass}`}>
-                        <span>Skill: {match.homeSkillBefore} → {match.homeSkillAfter}</span>
+                        <span>Habilidad: {match.homeSkillBefore} → {match.homeSkillAfter}</span>
                         {getSkillChangeIcon(match.homeSkillChange)}
                         <span className={getSkillChangeTextClass(match.homeSkillChange)}>
                           {match.homeSkillChange > 0 ? '+' : ''}
@@ -309,7 +309,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
                         </span>
                       </div>
                       <div className={`flex items-center gap-1 ${awayResultClass}`}>
-                        <span>Skill: {match.awaySkillBefore} → {match.awaySkillAfter}</span>
+                        <span>Habilidad: {match.awaySkillBefore} → {match.awaySkillAfter}</span>
                         {getSkillChangeIcon(match.awaySkillChange)}
                         <span className={getSkillChangeTextClass(match.awaySkillChange)}>
                           {match.awaySkillChange > 0 ? '+' : ''}

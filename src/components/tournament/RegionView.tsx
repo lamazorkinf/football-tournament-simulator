@@ -81,7 +81,7 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                       <h3 className="font-arcade text-sm text-white text-shadow-retro">{group.name}</h3>
                       {isComplete && (
                         <div className="flex items-center gap-1 text-led text-sm font-semibold">
-                          ✓ Complete
+                          ✓ Completo
                         </div>
                       )}
                     </div>
@@ -146,7 +146,7 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                         {/* Progress Bar */}
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-xs text-grass-soft">
-                            <span>Progress</span>
+                            <span>Progreso</span>
                             <span>
                               {playedMatches}/{totalMatches}
                             </span>
@@ -166,7 +166,7 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                         {/* View Details Button */}
                         <div className="mt-4 pt-4 border-t-2 border-grass">
                           <button className="w-full flex items-center justify-between text-led hover:text-white font-medium text-sm transition-colors">
-                            <span>View Details</span>
+                            <span>Ver detalles</span>
                             <ChevronRight className="w-4 h-4" />
                           </button>
                         </div>
@@ -174,7 +174,7 @@ export function RegionView({ region, groups, teams, onSimulateMatch }: RegionVie
                     ) : (
                       <div className="text-center py-8">
                         <p className="text-sm text-gold italic">
-                          Awaiting draw...
+                          Esperando sorteo…
                         </p>
                       </div>
                     )}

@@ -41,7 +41,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
         variants={matchCardVariants}
         className="bg-grass-dark border-2 border-dashed border-grass p-3 text-center text-grass-soft text-sm min-h-[100px] flex items-center justify-center"
       >
-        TBD
+        Por definir
       </motion.div>
     );
   }
@@ -55,7 +55,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
         variants={matchCardVariants}
         className="bg-grass-dark border-2 border-dashed border-grass p-3 text-center text-grass-soft text-sm min-h-[100px] flex items-center justify-center"
       >
-        Awaiting teams...
+        Esperando equipos…
       </motion.div>
     );
   }
@@ -120,7 +120,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
         {/* Penalties */}
         {match.penalties && (
           <div className="text-xs text-center text-gold bg-black/40 border border-gold py-1">
-            Penalties: {match.penalties.homeScore} - {match.penalties.awayScore}
+            Penales: {match.penalties.homeScore} - {match.penalties.awayScore}
           </div>
         )}
 
@@ -137,7 +137,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
               disabled={disabled}
               className="w-full"
             >
-              {disabled ? 'Guardando...' : 'Simulate'}
+              {disabled ? 'Guardando…' : 'Simular'}
             </Button>
           )}
           {!isPlayed && onSimulate && (
@@ -161,7 +161,7 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
               className="w-full gap-2"
             >
               <Info className="w-3 h-3" />
-              Details
+              Detalles
             </Button>
           )}
         </div>
@@ -208,7 +208,7 @@ export const KnockoutView = ({
     await simulateKnockoutMatch(matchId);
 
     toast.success(
-      `🏆 Knockout match played!`,
+      `🏆 ¡Partido de eliminatorias jugado!`,
       { duration: 2000 }
     );
   };
@@ -268,11 +268,11 @@ export const KnockoutView = ({
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
-            Back
+            Volver
           </Button>
           <div className="flex items-center gap-2">
             <Trophy className="w-6 h-6 text-gold" />
-            <h2 className="font-arcade text-lg text-white text-shadow-retro">Knockout Stage</h2>
+            <h2 className="font-arcade text-lg text-white text-shadow-retro">Eliminatorias</h2>
           </div>
         </div>
         {tournamentComplete && (
@@ -282,7 +282,7 @@ export const KnockoutView = ({
             className="gap-2"
           >
             <Trophy className="w-5 h-5" />
-            View Champion
+            Ver Campeón
           </Button>
         )}
       </div>
@@ -294,7 +294,7 @@ export const KnockoutView = ({
             <div className="flex items-center gap-3">
               <Trophy className="w-8 h-8 text-gold" />
               <div>
-                <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Knockout Stage Progress</h3>
+                <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">Progreso de las Eliminatorias</h3>
                 <p className="text-sm text-grass-soft">
                   {(() => {
                     const allMatches = [
@@ -306,7 +306,7 @@ export const KnockoutView = ({
                       ...(knockout.final ? [knockout.final] : []),
                     ];
                     const played = allMatches.filter((m) => m.isPlayed).length;
-                    return `${played}/${allMatches.length} matches completed`;
+                    return `${played}/${allMatches.length} partidos completados`;
                   })()}
                 </p>
               </div>
@@ -314,7 +314,7 @@ export const KnockoutView = ({
             {tournamentComplete && (
               <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-gold font-arcade text-[10px] text-gold uppercase blink">
                 <Trophy className="w-5 h-5" />
-                Champion Crowned!
+                ¡Campeón coronado!
               </div>
             )}
           </div>
@@ -431,7 +431,7 @@ export const KnockoutView = ({
             animate={{ opacity: 1, y: 0 }}
             className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
-            Round of 32
+            Dieciseisavos
           </motion.h3>
           <div className="space-y-3">
             {knockout.roundOf32.length > 0 ? (
@@ -447,7 +447,7 @@ export const KnockoutView = ({
               ))
             ) : (
               <div className="text-center text-grass-soft text-sm py-8">
-                Complete group stage first
+                Completá primero la fase de grupos
               </div>
             )}
           </div>
@@ -461,7 +461,7 @@ export const KnockoutView = ({
             transition={{ delay: 0.1 }}
             className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
-            Round of 16
+            Octavos
           </motion.h3>
           <div className="space-y-3">
             {knockout.roundOf16.length > 0 ? (
@@ -477,7 +477,7 @@ export const KnockoutView = ({
               ))
             ) : (
               <div className="text-center text-grass-soft text-sm py-8">
-                Complete Round of 32
+                Completá los Dieciseisavos
               </div>
             )}
           </div>
@@ -491,7 +491,7 @@ export const KnockoutView = ({
             transition={{ delay: 0.2 }}
             className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
-            Quarter Finals
+            Cuartos de Final
           </motion.h3>
           <div className="space-y-3">
             {knockout.quarterFinals.length > 0 ? (
@@ -507,7 +507,7 @@ export const KnockoutView = ({
               ))
             ) : (
               <div className="text-center text-grass-soft text-sm py-8">
-                Complete Round of 16
+                Completá los Octavos
               </div>
             )}
           </div>
@@ -521,7 +521,7 @@ export const KnockoutView = ({
             transition={{ delay: 0.4 }}
             className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
-            Semi Finals
+            Semifinales
           </motion.h3>
           <div className="space-y-3">
             {knockout.semiFinals.length > 0 ? (
@@ -537,7 +537,7 @@ export const KnockoutView = ({
               ))
             ) : (
               <div className="text-center text-grass-soft text-sm py-8">
-                Complete Quarter Finals
+                Completá los Cuartos de Final
               </div>
             )}
           </div>
@@ -551,7 +551,7 @@ export const KnockoutView = ({
             transition={{ delay: 0.6 }}
             className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
           >
-            Finals
+            Finales
           </motion.h3>
           <div className="space-y-3">
             {/* Third Place */}
@@ -559,7 +559,7 @@ export const KnockoutView = ({
               <div>
                 <div className="text-xs text-grass-soft mb-1 flex items-center justify-center gap-1">
                   <Medal className="w-3 h-3" />
-                  Third Place
+                  Tercer Puesto
                 </div>
                 <MatchCard
                   match={knockout.thirdPlace}
@@ -588,7 +588,7 @@ export const KnockoutView = ({
               </div>
             ) : knockout.semiFinals.length === 0 ? (
               <div className="text-center text-grass-soft text-sm py-8">
-                Complete Semi Finals
+                Completá las Semifinales
               </div>
             ) : null}
           </div>
@@ -602,7 +602,7 @@ export const KnockoutView = ({
         {/* Round of 32 */}
         <Card>
           <CardHeader>
-            <CardTitle>Round of 32</CardTitle>
+            <CardTitle>Dieciseisavos</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -618,7 +618,7 @@ export const KnockoutView = ({
                 ))
               ) : (
                 <div className="text-center text-grass-soft text-sm py-8">
-                  Complete group stage first
+                  Completá primero la fase de grupos
                 </div>
               )}
             </div>
@@ -628,7 +628,7 @@ export const KnockoutView = ({
         {/* Round of 16 */}
         <Card>
           <CardHeader>
-            <CardTitle>Round of 16</CardTitle>
+            <CardTitle>Octavos</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -644,7 +644,7 @@ export const KnockoutView = ({
                 ))
               ) : (
                 <div className="text-center text-grass-soft text-sm py-8">
-                  Complete Round of 32
+                  Completá los Dieciseisavos
                 </div>
               )}
             </div>
@@ -654,7 +654,7 @@ export const KnockoutView = ({
         {/* Quarter Finals */}
         <Card>
           <CardHeader>
-            <CardTitle>Quarter Finals</CardTitle>
+            <CardTitle>Cuartos de Final</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -670,7 +670,7 @@ export const KnockoutView = ({
                 ))
               ) : (
                 <div className="text-center text-grass-soft text-sm py-8">
-                  Complete Round of 16
+                  Completá los Octavos
                 </div>
               )}
             </div>
@@ -680,7 +680,7 @@ export const KnockoutView = ({
         {/* Semi Finals */}
         <Card>
           <CardHeader>
-            <CardTitle>Semi Finals</CardTitle>
+            <CardTitle>Semifinales</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -696,7 +696,7 @@ export const KnockoutView = ({
                 ))
               ) : (
                 <div className="text-center text-grass-soft text-sm py-8">
-                  Complete Quarter Finals
+                  Completá los Cuartos de Final
                 </div>
               )}
             </div>
@@ -706,7 +706,7 @@ export const KnockoutView = ({
         {/* Finals */}
         <Card>
           <CardHeader className="border-gold">
-            <CardTitle>Finals</CardTitle>
+            <CardTitle>Finales</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-4">
@@ -715,7 +715,7 @@ export const KnockoutView = ({
                 <div>
                   <div className="text-xs text-grass-soft mb-2 flex items-center gap-1">
                     <Medal className="w-3 h-3" />
-                    Third Place Match
+                    Partido por el Tercer Puesto
                   </div>
                   <MatchCard
                     match={knockout.thirdPlace}
@@ -731,7 +731,7 @@ export const KnockoutView = ({
                 <div>
                   <div className="text-xs text-gold font-semibold mb-2 flex items-center gap-1">
                     <Trophy className="w-4 h-4" />
-                    Championship Final
+                    Final del Campeonato
                   </div>
                   <MatchCard
                     match={knockout.final}

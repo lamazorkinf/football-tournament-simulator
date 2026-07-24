@@ -59,7 +59,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
                     <h3 className="font-arcade text-xs text-white text-shadow-retro uppercase">{group.name}</h3>
                     {isComplete && (
                       <div className="flex items-center gap-1 text-led font-arcade text-[10px] uppercase">
-                        ✓ Complete
+                        ✓ Completo
                       </div>
                     )}
                   </div>
@@ -114,7 +114,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
                   {/* Progress Bar */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-grass-soft">
-                      <span>Progress</span>
+                      <span>Progreso</span>
                       <span className="font-terminal text-led tabular-nums">
                         {playedMatches}/{totalMatches}
                       </span>
@@ -134,7 +134,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
                   {/* View Details Button */}
                   <div className="mt-4 pt-4 border-t-4 border-grass">
                     <button className="w-full flex items-center justify-between font-arcade text-[10px] uppercase text-gold hover:text-white transition-colors">
-                      <span>View Details</span>
+                      <span>Ver detalles</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -152,17 +152,17 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
           <div className="flex flex-wrap items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-grass/30 border-2 border-grass"></div>
-              <span className="text-grass-soft">Qualified for Knockout</span>
+              <span className="text-grass-soft">Clasifica a Eliminatorias</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-night border-2 border-grass"></div>
-              <span className="text-grass-soft">Eliminated</span>
+              <span className="text-grass-soft">Eliminado</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 text-led font-arcade text-[10px] uppercase">
-                ✓ Complete
+                ✓ Completo
               </div>
-              <span className="text-grass-soft">All matches played</span>
+              <span className="text-grass-soft">Todos los partidos jugados</span>
             </div>
           </div>
         </CardContent>
@@ -175,7 +175,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
             <div className="text-3xl font-terminal text-led tabular-nums">
               {groups.length}
             </div>
-            <div className="text-sm text-grass-soft mt-1">Groups</div>
+            <div className="text-sm text-grass-soft mt-1">Grupos</div>
           </CardContent>
         </Card>
 
@@ -184,7 +184,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
             <div className="text-3xl font-terminal text-led tabular-nums">
               {groups.reduce((acc, g) => acc + g.teamIds.length, 0)}
             </div>
-            <div className="text-sm text-grass-soft mt-1">Teams</div>
+            <div className="text-sm text-grass-soft mt-1">Equipos</div>
           </CardContent>
         </Card>
 
@@ -193,7 +193,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
             <div className="text-3xl font-terminal text-led tabular-nums">
               {groups.filter((g) => g.matches.every((m) => m.isPlayed)).length}
             </div>
-            <div className="text-sm text-grass-soft mt-1">Complete</div>
+            <div className="text-sm text-grass-soft mt-1">Completos</div>
           </CardContent>
         </Card>
 
@@ -202,7 +202,7 @@ export function WorldCupGridView({ groups, teams, onSimulateMatch }: WorldCupGri
             <div className="text-3xl font-terminal text-gold tabular-nums">
               {groups.filter((g) => g.matches.some((m) => !m.isPlayed)).length}
             </div>
-            <div className="text-sm text-grass-soft mt-1">In Progress</div>
+            <div className="text-sm text-grass-soft mt-1">En Progreso</div>
           </CardContent>
         </Card>
       </div>

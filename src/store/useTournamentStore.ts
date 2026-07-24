@@ -358,7 +358,7 @@ export const useTournamentStore = create<TournamentState>()(
         progress.startProgress(`Creando Mundial ${year}`, 6);
 
         try {
-          progress.updateProgress('Actualizando rankings de equipos...', 1);
+          progress.updateProgress('Actualizando rankings de equipos…', 1);
           // Nueva temporada: los skills regresan un 3% hacia su valor base
           const regressedTeams = applySeasonRegression(get().teams);
           const teamsWithTiers = updateTeamsTiers(regressedTeams);
@@ -369,7 +369,7 @@ export const useTournamentStore = create<TournamentState>()(
             originalSkills[team.id] = team.skill;
           });
 
-          progress.updateProgress('Creando grupos de clasificatorios...', 2);
+          progress.updateProgress('Creando grupos de clasificatorios…', 2);
           const qualifiers: Record<Region, Group[]> = {
             Europe: createQualifierGroups(teamsWithTiers, 'Europe'),
             America: createQualifierGroups(teamsWithTiers, 'America'),
@@ -377,7 +377,7 @@ export const useTournamentStore = create<TournamentState>()(
             Asia: createQualifierGroups(teamsWithTiers, 'Asia'),
           };
 
-          progress.updateProgress('Inicializando torneo...', 3);
+          progress.updateProgress('Inicializando torneo…', 3);
           const tournament: Cycle = toCycle({
             id: nanoid(),
             name: `World Cup ${year}`,
@@ -402,13 +402,13 @@ export const useTournamentStore = create<TournamentState>()(
           // Save new tournament to database
           if (isSupabaseConfigured()) {
             try {
-              progress.updateProgress('Guardando torneo en base de datos...', 4);
+              progress.updateProgress('Guardando torneo en base de datos…', 4);
               await adaptiveTournamentService.saveTournament(tournament);
               await cycleStateService.saveCycleState(tournament);
               console.log(`Tournament ${year} created and saved to database`);
 
               // Save empty qualifier groups to database
-              progress.updateProgress('Guardando grupos de clasificatorios...', 5);
+              progress.updateProgress('Guardando grupos de clasificatorios…', 5);
               const regions: Region[] = ['Europe', 'America', 'Africa', 'Asia'];
               await Promise.all(
                 regions.map(async (region) => {
@@ -433,7 +433,7 @@ export const useTournamentStore = create<TournamentState>()(
             }
           }
 
-          progress.updateProgress('Finalizando...', 6);
+          progress.updateProgress('Finalizando…', 6);
           progress.completeProgress();
 
           // Se cambia al torneo recién creado sin preguntar: crearlo desde el
@@ -619,7 +619,7 @@ export const useTournamentStore = create<TournamentState>()(
         try {
           console.log(`🔄 Recalculando rendimientos para torneo ${tournamentId}...`);
 
-          pendingToastId = toast.info('Calculando rendimientos en segundo plano...', 0);
+          pendingToastId = toast.info('Calculando rendimientos en segundo plano…', 0);
 
           // Call the Edge Function
           const { data, error } = await supabase.functions.invoke('calculate-tournament-performances', {
@@ -1418,7 +1418,7 @@ export const useTournamentStore = create<TournamentState>()(
         try {
           progress.startProgress('Avanzando al Mundial', 5);
 
-          progress.updateProgress('Verificando partidos de clasificatorios...', 1);
+          progress.updateProgress('Verificando partidos de clasificatorios…', 1);
           // Check if all qualifier matches are complete
           let allMatchesPlayed = true;
           for (const region in state.currentTournament.qualifiers) {
@@ -1441,7 +1441,7 @@ export const useTournamentStore = create<TournamentState>()(
 
             console.log('✅ All qualifier matches complete');
 
-          progress.updateProgress('Recolectando equipos clasificados...', 2);
+          progress.updateProgress('Recolectando equipos clasificados…', 2);
           // Get all first-place teams + 22 best second-place teams
           const qualifiedTeamIds: string[] = [];
           const qualifierSummary: Record<Region, string[]> = {
@@ -1509,7 +1509,7 @@ export const useTournamentStore = create<TournamentState>()(
             return;
           }
 
-          progress.updateProgress('Creando sorteo del Mundial...', 3);
+          progress.updateProgress('Creando sorteo del Mundial…', 3);
           // Use smart seeding to create balanced World Cup groups
           console.log('🎲 Creating World Cup draw...');
           const worldCupGroups = createSmartWorldCupDraw(qualifiedTeams);
@@ -1526,14 +1526,14 @@ export const useTournamentStore = create<TournamentState>()(
             calendar: { phase: 'wc-groups' as const, matchday: 1 },
           };
 
-          progress.updateProgress('Guardando grupos en base de datos...', 4);
+          progress.updateProgress('Guardando grupos en base de datos…', 4);
           // Save World Cup groups and matches to database
           if (isSupabaseConfigured()) {
             await normalizedWorldCupService.createWorldCupGroups(state.currentTournament.id, worldCupGroups);
             console.log('✅ World Cup groups and matches saved to database');
           }
 
-          progress.updateProgress('Finalizando...', 5);
+          progress.updateProgress('Finalizando…', 5);
           updateTournamentInState(set, get, updatedTournament);
 
           console.log('✅ Advanced to World Cup successfully');
@@ -1556,7 +1556,7 @@ export const useTournamentStore = create<TournamentState>()(
         try {
           progress.startProgress('Generando fase eliminatoria', 4);
 
-          progress.updateProgress('Verificando fase de grupos...', 1);
+          progress.updateProgress('Verificando fase de grupos…', 1);
           // Check if all group matches are complete
           if (!areGroupsComplete(state.currentTournament.worldCup.groups)) {
             progress.resetProgress();
@@ -1566,13 +1566,13 @@ export const useTournamentStore = create<TournamentState>()(
 
           console.log('🏆 Advancing to knockout stage...');
 
-          progress.updateProgress('Generando bracket de Round of 32...', 2);
+          progress.updateProgress('Generando bracket de Round of 32…', 2);
           // Generate Round of 32 (for 64 teams from 16 groups)
           const roundOf32 = generateRoundOf32(state.currentTournament.worldCup.groups, state.teams);
 
           console.log(`✅ Generated ${roundOf32.length} Round of 32 matches`);
 
-          progress.updateProgress('Guardando partidos en base de datos...', 3);
+          progress.updateProgress('Guardando partidos en base de datos…', 3);
           // Save knockout matches to database
           if (isSupabaseConfigured()) {
             try {
@@ -1591,7 +1591,7 @@ export const useTournamentStore = create<TournamentState>()(
             }
           }
 
-          progress.updateProgress('Finalizando...', 4);
+          progress.updateProgress('Finalizando…', 4);
           const updatedTournament = {
             ...state.currentTournament,
             worldCup: {
@@ -1777,7 +1777,7 @@ export const useTournamentStore = create<TournamentState>()(
         try {
           progress.startProgress('Generando sorteo y fixtures', totalSteps);
 
-          progress.updateProgress('Restaurando habilidades de equipos...', ++currentStep);
+          progress.updateProgress('Restaurando habilidades de equipos…', ++currentStep);
           console.log('📊 Restoring team skills...');
           // Restore original skills if available
           let restoredTeams = state.teams;
@@ -1789,7 +1789,7 @@ export const useTournamentStore = create<TournamentState>()(
             console.log(`✅ Restored ${restoredTeams.length} team skills`);
           }
 
-          progress.updateProgress('Verificando grupos...', ++currentStep);
+          progress.updateProgress('Verificando grupos…', ++currentStep);
           // Copia: asignar sobre state.currentTournament.qualifiers mutaba el
           // objeto vivo del store, corrompiendo retroactivamente el snapshot
           // guardado en `tournaments` y dejando la misma referencia en el
@@ -1815,7 +1815,7 @@ export const useTournamentStore = create<TournamentState>()(
 
           // Process each region
           for (const region of regions) {
-          progress.updateProgress(`Generando fixtures para ${region}...`, ++currentStep);
+          progress.updateProgress(`Generando fixtures para ${region}…`, ++currentStep);
           const groups = updatedQualifiers[region];
           const regionTeams = restoredTeams.filter((t) => t.region === region);
 
@@ -1843,7 +1843,7 @@ export const useTournamentStore = create<TournamentState>()(
           updatedQualifiers[region] = groupsWithMatches;
         }
 
-          progress.updateProgress('Guardando datos en la base de datos...', ++currentStep);
+          progress.updateProgress('Guardando datos en la base de datos…', ++currentStep);
           console.log('💾 Creating updated tournament object...');
         // Update tournament
         const updatedTournament = {
@@ -1908,7 +1908,7 @@ export const useTournamentStore = create<TournamentState>()(
             console.warn('⚠️ Supabase not configured - data will not be persisted');
           }
 
-          progress.updateProgress('Finalizando...', ++currentStep);
+          progress.updateProgress('Finalizando…', ++currentStep);
           console.log('✅ generateDrawAndFixtures completed');
           progress.completeProgress();
         } catch (error) {
@@ -1933,7 +1933,7 @@ export const useTournamentStore = create<TournamentState>()(
         try {
           progress.startProgress('Regenerando fase eliminatoria', 5);
 
-          progress.updateProgress('Verificando partidos...', 1);
+          progress.updateProgress('Verificando partidos…', 1);
           // Check if any knockout match has been played
           const hasKnockoutMatchPlayed =
             state.currentTournament.worldCup.knockout.roundOf32.some(m => m.isPlayed) ||
@@ -1959,7 +1959,7 @@ export const useTournamentStore = create<TournamentState>()(
 
           console.log('🔄 Regenerating knockout stage...');
 
-          progress.updateProgress('Eliminando datos anteriores...', 2);
+          progress.updateProgress('Eliminando datos anteriores…', 2);
           // Delete existing knockout data from database
           if (isSupabaseConfigured()) {
             try {
@@ -1974,13 +1974,13 @@ export const useTournamentStore = create<TournamentState>()(
             }
           }
 
-          progress.updateProgress('Generando nuevo bracket...', 3);
+          progress.updateProgress('Generando nuevo bracket…', 3);
           // Generate new Round of 32 based on current group standings
           console.log('🎲 Generating new Round of 32...');
           const roundOf32 = generateRoundOf32(state.currentTournament.worldCup.groups, state.teams);
           console.log(`✅ Generated ${roundOf32.length} Round of 32 matches`);
 
-          progress.updateProgress('Guardando partidos en base de datos...', 4);
+          progress.updateProgress('Guardando partidos en base de datos…', 4);
           // Save new knockout matches to database
           if (isSupabaseConfigured()) {
             try {
@@ -1999,7 +1999,7 @@ export const useTournamentStore = create<TournamentState>()(
             }
           }
 
-          progress.updateProgress('Finalizando...', 5);
+          progress.updateProgress('Finalizando…', 5);
           // Update state with new knockout bracket
           const updatedTournament = {
             ...state.currentTournament,
@@ -2303,7 +2303,7 @@ export const useTournamentStore = create<TournamentState>()(
             // Toast sin auto-cierre: se retira explícitamente al resolverse,
             // si no se acumula uno por cada Mundial completado en la sesión.
             const pendingToastId = toast.info(
-              'Calculando rendimientos del torneo en segundo plano...',
+              'Calculando rendimientos del torneo en segundo plano…',
               0
             );
 

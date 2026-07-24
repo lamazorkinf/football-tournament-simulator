@@ -85,7 +85,7 @@ export function TeamTournamentHistory({ teamId, teamName }: TeamTournamentHistor
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-grass-soft py-4">Cargando...</div>
+          <div className="text-center text-grass-soft py-4">Cargando…</div>
         </CardContent>
       </Card>
     );

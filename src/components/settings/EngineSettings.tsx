@@ -65,7 +65,7 @@ export function EngineSettings() {
               <p className="font-semibold text-white mb-1">Sistema ELO</p>
               <p>
                 El sistema ELO ajusta dinámicamente las habilidades de los equipos basándose en resultados de partidos.
-                Los cambios aquí afectan cómo los equipos ganan o pierden puntos de skill.
+                Los cambios aquí afectan cómo los equipos ganan o pierden puntos de habilidad.
               </p>
             </div>
           </div>
@@ -116,7 +116,7 @@ export function EngineSettings() {
               </div>
               <div className="mt-3 pt-3 border-t-2 border-grass">
                 <p className="text-xs text-grass-soft">
-                  <strong className="text-white">Ejemplo con K={config.kFactor}:</strong> Si un equipo de 70 skill gana a uno de 85 skill,
+                  <strong className="text-white">Ejemplo con K={config.kFactor}:</strong> Si un equipo con 70 de habilidad le gana a uno con 85,
                   ganará aproximadamente <strong className="text-led font-terminal tabular-nums">+{(config.kFactor * 0.61).toFixed(1)}</strong> puntos
                   (el favorito perdería <strong className="text-loss font-terminal tabular-nums">-{(config.kFactor * 0.61).toFixed(1)}</strong>).
                 </p>
@@ -166,7 +166,7 @@ export function EngineSettings() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm text-grass-soft">
-                  Bonus de skill: <span className="text-led font-terminal tabular-nums font-bold">+{config.homeAdvantage}</span>
+                  Bonus de habilidad: <span className="text-led font-terminal tabular-nums font-bold">+{config.homeAdvantage}</span>
                 </label>
                 <span className="text-sm text-grass-soft">
                   {config.homeAdvantage === 0 && 'Sin ventaja'}
@@ -193,12 +193,12 @@ export function EngineSettings() {
             <div className="bg-night border-2 border-grass p-4">
               <p className="text-sm font-semibold text-white mb-2">Impacto</p>
               <p className="text-sm text-grass-soft">
-                El equipo local recibe <strong className="text-led font-terminal tabular-nums">+{config.homeAdvantage}</strong> puntos de skill
+                El equipo local recibe <strong className="text-led font-terminal tabular-nums">+{config.homeAdvantage}</strong> puntos de habilidad
                 temporalmente durante el cálculo de goles esperados. Esto NO afecta el cálculo ELO, solo la generación de resultados.
               </p>
               <div className="mt-2 pt-2 border-t-2 border-grass">
                 <p className="text-xs text-grass-soft">
-                  <strong className="text-white">Realista:</strong> En fútbol real, la ventaja de local suele ser equivalente a ~2-4 puntos de skill.
+                  <strong className="text-white">Realista:</strong> En fútbol real, la ventaja de local suele ser equivalente a ~2-4 puntos de habilidad.
                 </p>
               </div>
             </div>
@@ -211,7 +211,7 @@ export function EngineSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="w-5 h-5 text-gold" />
-            Límites de Skill
+            Límites de Habilidad
           </CardTitle>
         </CardHeader>
         <CardContent>

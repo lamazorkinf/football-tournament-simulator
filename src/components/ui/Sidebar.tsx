@@ -92,7 +92,7 @@ export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews
                   {tournamentYear}
                 </h1>
                 <p className="text-xs text-grass-soft truncate">
-                  World Cup
+                  Ciclo mundial
                 </p>
               </div>
             </>
