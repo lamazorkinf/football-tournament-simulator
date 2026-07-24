@@ -4,6 +4,7 @@ import { ExportImport } from '../tournament/ExportImport';
 import { EngineSettings } from './EngineSettings';
 import { TeamEditor } from '../tournament/TeamEditor';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
+import { Tabs } from '../ui/Tabs';
 import { useConfigStore } from '../../store/useConfigStore';
 
 type SettingsTab = 'teams' | 'elo' | 'data';
@@ -31,25 +32,7 @@ export function SettingsHub() {
         </CardHeader>
 
         {/* Tabs */}
-        <div className="flex border-b-4 border-grass">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-4 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-gold text-gold bg-grass/30'
-                    : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs items={tabs} value={activeTab} onChange={(id) => setActiveTab(id as typeof activeTab)} />
       </Card>
 
       {/* Pantalla */}

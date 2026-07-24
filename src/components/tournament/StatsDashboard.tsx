@@ -5,6 +5,7 @@ import { TeamFlag } from '../ui/TeamFlag';
 import { EmptyState } from '../ui/EmptyState';
 import { TrendingUp, History, BarChart3 } from 'lucide-react';
 import { HistoricalStats } from './HistoricalStats';
+import { Tabs } from '../ui/Tabs';
 
 interface StatsDashboardProps {
   tournament: Tournament;
@@ -115,30 +116,14 @@ export function StatsDashboard({ tournament, teams }: StatsDashboardProps) {
   return (
     <div className="space-y-6">
       {/* View Selector */}
-      <div className="flex border-b-4 border-grass">
-        <button
-          onClick={() => setView('current')}
-          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-            view === 'current'
-              ? 'border-gold text-gold bg-grass/30'
-              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-          }`}
-        >
-          <TrendingUp className="w-4 h-4" />
-          Torneo Actual
-        </button>
-        <button
-          onClick={() => setView('historical')}
-          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-            view === 'historical'
-              ? 'border-gold text-gold bg-grass/30'
-              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-          }`}
-        >
-          <History className="w-4 h-4" />
-          Estadísticas Históricas
-        </button>
-      </div>
+      <Tabs
+        items={[
+          { id: 'current', label: 'Torneo Actual', icon: TrendingUp },
+          { id: 'historical', label: 'Estadísticas Históricas', icon: History },
+        ]}
+        value={view}
+        onChange={(id) => setView(id as 'current' | 'historical')}
+      />
 
       {view === 'historical' ? (
         <HistoricalStats teams={teams} />

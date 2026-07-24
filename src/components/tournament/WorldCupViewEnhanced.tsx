@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { Trophy, Award, Users, Zap, RefreshCw } from 'lucide-react';
+import { Trophy, Award, Users, Zap, RefreshCw, Lock } from 'lucide-react';
 import { WorldCupGridView } from './WorldCupGridView';
 import { KnockoutView } from './KnockoutView';
 import { areGroupsComplete } from '../../core/knockout';
 import { toast } from 'sonner';
 import { Button } from '../ui/Button';
-import { Card, CardHeader } from '../ui/Card';
+import { Card, CardHeader, CardContent } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { EmptyState } from '../ui/EmptyState';
+import { Tabs } from '../ui/Tabs';
 
 type WorldCupTab = 'groups' | 'playoffs';
 
@@ -135,48 +137,26 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
         </CardHeader>
 
         {/* Tabs */}
-        <div className="flex border-b-4 border-grass">
-          <button
-            onClick={() => setActiveTab('groups')}
-            className={`flex items-center gap-2 px-6 py-4 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-              activeTab === 'groups'
-                ? 'border-gold text-gold bg-grass/30'
-                : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            <span>Fase de Grupos</span>
-            {groupsProgress > 0 && (
-              <span className="px-2 py-0.5 font-arcade text-[10px] bg-black/40 border border-gold text-gold">
-                {groupsProgress}%
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('playoffs')}
-            disabled={!knockoutStarted}
-            className={`flex items-center gap-2 px-6 py-4 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-              activeTab === 'playoffs'
-                ? 'border-gold text-gold bg-grass/30'
-                : knockoutStarted
-                ? 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-                : 'border-transparent text-grass-soft/40 cursor-not-allowed'
-            }`}
-          >
-            <Award className="w-5 h-5" />
-            <span>Playoffs</span>
-            {knockoutStarted && knockoutProgress > 0 && (
-              <span className="px-2 py-0.5 font-arcade text-[10px] bg-black/40 border border-gold text-gold">
-                {knockoutProgress}%
-              </span>
-            )}
-            {!knockoutStarted && (
-              <span className="px-2 py-0.5 font-arcade text-[10px] bg-black/40 border border-grass-soft text-grass-soft uppercase">
-                Bloqueado
-              </span>
-            )}
-          </button>
-        </div>
+        <Tabs
+          items={[
+            {
+              id: 'groups',
+              label: groupsProgress > 0 ? `Grupos ${groupsProgress}%` : 'Grupos',
+              icon: Users,
+            },
+            {
+              id: 'playoffs',
+              label: knockoutStarted
+                ? knockoutProgress > 0
+                  ? `Playoffs ${knockoutProgress}%`
+                  : 'Playoffs'
+                : 'Playoffs (bloqueado)',
+              icon: Award,
+            },
+          ]}
+          value={activeTab}
+          onChange={(id) => setActiveTab(id as WorldCupTab)}
+        />
 
         {/* Tab Content Stats */}
         {activeTab === 'groups' && (
@@ -285,6 +265,19 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
             onBack={() => setActiveTab('groups')}
             onNewTournament={onNavigate ? () => onNavigate('wizard') : undefined}
           />
+        )}
+
+        {activeTab === 'playoffs' && !knockoutStarted && (
+          <Card>
+            <CardContent className="pt-6">
+              <EmptyState
+                icon={Lock}
+                title="Playoffs sin generar"
+                description="Se generan los dieciseisavos de final cuando termine la fase de grupos."
+                action={{ label: 'Ver fase de grupos', onClick: () => setActiveTab('groups') }}
+              />
+            </CardContent>
+          </Card>
         )}
       </div>
 

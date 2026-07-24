@@ -5,6 +5,7 @@ import { TeamFlag } from '../ui/TeamFlag';
 import { PixelBar } from '../ui/PixelBar';
 import { LoadingState } from '../ui/LoadingState';
 import { EmptyState } from '../ui/EmptyState';
+import { Tabs } from '../ui/Tabs';
 import { matchHistoryService, computeWinRate } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { Trophy, Award, BarChart3, History } from 'lucide-react';
@@ -143,41 +144,15 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
   return (
     <div className="space-y-6">
       {/* View Selector */}
-      <div className="flex border-b-4 border-grass">
-        <button
-          onClick={() => setSelectedView('overview')}
-          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-            selectedView === 'overview'
-              ? 'border-gold text-gold bg-grass/30'
-              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-          }`}
-        >
-          <BarChart3 className="w-4 h-4" />
-          Overview
-        </button>
-        <button
-          onClick={() => setSelectedView('teams')}
-          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-            selectedView === 'teams'
-              ? 'border-gold text-gold bg-grass/30'
-              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-          }`}
-        >
-          <Trophy className="w-4 h-4" />
-          Top Teams
-        </button>
-        <button
-          onClick={() => setSelectedView('tiers')}
-          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-            selectedView === 'tiers'
-              ? 'border-gold text-gold bg-grass/30'
-              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-          }`}
-        >
-          <Award className="w-4 h-4" />
-          Tier Analysis
-        </button>
-      </div>
+      <Tabs
+        items={[
+          { id: 'overview', label: 'Overview', icon: BarChart3 },
+          { id: 'teams', label: 'Top Teams', icon: Trophy },
+          { id: 'tiers', label: 'Tier Analysis', icon: Award },
+        ]}
+        value={selectedView}
+        onChange={(id) => setSelectedView(id as 'overview' | 'teams' | 'tiers')}
+      />
 
       {/* Overview - Now with same layout as Current Tournament */}
       {selectedView === 'overview' && (

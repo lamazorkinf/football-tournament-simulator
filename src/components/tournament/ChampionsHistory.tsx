@@ -14,6 +14,7 @@ import { ChampionsTimeline } from './ChampionsTimeline';
 import { Trophy, ListOrdered, AlertTriangle, Medal } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
 import { EmptyState } from '../ui/EmptyState';
+import { Tabs } from '../ui/Tabs';
 
 type Tab = 'palmares' | 'timeline';
 
@@ -149,30 +150,14 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
       </Card>
 
       {/* Selector de pestaña */}
-      <div className="flex border-b-4 border-grass">
-        <button
-          onClick={() => setTab('palmares')}
-          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-            tab === 'palmares'
-              ? 'border-gold text-gold bg-grass/30'
-              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-          }`}
-        >
-          <Trophy className="w-4 h-4" />
-          Palmarés
-        </button>
-        <button
-          onClick={() => setTab('timeline')}
-          className={`flex items-center gap-2 px-4 py-3 font-arcade text-[10px] uppercase border-b-4 transition-colors ${
-            tab === 'timeline'
-              ? 'border-gold text-gold bg-grass/30'
-              : 'border-transparent text-grass-soft hover:text-white hover:bg-grass/40'
-          }`}
-        >
-          <ListOrdered className="w-4 h-4" />
-          Cronología
-        </button>
-      </div>
+      <Tabs
+        items={[
+          { id: 'palmares', label: 'Palmarés', icon: Trophy },
+          { id: 'timeline', label: 'Cronología', icon: ListOrdered },
+        ]}
+        value={tab}
+        onChange={(id) => setTab(id as 'palmares' | 'timeline')}
+      />
 
       <Card>
         <CardContent className="pt-6">
