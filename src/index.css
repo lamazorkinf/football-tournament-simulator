@@ -114,6 +114,14 @@
   animation: retro-dot 0.75s steps(1) infinite;
 }
 
+@keyframes pixel-sweep {
+  0%, 15%   { background-color: var(--color-led); }
+  16%, 100% { background-color: var(--color-grass-dark); }
+}
+.pixel-sweep {
+  animation: pixel-sweep 1.6s steps(1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
