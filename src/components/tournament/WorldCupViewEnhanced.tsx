@@ -7,6 +7,7 @@ import { areGroupsComplete } from '../../core/knockout';
 import { toast } from 'sonner';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Card';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 type WorldCupTab = 'groups' | 'playoffs';
 
@@ -17,6 +18,7 @@ interface WorldCupViewEnhancedProps {
 export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps = {}) {
   const { currentTournament, teams, advanceToKnockout, regenerateKnockoutStage, simulateMatch } = useTournamentStore();
   const [activeTab, setActiveTab] = useState<WorldCupTab>('groups');
+  const [confirmRegenKnockout, setConfirmRegenKnockout] = useState(false);
 
   if (!currentTournament) {
     return null;
@@ -121,17 +123,7 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
     setActiveTab('playoffs');
   };
 
-  const handleRegenerateKnockout = async () => {
-    if (
-      !confirm(
-        '¿Regenerar Playoffs?\n\nSe eliminarán todos los partidos de playoffs (no jugados) y se volverán a generar los cruces basándose en las posiciones actuales de la fase de grupos.'
-      )
-    ) {
-      return;
-    }
-    await regenerateKnockoutStage();
-    toast.success('✅ ¡Playoffs regenerados correctamente!');
-  };
+  const handleRegenerateKnockout = () => setConfirmRegenKnockout(true);
 
   return (
     <div className="space-y-6">
@@ -302,6 +294,24 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmRegenKnockout}
+        onOpenChange={setConfirmRegenKnockout}
+        variant="danger"
+        title="Regenerar playoffs"
+        confirmLabel="Regenerar"
+        description={
+          <>
+            <p>Se eliminan todos los partidos de playoffs no jugados y se vuelven a generar los cruces según las posiciones actuales de la fase de grupos.</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </>
+        }
+        onConfirm={async () => {
+          await regenerateKnockoutStage();
+          toast.success('Playoffs regenerados');
+        }}
+      />
     </div>
   );
 }

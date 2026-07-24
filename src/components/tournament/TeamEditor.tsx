@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react';
 import type { Team, Region } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TeamFlag } from '../ui/TeamFlag';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { teamsService } from '../../services/teamsService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { Search, Edit2, Save, X, Trash2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 const REGIONS: Region[] = [
   'Europe',
@@ -55,23 +57,19 @@ export function TeamEditor() {
     setEditingTeam(null);
   };
 
-  const handleDeleteTeam = async (teamId: string, teamName: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete ${teamName}? This will remove the team from all groups and cannot be undone.`
-      )
-    ) {
-      return;
-    }
+  const [pendingDeleteTeam, setPendingDeleteTeam] = useState<Team | null>(null);
 
-    // Delete from Supabase first
+  const confirmDeleteTeam = async (team: Team) => {
     if (isSupabaseConfigured()) {
       try {
-        await teamsService.deleteTeam(teamId);
+        await teamsService.deleteTeam(team.id);
       } catch (error) {
         console.error('Error deleting team from Supabase:', error);
-        alert('Failed to delete team from database. Please try again.');
-        return;
+        toast.error('No se pudo eliminar el equipo de la base. Intentá de nuevo.');
+        // Re-lanzar: si no, onConfirm resuelve "bien" y ConfirmDialog cierra
+        // el diálogo como si el borrado hubiera funcionado, mientras el toast
+        // dice lo contrario al mismo tiempo.
+        throw error;
       }
     }
 
@@ -166,7 +164,7 @@ export function TeamEditor() {
                   onEdit={() => handleEdit(team)}
                   onSave={() => handleSave(team.id)}
                   onCancel={handleCancel}
-                  onDelete={() => handleDeleteTeam(team.id, team.name)}
+                  onDelete={() => setPendingDeleteTeam(team)}
                   onFormChange={setEditForm}
                 />
               ))
@@ -185,9 +183,26 @@ export function TeamEditor() {
       </CardContent>
     </Card>
 
+      <ConfirmDialog
+        open={pendingDeleteTeam !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteTeam(null); }}
+        variant="danger"
+        title="Eliminar equipo"
+        confirmLabel="Eliminar"
+        description={
+          <>
+            <p>Se elimina <strong className="text-white">{pendingDeleteTeam?.name}</strong> de todos los grupos.</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </>
+        }
+        onConfirm={async () => {
+          if (pendingDeleteTeam) await confirmDeleteTeam(pendingDeleteTeam);
+        }}
+      />
     </>
   );
 }
+
 
 interface TeamRowProps {
   team: Team;

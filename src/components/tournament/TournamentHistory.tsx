@@ -4,6 +4,7 @@ import { Trophy, Calendar, Award, Users, Trash2, Eye, RefreshCw } from 'lucide-r
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import type { Tournament } from '../../types';
 
 type FilterType = 'all' | 'qualifiers' | 'world-cup' | 'completed';
@@ -11,6 +12,7 @@ type FilterType = 'all' | 'qualifiers' | 'world-cup' | 'completed';
 export function TournamentHistory() {
   const { tournaments, selectTournament, deleteTournament, recalculateTournamentPerformances, currentTournamentId } = useTournamentStore();
   const [filter, setFilter] = useState<FilterType>('all');
+  const [pendingDelete, setPendingDelete] = useState<Tournament | null>(null);
 
   const filteredTournaments = useMemo(() => {
     return tournaments.filter((t) => {
@@ -75,8 +77,8 @@ export function TournamentHistory() {
     selectTournament(tournamentId);
   };
 
-  const handleDelete = (tournamentId: string) => {
-    deleteTournament(tournamentId);
+  const handleDelete = (tournament: Tournament) => {
+    setPendingDelete(tournament);
   };
 
   const handleRecalculate = (tournamentId: string) => {
@@ -235,7 +237,7 @@ export function TournamentHistory() {
                     <Button
                       variant="danger"
                       size="sm"
-                      onClick={() => handleDelete(tournament.id)}
+                      onClick={() => handleDelete(tournament)}
                       disabled={tournaments.length === 1}
                       title={
                         tournaments.length === 1
@@ -260,6 +262,23 @@ export function TournamentHistory() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        variant="danger"
+        title="Eliminar torneo"
+        confirmLabel="Eliminar"
+        description={
+          <>
+            <p>Se elimina <strong className="text-white">{pendingDelete?.name}</strong> y todo su historial de partidos.</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </>
+        }
+        onConfirm={() => {
+          if (pendingDelete) deleteTournament(pendingDelete.id);
+        }}
+      />
     </div>
   );
 }

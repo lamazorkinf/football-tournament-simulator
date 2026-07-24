@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Star, Search, Trash2 } from 'lucide-react';
 import type { Region, Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TeamFlag } from '../ui/TeamFlag';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
@@ -38,9 +39,9 @@ export function FavoritesView() {
   // Ids marcados que ya no existen en la base de equipos no cuentan.
   const favoriteCount = teams.filter((t) => favoriteSet.has(t.id)).length;
 
-  const handleClear = () => {
-    if (confirm('¿Quitar todos los equipos favoritos?')) clearFavorites();
-  };
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const handleClear = () => setConfirmClear(true);
 
   return (
     <div className="space-y-6">
@@ -114,6 +115,16 @@ export function FavoritesView() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        variant="danger"
+        title="Quitar todos los favoritos"
+        confirmLabel="Quitar todos"
+        description={<p>Se desmarcan los {favoriteCount} equipos favoritos. Podés volver a marcarlos cuando quieras.</p>}
+        onConfirm={clearFavorites}
+      />
     </div>
   );
 }

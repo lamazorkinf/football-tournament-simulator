@@ -23,6 +23,7 @@ import {
 import { sortStandings, getBestRunnersUp } from '../../core/scheduler';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Card';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import {
   CheckCircle2,
   Circle,
@@ -54,6 +55,7 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
 
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
+  const [confirmRegenWorldCup, setConfirmRegenWorldCup] = useState(false);
 
   const handleGenerateDraw = async () => {
     if (!currentTournament) return;
@@ -236,16 +238,7 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
     toast.info('Sorteo manual cancelado');
   };
 
-  const handleRegenerateWorldCupDraw = () => {
-    if (
-      confirm(
-        '¿Regenerar sorteo y fixtures de la Copa del Mundo?\n\nEsto eliminará todos los partidos actuales del Mundial (grupos y playoffs) y creará nuevos grupos con los mismos 64 equipos clasificados.\n\n⚠️ Esta acción NO se puede deshacer.'
-      )
-    ) {
-      regenerateWorldCupDrawAndFixtures();
-      toast.success('✅ Sorteo del Mundial regenerado correctamente');
-    }
-  };
+  const handleRegenerateWorldCupDraw = () => setConfirmRegenWorldCup(true);
 
   const handleAdvanceToKnockout = async () => {
     if (
@@ -576,6 +569,24 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmRegenWorldCup}
+        onOpenChange={setConfirmRegenWorldCup}
+        variant="danger"
+        title="Regenerar sorteo del Mundial"
+        confirmLabel="Regenerar"
+        description={
+          <>
+            <p>Se eliminan todos los partidos actuales del Mundial (grupos y playoffs) y se crean grupos nuevos con los mismos 64 equipos clasificados.</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </>
+        }
+        onConfirm={() => {
+          regenerateWorldCupDrawAndFixtures();
+          toast.success('Sorteo del Mundial regenerado');
+        }}
+      />
     </div>
   );
 }
