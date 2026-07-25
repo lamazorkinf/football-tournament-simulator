@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { queueSettingsSave } from '../lib/persistSettings';
+import { DEFAULT_FATIGUE, type FatigueConfig } from '../core/energy';
 
 export type ImportanceKey =
   | 'qualifier'
@@ -17,6 +18,7 @@ export interface EngineConfig {
   skillMin: number;
   skillMax: number;
   importanceByStage: Record<ImportanceKey, number>;
+  fatigue: FatigueConfig;
 }
 
 interface ConfigStore {
@@ -26,6 +28,7 @@ interface ConfigStore {
   updateHomeAdvantage: (value: number) => void;
   updateSkillLimits: (min: number, max: number) => void;
   updateImportance: (key: ImportanceKey, value: number) => void;
+  updateFatigue: (patch: Partial<FatigueConfig>) => void;
   resetToDefaults: () => void;
   scanlines: boolean;
   toggleScanlines: () => void;
@@ -54,6 +57,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
   skillMin: 30,
   skillMax: 100,
   importanceByStage: DEFAULT_IMPORTANCE,
+  fatigue: DEFAULT_FATIGUE,
 };
 
 /**
@@ -121,6 +125,14 @@ export const useConfigStore = create<ConfigStore>()((set) => ({
       return { config };
     }),
 
+  updateFatigue: (patch: Partial<FatigueConfig>) =>
+    set((state) => {
+      const fatigue = { ...state.config.fatigue, ...patch };
+      const config = { ...state.config, fatigue };
+      queueSettingsSave({ engineConfig: config });
+      return { config };
+    }),
+
   resetToDefaults: () => {
     queueSettingsSave({ engineConfig: DEFAULT_CONFIG });
     set({ config: DEFAULT_CONFIG });
@@ -136,10 +148,14 @@ export const useConfigStore = create<ConfigStore>()((set) => ({
     }),
 
   // Escritura directa sin re-guardar: los valores vienen de la DB, mandarlos de
-  // vuelta sería un round-trip inútil.
+  // vuelta sería un round-trip inútil. Un engineConfig guardado por una
+  // versión anterior de la app puede no traer `fatigue`: sin este relleno
+  // quedaría `undefined` y el motor explotaría en tiempo de ejecución.
   applySettings: ({ engineConfig, scanlines }) =>
     set((state) => ({
-      config: engineConfig ?? state.config,
+      config: engineConfig
+        ? { ...engineConfig, fatigue: engineConfig.fatigue ?? DEFAULT_FATIGUE }
+        : state.config,
       scanlines: scanlines ?? state.scanlines,
     })),
 }));
