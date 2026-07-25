@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { EnergyMeter } from '../EnergyMeter';
 import { useConfigStore, DEFAULT_CONFIG } from '../../../store/useConfigStore';
 
@@ -35,5 +35,22 @@ describe('EnergyMeter', () => {
     const meter = screen.getByRole('meter', { name: /Bélgica/ });
     expect(meter).toHaveAttribute('aria-valuemin', '40');
     expect(meter).toHaveAttribute('aria-valuenow', '50');
+  });
+
+  // Regresión: `getEngineConfig()` es un getter no reactivo — leerlo no
+  // suscribe al componente. Si el medidor lo usara en vez de un selector de
+  // `useConfigStore`, mover "Energía mínima" en Ajustes (Task 9) con este
+  // medidor ya montado no cambiaría nada en pantalla hasta recargar o
+  // remontar, lo que se lee como un control roto.
+  it('sigue el piso de energía cuando el config cambia con el medidor ya montado', () => {
+    render(<EnergyMeter energy={50} label="Bélgica" />);
+    const meter = screen.getByRole('meter', { name: /Bélgica/ });
+    expect(meter).toHaveAttribute('aria-valuemin', '60');
+
+    act(() => {
+      useConfigStore.getState().updateFatigue({ energyMin: 40 });
+    });
+
+    expect(meter).toHaveAttribute('aria-valuemin', '40');
   });
 });

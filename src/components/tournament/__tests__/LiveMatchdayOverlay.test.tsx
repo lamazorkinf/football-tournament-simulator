@@ -312,5 +312,22 @@ describe('LiveMatchdayOverlay', () => {
       expect(screen.queryByText('82%')).not.toBeInTheDocument();
       expect(screen.queryByText('91%')).not.toBeInTheDocument();
     });
+
+    // Regresión: `getEngineConfig()` es un getter no reactivo. Si la tarjeta
+    // lo usara en vez de un selector de `useConfigStore`, apagar el cansancio
+    // desde Ajustes (Task 9) con la jornada YA ABIERTA no ocultaría la
+    // energía hasta cerrar y reabrir el overlay.
+    it('apagar la fatiga en Ajustes oculta la energía en las tarjetas ya abiertas', () => {
+      openSession();
+      render(<LiveMatchdayOverlay />);
+      expect(screen.getByText('82%')).toBeInTheDocument();
+
+      act(() => {
+        useConfigStore.getState().updateFatigue({ enabled: false });
+      });
+
+      expect(screen.queryByText('82%')).not.toBeInTheDocument();
+      expect(screen.queryByText('91%')).not.toBeInTheDocument();
+    });
   });
 });

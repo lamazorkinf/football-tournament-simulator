@@ -1,7 +1,7 @@
 import { useConfigStore, type ImportanceKey } from '../../store/useConfigStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Settings, RotateCcw, Info, Zap, Home, Target, Trophy } from 'lucide-react';
+import { Settings, RotateCcw, Info, Zap, Home, Target, Trophy, BatteryLow } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
 const IMPORTANCE_ROWS: Array<{ key: ImportanceKey; label: string }> = [
@@ -15,7 +15,7 @@ const IMPORTANCE_ROWS: Array<{ key: ImportanceKey; label: string }> = [
 ];
 
 export function EngineSettings() {
-  const { config, updateKFactor, updateEloDivisor, updateHomeAdvantage, updateSkillLimits, updateImportance, resetToDefaults } = useConfigStore();
+  const { config, updateKFactor, updateEloDivisor, updateHomeAdvantage, updateSkillLimits, updateImportance, updateFatigue, resetToDefaults } = useConfigStore();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -36,6 +36,15 @@ export function EngineSettings() {
   };
 
   const kFactorInfo = getKFactorLabel(config.kFactor);
+
+  const getClutchLabel = (value: number): { label: string; color: string } => {
+    if (value <= 0.1) return { label: 'Sutil', color: 'text-led' };
+    if (value <= 0.2) return { label: 'Equilibrado', color: 'text-led' };
+    if (value <= 0.3) return { label: 'Marcado', color: 'text-gold' };
+    return { label: 'Dominante', color: 'text-loss' };
+  };
+
+  const clutchInfo = getClutchLabel(config.fatigue.clutchGain);
 
   const handleReset = () => {
     if (showResetConfirm) {
@@ -302,6 +311,107 @@ export function EngineSettings() {
                 />
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cansancio y oficio */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BatteryLow className="w-5 h-5 text-gold" />
+            Cansancio y oficio
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-grass-soft">
+              Calibrado con 20.000 Mundiales simulados. Con el oficio en 0,15 los ocho mejores del ranking ganan
+              el 54% de los títulos; en 0,35, el 59%.
+            </p>
+
+            <label className="flex items-center justify-between gap-4 cursor-pointer">
+              <span className="text-sm text-grass-soft">Activar cansancio</span>
+              <button
+                role="switch"
+                aria-checked={config.fatigue.enabled}
+                onClick={() => updateFatigue({ enabled: !config.fatigue.enabled })}
+                className={`font-arcade text-[10px] px-3 py-2 border-2 ${
+                  config.fatigue.enabled
+                    ? 'bg-grass text-led border-line'
+                    : 'bg-grass-dark text-grass-soft border-grass'
+                }`}
+              >
+                {config.fatigue.enabled ? 'ON' : 'OFF'}
+              </button>
+            </label>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-grass-soft" htmlFor="clutch-gain">
+                  Oficio en partidos exigentes:{' '}
+                  <span className="text-led font-terminal tabular-nums font-bold">
+                    {config.fatigue.clutchGain.toFixed(2)}
+                  </span>
+                </label>
+                <span className={`text-sm font-semibold ${clutchInfo.color}`}>
+                  {clutchInfo.label}
+                </span>
+              </div>
+              <input
+                id="clutch-gain"
+                type="range"
+                min={0}
+                max={0.4}
+                step={0.05}
+                value={config.fatigue.clutchGain}
+                onChange={(e) => updateFatigue({ clutchGain: Number(e.target.value) })}
+                className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-grass-soft" htmlFor="energy-min">
+                  Energía mínima:{' '}
+                  <span className="text-led font-terminal tabular-nums font-bold">
+                    {config.fatigue.energyMin}
+                  </span>
+                </label>
+              </div>
+              <input
+                id="energy-min"
+                type="range"
+                min={40}
+                max={90}
+                step={5}
+                value={config.fatigue.energyMin}
+                onChange={(e) => updateFatigue({ energyMin: Number(e.target.value) })}
+                className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led"
+              />
+              <p className="text-xs text-grass-soft mt-2">Cuanto más bajo, más pesa el cansancio.</p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-grass-soft" htmlFor="recovery">
+                  Recuperación por jornada:{' '}
+                  <span className="text-led font-terminal tabular-nums font-bold">
+                    {config.fatigue.recovery}
+                  </span>
+                </label>
+              </div>
+              <input
+                id="recovery"
+                type="range"
+                min={0}
+                max={12}
+                step={1}
+                value={config.fatigue.recovery}
+                onChange={(e) => updateFatigue({ recovery: Number(e.target.value) })}
+                className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

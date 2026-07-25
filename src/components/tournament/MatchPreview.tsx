@@ -8,7 +8,7 @@ import { useTeamProfile } from '../../hooks/useTeamProfile';
 import { History } from 'lucide-react';
 import { matchHistoryService, type MatchHistoryEntry } from '../../services/matchHistoryService';
 import { useTournamentStore, buildEnergyContext } from '../../store/useTournamentStore';
-import { getEngineConfig } from '../../store/useConfigStore';
+import { useConfigStore } from '../../store/useConfigStore';
 
 interface MatchPreviewProps {
   homeTeam: Team;
@@ -20,6 +20,9 @@ interface MatchPreviewProps {
 export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewProps) {
   const { openTeamProfile } = useTeamProfile();
   const cycle = useTournamentStore((s) => s.currentTournament);
+  // Vía selector, no `getEngineConfig()`: así un cambio en Ajustes (Task 9)
+  // se refleja en la previa ya montada, no solo tras recargar o remontar.
+  const fatigueEnabled = useConfigStore((s) => s.config.fatigue.enabled);
   const [homeTeamHistory, setHomeTeamHistory] = useState<MatchHistoryEntry[]>([]);
   const [awayTeamHistory, setAwayTeamHistory] = useState<MatchHistoryEntry[]>([]);
   const [h2hHistory, setH2hHistory] = useState<{ home: number; draw: number; away: number }>({
@@ -123,7 +126,6 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
   // (clasificatorias) trae `region`, `WorldCupGroup` no. El `matchday` sale
   // de buscar el partido sin jugar entre esos dos equipos dentro del grupo,
   // porque la previa no recibe el `Match` en sí, solo sus equipos.
-  const fatigueEnabled = getEngineConfig().fatigue.enabled;
   const previewedMatch = group.matches.find(
     (m) => m.homeTeamId === homeTeam.id && m.awayTeamId === awayTeam.id && !m.isPlayed
   );

@@ -1,7 +1,7 @@
 import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiveMatchdayStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { getEngineConfig } from '../../store/useConfigStore';
+import { useConfigStore } from '../../store/useConfigStore';
 import { scoreAtMinute } from '../../core/liveMatch';
 import {
   useLiveMatchdayPlayback,
@@ -190,7 +190,10 @@ function LiveGridCard({
   // mínimo). El criterio es que en pantalla el partido "se sigue jugando",
   // así que corresponde mostrar con cuánta energía llegaron, no con cuánta
   // quedaron.
-  const fatigueEnabled = getEngineConfig().fatigue.enabled;
+  //
+  // Vía selector, no `getEngineConfig()`: así un cambio en Ajustes (Task 9)
+  // se refleja en las tarjetas ya montadas, no solo tras recargar.
+  const fatigueEnabled = useConfigStore((s) => s.config.fatigue.enabled);
   const { homeEnergy, awayEnergy } = entry;
 
   // El "FINAL" de CADA tarjeta se decide con el minuto de cierre de SU
