@@ -64,6 +64,8 @@ export interface KnockoutMatch extends Match {
     homeScore: number;
     awayScore: number;
   };
+  /** El partido se definió en el alargue (o llegó a penales tras jugarlo). */
+  extraTime?: boolean;
   position?: number; // Position in bracket (0-15 for R32, 0-7 for R16, etc.)
 }
 
@@ -247,6 +249,8 @@ export interface MatchResult {
   awayScore: number;
   homeSkillChange: number;
   awaySkillChange: number;
+  /** Goles marcados EN el alargue. El marcador principal ya los incluye. */
+  extraTime?: { homeGoals: number; awayGoals: number };
 }
 
 /** Resultado comprometido por una acción simulate*, para reproducir en vivo. */
@@ -254,6 +258,7 @@ export interface SimulatedMatchOutcome {
   homeScore: number;
   awayScore: number;
   penalties?: { homeScore: number; awayScore: number };
+  extraTime?: { homeGoals: number; awayGoals: number };
 }
 
 /** Resultado de un partido dentro de un batch de jornada, con sus equipos. */

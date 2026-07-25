@@ -2673,12 +2673,22 @@ export const useTournamentStore = create<TournamentState>()(
         set({ isSavingMatch: true });
         const isKo = Boolean(koMatch);
         const importance = importanceFor(isKo ? 'confed-knockout' : 'confed-group', isKo ? (match as KnockoutMatch).round : undefined);
-        const result = simulateMatchWithPenalties({
+        const matchCtx = {
           home: { skill: home.skill, energy: 100 },
           away: { skill: away.skill, energy: 100 },
           importance,
           neutral: true,
-        });
+        };
+        // Sólo la eliminación directa juega alargue/penales; un empate de
+        // grupo tiene que quedar empate en la tabla, no resolverse solo.
+        // Anotado con el tipo de retorno de simulateMatchWithPenalties (en vez
+        // de dejar que la unión de ambas ramas se infiera sola) porque
+        // `penalties` es opcional: el resultado de grupo simplemente no trae
+        // esa clave, y de lo contrario TS no deja leer `result.penalties` más
+        // abajo al no estar declarada en el tipo de la rama de grupo.
+        const result: ReturnType<typeof simulateMatchWithPenalties> = isKo
+          ? simulateMatchWithPenalties({ ...matchCtx })
+          : simulateGroupMatch({ ...matchCtx });
         const newHome = updateTeamSkill(home.skill, result.homeSkillChange);
         const newAway = updateTeamSkill(away.skill, result.awaySkillChange);
         const updatedTeams = state.teams.map((t) =>

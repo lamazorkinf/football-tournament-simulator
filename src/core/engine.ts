@@ -51,25 +51,32 @@ export interface MatchContext {
 }
 
 /**
- * Simula un partido. El cansancio y el oficio entran por el skill efectivo; el
- * Elo se calcula SIEMPRE con el skill real, así que ganar cansado premia igual.
+ * Goles esperados de cada lado, ya con cansancio y oficio aplicados. Se expone
+ * aparte porque el alargue reusa exactamente el mismo caudal, escalado.
  */
-export function simulateMatch(ctx: MatchContext): MatchResult {
+function expectedGoalsFor(ctx: MatchContext): { home: number; away: number } {
   const config = getEngineConfig();
-  const rng = ctx.rng ?? Math.random;
-
   const homeEffective =
     effectiveSkill(ctx.home.skill, ctx.home.energy, config.fatigue) +
     (ctx.neutral ? 0 : config.homeAdvantage);
   const awayEffective = effectiveSkill(ctx.away.skill, ctx.away.energy, config.fatigue);
-
   // El oficio amplifica la diferencia según lo exigente que sea el partido.
   const skillDiff =
     (homeEffective - awayEffective) *
     clutchMultiplier(ctx.home.skill, ctx.away.skill, ctx.importance, config.fatigue);
+  return { home: 1.5 + skillDiff / 50, away: 1.5 - skillDiff / 50 };
+}
 
-  const homeScore = generateGoals(1.5 + skillDiff / 50, rng);
-  const awayScore = generateGoals(1.5 - skillDiff / 50, rng);
+/**
+ * Simula un partido. El cansancio y el oficio entran por el skill efectivo; el
+ * Elo se calcula SIEMPRE con el skill real, así que ganar cansado premia igual.
+ */
+export function simulateMatch(ctx: MatchContext): MatchResult {
+  const rng = ctx.rng ?? Math.random;
+
+  const lambdas = expectedGoalsFor(ctx);
+  const homeScore = generateGoals(lambdas.home, rng);
+  const awayScore = generateGoals(lambdas.away, rng);
 
   // El Elo usa el skill real (no el efectivo): ganar cansado premia igual.
   const { homeChange, awayChange } = calculateSkillChanges(
@@ -155,22 +162,51 @@ export function updateTeamSkill(currentSkill: number, change: number): number {
 }
 
 /**
- * Simula un partido de eliminación directa, con penales si termina empatado.
- * El alargue llega en la Task 3; por ahora el contexto se pasa igual que en
- * `simulateMatch`.
+ * Simula un partido de eliminación directa: si termina empatado a los 90',
+ * juega 30' de alargue con el mismo caudal de goles del partido; si sigue
+ * empatado, define por penales.
  */
 export function simulateMatchWithPenalties(
   ctx: MatchContext,
 ): MatchResult & { penalties?: { homeScore: number; awayScore: number } } {
+  const config = getEngineConfig();
+  const rng = ctx.rng ?? Math.random;
   const result = simulateMatch(ctx);
 
-  // If it's a draw, simulate penalties
-  if (result.homeScore === result.awayScore) {
-    const penalties = simulatePenalties(ctx.home.skill, ctx.away.skill, ctx.rng);
-    return { ...result, penalties };
-  }
+  if (result.homeScore !== result.awayScore) return result;
 
-  return result;
+  // 30 minutos con el mismo caudal del partido, escalado y algo más lento:
+  // resuelve la mitad de los empates y deja la otra mitad para los penales.
+  const lambdas = expectedGoalsFor(ctx);
+  const share = config.fatigue.extraTimeShare;
+  const homeGoals = generateGoals(lambdas.home * share, rng);
+  const awayGoals = generateGoals(lambdas.away * share, rng);
+
+  const withExtraTime: MatchResult = {
+    ...result,
+    homeScore: result.homeScore + homeGoals,
+    awayScore: result.awayScore + awayGoals,
+    extraTime: { homeGoals, awayGoals },
+  };
+
+  // El Elo se recalcula con el resultado de los 120', que es el oficial.
+  const { homeChange, awayChange } = calculateSkillChanges(
+    ctx.home.skill,
+    ctx.away.skill,
+    withExtraTime.homeScore,
+    withExtraTime.awayScore,
+    ctx.importance,
+  );
+  withExtraTime.homeSkillChange = homeChange;
+  withExtraTime.awaySkillChange = awayChange;
+
+  if (withExtraTime.homeScore === withExtraTime.awayScore) {
+    return {
+      ...withExtraTime,
+      penalties: simulatePenalties(ctx.home.skill, ctx.away.skill, rng),
+    };
+  }
+  return withExtraTime;
 }
 
 /**
