@@ -181,6 +181,8 @@ export interface KnockoutResult {
   winnerId: string;
   loserId: string;
   penalties?: { homeScore: number; awayScore: number };
+  /** El partido se definió en el alargue (o llegó a penales tras jugarlo). */
+  extraTime?: boolean;
 }
 
 /** Sortea los 4 brackets continentales y arranca el calendario en md1 (R64). */
@@ -213,6 +215,7 @@ function applyResultTo(matches: KnockoutMatch[], matchId: string, result: Knocko
           winnerId: result.winnerId,
           loserId: result.loserId,
           penalties: result.penalties,
+          extraTime: result.extraTime,
         }
       : m,
   );

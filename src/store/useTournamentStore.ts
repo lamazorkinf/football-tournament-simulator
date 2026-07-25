@@ -50,6 +50,16 @@ import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
 import { supabase } from '../lib/supabase';
 import { getEngineConfig } from './useConfigStore';
+import {
+  commitEnergy,
+  matchEnergyCost,
+  matchdayIndexFor,
+  resolveEnergy,
+  scopeForStage,
+  type EnergyState,
+  type MatchStage,
+  type TournamentScope,
+} from '../core/energy';
 
 // Regresión hacia el skill base entre temporadas: evita que la caminata
 // aleatoria del Elo disperse los ratings indefinidamente tras muchas
@@ -203,6 +213,83 @@ const updateTournamentInState = (set: any, get: any, updatedTournament: Tourname
  */
 function importanceFor(stage: string | undefined, round: KnockoutMatch['round'] | undefined): number {
   return getStageImportance(stage, round, getEngineConfig());
+}
+
+export interface EnergyContext {
+  scope: TournamentScope;
+  matchdayIndex: number;
+  homeEnergy: number;
+  awayEnergy: number;
+}
+
+/**
+ * Energía con la que los dos equipos entran a un partido. Única fuente de este
+ * cálculo: las cinco simulaciones del store la usan, para que no se
+ * desincronicen entre sí.
+ */
+export function buildEnergyContext(
+  cycle: Pick<Cycle, 'energy'>,
+  stage: MatchStage,
+  round: KnockoutMatch['round'] | undefined,
+  matchday: number | undefined,
+  homeTeamId: string,
+  awayTeamId: string,
+): EnergyContext {
+  const cfg = getEngineConfig().fatigue;
+  const scope = scopeForStage(stage);
+  const matchdayIndex = matchdayIndexFor(stage, round, matchday);
+
+  return {
+    scope,
+    matchdayIndex,
+    homeEnergy: resolveEnergy(cycle.energy, scope, matchdayIndex, homeTeamId, cfg),
+    awayEnergy: resolveEnergy(cycle.energy, scope, matchdayIndex, awayTeamId, cfg),
+  };
+}
+
+export interface EnergyOutcome {
+  scope: TournamentScope;
+  matchdayIndex: number;
+  importance: number;
+  home: { teamId: string; skill: number; energy: number };
+  away: { teamId: string; skill: number; energy: number };
+  tight: boolean;
+  extraTime: boolean;
+  penalties: boolean;
+}
+
+/** Estado de energía tras un partido, con el costo ya cobrado a los dos. */
+export function applyEnergyAfterMatch(
+  state: EnergyState | undefined,
+  outcome: EnergyOutcome,
+): EnergyState {
+  const cfg = getEngineConfig().fatigue;
+  const shared = {
+    importance: outcome.importance,
+    tight: outcome.tight,
+    extraTime: outcome.extraTime,
+    penalties: outcome.penalties,
+  };
+
+  const homeCost = matchEnergyCost(
+    { skill: outcome.home.skill, oppSkill: outcome.away.skill, ...shared },
+    cfg,
+  );
+  const awayCost = matchEnergyCost(
+    { skill: outcome.away.skill, oppSkill: outcome.home.skill, ...shared },
+    cfg,
+  );
+
+  return commitEnergy(
+    state,
+    outcome.scope,
+    outcome.matchdayIndex,
+    [
+      { teamId: outcome.home.teamId, energy: outcome.home.energy - homeCost },
+      { teamId: outcome.away.teamId, energy: outcome.away.energy - awayCost },
+    ],
+    cfg,
+  );
 }
 
 export const useTournamentStore = create<TournamentState>()(
@@ -829,13 +916,32 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Simulate the match (disable home advantage for World Cup)
         const neutral = stage === 'world-cup';
-        const stageKey = stage === 'qualifier' ? 'qualifier' : 'world-cup-group';
+        const stageKey: MatchStage = stage === 'qualifier' ? 'qualifier' : 'world-cup-group';
         const importance = importanceFor(stageKey, undefined);
+        const energyCtx = buildEnergyContext(
+          state.currentTournament,
+          stageKey,
+          undefined,
+          match.matchday,
+          homeTeam.id,
+          awayTeam.id,
+        );
         const result = simulateGroupMatch({
-          home: { skill: homeTeam.skill, energy: 100 },
-          away: { skill: awayTeam.skill, energy: 100 },
+          home: { skill: homeTeam.skill, energy: energyCtx.homeEnergy },
+          away: { skill: awayTeam.skill, energy: energyCtx.awayEnergy },
           importance,
           neutral,
+        });
+
+        const nextEnergy = applyEnergyAfterMatch(state.currentTournament.energy, {
+          scope: energyCtx.scope,
+          matchdayIndex: energyCtx.matchdayIndex,
+          importance,
+          home: { teamId: homeTeam.id, skill: homeTeam.skill, energy: energyCtx.homeEnergy },
+          away: { teamId: awayTeam.id, skill: awayTeam.skill, energy: energyCtx.awayEnergy },
+          tight: Math.abs(result.homeScore - result.awayScore) <= 1,
+          extraTime: false,
+          penalties: false,
         });
 
         // Update match
@@ -933,6 +1039,7 @@ export const useTournamentStore = create<TournamentState>()(
             ...state.currentTournament,
             qualifiers: updatedQualifiers,
             hasAnyMatchPlayed: true,
+            energy: nextEnergy,
           };
 
           set({ teams: updatedTeams });
@@ -950,6 +1057,7 @@ export const useTournamentStore = create<TournamentState>()(
                 groups: updatedGroups,
               },
               hasAnyMatchPlayed: true,
+              energy: nextEnergy,
             };
 
             set({ teams: updatedTeams });
@@ -993,6 +1101,11 @@ export const useTournamentStore = create<TournamentState>()(
           }> = [];
           const teamSkillUpdates: Map<string, number> = new Map();
           const updatedMatchesByGroup: Map<string, { groupId: string; stage: 'qualifier' | 'world-cup'; region?: Region; matches: Match[] }> = new Map();
+          // Se hilvana partido a partido dentro del batch (aunque en una
+          // jornada real cada equipo juegue una sola vez) para que
+          // buildEnergyContext/applyEnergyAfterMatch sean la única fuente del
+          // cálculo, igual que en las demás simulaciones.
+          let batchEnergy: EnergyState | undefined = state.currentTournament.energy;
 
           // Get progress store for UI updates
           const progress = useProgressStore.getState();
@@ -1052,12 +1165,32 @@ export const useTournamentStore = create<TournamentState>()(
 
             // Simulate the match
             const neutral = stage === 'world-cup';
-            const batchImportance = importanceFor(stage === 'qualifier' ? 'qualifier' : 'world-cup-group', undefined);
+            const batchStageKey: MatchStage = stage === 'qualifier' ? 'qualifier' : 'world-cup-group';
+            const batchImportance = importanceFor(batchStageKey, undefined);
+            const batchEnergyCtx = buildEnergyContext(
+              { energy: batchEnergy },
+              batchStageKey,
+              undefined,
+              match.matchday,
+              homeTeam.id,
+              awayTeam.id,
+            );
             const result = simulateGroupMatch({
-              home: { skill: homeSkill, energy: 100 },
-              away: { skill: awaySkill, energy: 100 },
+              home: { skill: homeSkill, energy: batchEnergyCtx.homeEnergy },
+              away: { skill: awaySkill, energy: batchEnergyCtx.awayEnergy },
               importance: batchImportance,
               neutral,
+            });
+
+            batchEnergy = applyEnergyAfterMatch(batchEnergy, {
+              scope: batchEnergyCtx.scope,
+              matchdayIndex: batchEnergyCtx.matchdayIndex,
+              importance: batchImportance,
+              home: { teamId: homeTeam.id, skill: homeSkill, energy: batchEnergyCtx.homeEnergy },
+              away: { teamId: awayTeam.id, skill: awaySkill, energy: batchEnergyCtx.awayEnergy },
+              tight: Math.abs(result.homeScore - result.awayScore) <= 1,
+              extraTime: false,
+              penalties: false,
             });
 
             // Update match
@@ -1243,6 +1376,7 @@ export const useTournamentStore = create<TournamentState>()(
           });
 
           updatedTournament.hasAnyMatchPlayed = true;
+          updatedTournament.energy = batchEnergy;
 
           // Single state update with all changes
           set({ teams: updatedTeams });
@@ -2234,11 +2368,30 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Simulate with penalties (sede neutral: eliminatorias del Mundial sin ventaja local)
         const koImportance = importanceFor('world-cup-knockout', targetMatch.round);
+        const energyCtx = buildEnergyContext(
+          state.currentTournament,
+          'world-cup-knockout',
+          targetMatch.round,
+          undefined,
+          homeTeam.id,
+          awayTeam.id,
+        );
         const result = simulateMatchWithPenalties({
-          home: { skill: homeTeam.skill, energy: 100 },
-          away: { skill: awayTeam.skill, energy: 100 },
+          home: { skill: homeTeam.skill, energy: energyCtx.homeEnergy },
+          away: { skill: awayTeam.skill, energy: energyCtx.awayEnergy },
           importance: koImportance,
           neutral: true,
+        });
+
+        const nextEnergy = applyEnergyAfterMatch(state.currentTournament.energy, {
+          scope: energyCtx.scope,
+          matchdayIndex: energyCtx.matchdayIndex,
+          importance: koImportance,
+          home: { teamId: homeTeam.id, skill: homeTeam.skill, energy: energyCtx.homeEnergy },
+          away: { teamId: awayTeam.id, skill: awayTeam.skill, energy: energyCtx.awayEnergy },
+          tight: Math.abs(result.homeScore - result.awayScore) <= 1,
+          extraTime: !!result.extraTime,
+          penalties: !!result.penalties,
         });
 
         // Determine winner
@@ -2276,6 +2429,7 @@ export const useTournamentStore = create<TournamentState>()(
           winnerId,
           loserId,
           penalties: result.penalties,
+          extraTime: !!result.extraTime,
         };
 
         // Calculate new skills
@@ -2445,6 +2599,7 @@ export const useTournamentStore = create<TournamentState>()(
               thirdPlace: thirdPlaceWinner,
               fourthPlace,
             },
+            energy: nextEnergy,
           };
 
           set({ teams: updatedTeams });
@@ -2485,7 +2640,7 @@ export const useTournamentStore = create<TournamentState>()(
 
           // Reset saving state
           set({ isSavingMatch: false });
-          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
+          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
         } else if (roundName === 'thirdPlace' && updatedKnockout.thirdPlace?.winnerId) {
           // El partido por el tercer puesto puede jugarse DESPUÉS de la final.
           // En ese caso la rama de la final ya corrió leyendo un thirdPlace sin
@@ -2499,12 +2654,13 @@ export const useTournamentStore = create<TournamentState>()(
               thirdPlace: updatedKnockout.thirdPlace.winnerId,
               fourthPlace: updatedKnockout.thirdPlace.loserId,
             },
+            energy: nextEnergy,
           };
 
           set({ teams: updatedTeams });
           updateTournamentInState(set, get, updatedTournament);
           set({ isSavingMatch: false });
-          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
+          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
         }
 
         const updatedTournament = {
@@ -2513,6 +2669,7 @@ export const useTournamentStore = create<TournamentState>()(
             ...state.currentTournament.worldCup,
             knockout: updatedKnockout,
           },
+          energy: nextEnergy,
         };
 
         set({ teams: updatedTeams });
@@ -2520,7 +2677,7 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Reset saving state
         set({ isSavingMatch: false });
-        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
+        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
       },
 
       drawContinental: () => {
@@ -2569,11 +2726,23 @@ export const useTournamentStore = create<TournamentState>()(
 
         set({ isSavingMatch: true });
         const importance = importanceFor('continental', match.round);
+        const energyCtx = buildEnergyContext(cycle, 'continental', match.round, undefined, home.id, away.id);
         const result = simulateMatchWithPenalties({
-          home: { skill: home.skill, energy: 100 },
-          away: { skill: away.skill, energy: 100 },
+          home: { skill: home.skill, energy: energyCtx.homeEnergy },
+          away: { skill: away.skill, energy: energyCtx.awayEnergy },
           importance,
           neutral: true,
+        });
+
+        const nextEnergy = applyEnergyAfterMatch(cycle.energy, {
+          scope: energyCtx.scope,
+          matchdayIndex: energyCtx.matchdayIndex,
+          importance,
+          home: { teamId: home.id, skill: home.skill, energy: energyCtx.homeEnergy },
+          away: { teamId: away.id, skill: away.skill, energy: energyCtx.awayEnergy },
+          tight: Math.abs(result.homeScore - result.awayScore) <= 1,
+          extraTime: !!result.extraTime,
+          penalties: !!result.penalties,
         });
 
         // Winner por goles; si empate, por penales.
@@ -2616,12 +2785,13 @@ export const useTournamentStore = create<TournamentState>()(
         const ko: KnockoutResult = {
           homeScore: result.homeScore, awayScore: result.awayScore, winnerId, loserId,
           penalties: result.penalties,
+          extraTime: !!result.extraTime,
         };
-        const updated = recordContinentalMatch(cycle, matchId, ko);
+        const updated: Cycle = { ...recordContinentalMatch(cycle, matchId, ko), energy: nextEnergy };
         set({ teams: updatedTeams });
         updateTournamentInState(set, get, updated);
         set({ isSavingMatch: false });
-        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
+        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
       },
 
       drawConfederations: () => {
@@ -2672,10 +2842,19 @@ export const useTournamentStore = create<TournamentState>()(
 
         set({ isSavingMatch: true });
         const isKo = Boolean(koMatch);
-        const importance = importanceFor(isKo ? 'confed-knockout' : 'confed-group', isKo ? (match as KnockoutMatch).round : undefined);
+        const stageKey: MatchStage = isKo ? 'confed-knockout' : 'confed-group';
+        const importance = importanceFor(stageKey, isKo ? (match as KnockoutMatch).round : undefined);
+        const energyCtx = buildEnergyContext(
+          cycle,
+          stageKey,
+          isKo ? (match as KnockoutMatch).round : undefined,
+          isKo ? undefined : match.matchday,
+          home.id,
+          away.id,
+        );
         const matchCtx = {
-          home: { skill: home.skill, energy: 100 },
-          away: { skill: away.skill, energy: 100 },
+          home: { skill: home.skill, energy: energyCtx.homeEnergy },
+          away: { skill: away.skill, energy: energyCtx.awayEnergy },
           importance,
           neutral: true,
         };
@@ -2689,6 +2868,17 @@ export const useTournamentStore = create<TournamentState>()(
         const result: ReturnType<typeof simulateMatchWithPenalties> = isKo
           ? simulateMatchWithPenalties({ ...matchCtx })
           : simulateGroupMatch({ ...matchCtx });
+
+        const nextEnergy = applyEnergyAfterMatch(cycle.energy, {
+          scope: energyCtx.scope,
+          matchdayIndex: energyCtx.matchdayIndex,
+          importance,
+          home: { teamId: home.id, skill: home.skill, energy: energyCtx.homeEnergy },
+          away: { teamId: away.id, skill: away.skill, energy: energyCtx.awayEnergy },
+          tight: Math.abs(result.homeScore - result.awayScore) <= 1,
+          extraTime: !!result.extraTime,
+          penalties: !!result.penalties,
+        });
         const newHome = updateTeamSkill(home.skill, result.homeSkillChange);
         const newAway = updateTeamSkill(away.skill, result.awaySkillChange);
         const updatedTeams = state.teams.map((t) =>
@@ -2725,15 +2915,17 @@ export const useTournamentStore = create<TournamentState>()(
                    && result.penalties.awayScore > result.penalties.homeScore) { winnerId = away.id; loserId = home.id; }
           updated = recordConfedKnockoutMatch(cycle, matchId, {
             homeScore: result.homeScore, awayScore: result.awayScore, winnerId, loserId, penalties: result.penalties,
+            extraTime: !!result.extraTime,
           }); // 3 args: recordConfedKnockoutMatch NO recibe teams
         } else {
           const groupResult: GroupResult = { homeScore: result.homeScore, awayScore: result.awayScore };
           updated = recordConfedGroupMatch(cycle, matchId, groupResult, updatedTeams);
         }
+        updated = { ...updated, energy: nextEnergy };
         set({ teams: updatedTeams });
         updateTournamentInState(set, get, updated);
         set({ isSavingMatch: false });
-        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties };
+        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
       },
 
       advanceToQualifiers: () => {
