@@ -1034,17 +1034,44 @@ export function simulateMatchWithPenalties(
 Run: `npx vitest run src/core/__tests__/engine.extraTime.test.ts`
 Expected: PASS. Si el porcentaje de alargues cae fuera de 18-28%, revisar que `extraTimeShare` sea `(30/90) × 0,85` y no otra cosa.
 
-- [ ] **Step 5: Suite completa y tipos**
+- [ ] **Step 5: Cerrar el paso de los grupos de Confederaciones por el camino del alargue**
+
+Detectado al revisar la Task 2: `simulateConfederationsMatch` (`src/store/useTournamentStore.ts`, cerca de la línea 2676) llama a `simulateMatchWithPenalties` para **todos** sus partidos, incluidos los de fase de grupos. Ya calcula un booleano `isKo` para elegir la importancia, pero no lo usa para elegir el simulador.
+
+Hasta ahora eso sólo desperdiciaba una tanda de penales que nadie leía. **Con el alargue de esta tarea pasa a ser un bug real**: un partido de grupo empatado jugaría 30 minutos extra y el marcador cambiaría, convirtiendo empates en victorias y ensuciando las tablas de posiciones de Confederaciones.
+
+Usar el `isKo` que ya existe para elegir el simulador:
+
+```ts
+        const result = isKo
+          ? simulateMatchWithPenalties({ ...matchCtx })
+          : simulateGroupMatch({ ...matchCtx });
+```
+
+Agregar al archivo de tests de esta tarea un caso que lo fije:
+
+```ts
+  it('un partido de fase de grupos nunca juega alargue ni penales', () => {
+    for (let i = 0; i < 2000; i++) {
+      const r = simulateMatch(ctx);
+      expect(r.extraTime).toBeUndefined();
+    }
+  });
+```
+
+(`simulateMatch` es el camino de los partidos de grupo: no debe producir alargue nunca, sin importar el resultado.)
+
+- [ ] **Step 6: Suite completa y tipos**
 
 ```bash
 npx tsc -b && npm test
 ```
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/core/engine.ts src/types/index.ts src/core/__tests__/engine.extraTime.test.ts
+git add src/core/engine.ts src/types/index.ts src/core/__tests__/engine.extraTime.test.ts src/store/useTournamentStore.ts
 git commit -m "feat: prórroga en los partidos de eliminación directa"
 ```
 
