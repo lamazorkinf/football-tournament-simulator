@@ -176,12 +176,39 @@ describe('resolveEnergy', () => {
     // scope 'world-cup' cubre las dos fases: sigue el desgaste, sólo recupera.
     expect(resolveEnergy(state, 'world-cup', 4, 'bel', cfg)).toBeCloseTo(92, 5);
   });
+
+  // Los dos tests de arriba sólo prueban `cfg.recovery` y `cfg.recoveryQualifiers`
+  // en sus valores por defecto (4 y 8): si `recoveryFor` volviera a un
+  // `scope === 'wc-qualifiers' ? 8 : 4` hardcodeado, pasarían igual porque el
+  // valor coincide con el config. `recovery`/`recoveryQualifiers` son
+  // editables desde Ajustes, así que hace falta un config distinto del
+  // default para probar que la función lee el config y no una constante.
+  it('la recuperación sale del config, no de una constante', () => {
+    const customCfg = { ...cfg, recovery: 10, recoveryQualifiers: 20 };
+
+    const state = commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 70 }], customCfg);
+    expect(resolveEnergy(state, 'world-cup', 5, 'bel', customCfg)).toBeCloseTo(80, 5);
+
+    const stateQual = commitEnergy(undefined, 'wc-qualifiers', 1, [{ teamId: 'bel', energy: 70 }], customCfg);
+    expect(resolveEnergy(stateQual, 'wc-qualifiers', 2, 'bel', customCfg)).toBeCloseTo(90, 5);
+  });
 });
 
 describe('commitEnergy', () => {
   it('respeta el piso', () => {
     const state = commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 12 }], cfg);
     expect(state.byTeam.bel.value).toBe(cfg.energyMin);
+  });
+
+  // El test de arriba no distingue "lee cfg.energyMin" de "tiene 60
+  // hardcodeado", porque cfg.energyMin === 60 en el config por defecto. El
+  // piso es editable desde Ajustes (el comentario en energy.ts lo marca
+  // explícitamente como load-bearing), así que hace falta un energyMin
+  // distinto del default para probar que commitEnergy lee el config.
+  it('el piso sale del config, no de una constante: un energyMin de 40 se respeta en vez de 60', () => {
+    const customCfg = { ...cfg, energyMin: 40 };
+    const state = commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 12 }], customCfg);
+    expect(state.byTeam.bel.value).toBe(40);
   });
 
   it('descarta el estado del torneo anterior al cambiar de torneo', () => {
