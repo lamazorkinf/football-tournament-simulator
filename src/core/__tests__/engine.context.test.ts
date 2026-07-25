@@ -2,6 +2,20 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { simulateMatch } from '../engine';
 import { useConfigStore } from '../../store/useConfigStore';
 
+/**
+ * PRNG mulberry32 sembrado: puro y determinista (mismo algoritmo que el
+ * privado de `src/core/liveMatch.ts`, replicado acá porque no se exporta).
+ */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** Simula muchas veces y devuelve el promedio de goles de cada lado. */
 function averageScores(ctx: Parameters<typeof simulateMatch>[0], runs = 20000) {
   let home = 0;
@@ -47,6 +61,11 @@ describe('simulateMatch con energía', () => {
   });
 
   it('el oficio agranda la ventaja del favorito en un partido exigente', () => {
+    // Números aleatorios comunes: la misma semilla en las dos ramas hace que
+    // ambas corridas vean la misma secuencia de aleatorios, así el ruido de
+    // 20.000 partidos se cancela y sólo queda la señal del oficio. Sin esto,
+    // comparar dos corridas independientes de Math.random dejaba un efecto
+    // real de ~0,04 contra un desvío de ruido de ~0,0173 (z ≈ 2,3): intermitente.
     const ctx = {
       home: { skill: 96, energy: 100 },
       away: { skill: 88, energy: 100 },
@@ -54,9 +73,9 @@ describe('simulateMatch con energía', () => {
       neutral: true,
     } as const;
 
-    const conOficio = averageScores(ctx);
+    const conOficio = averageScores({ ...ctx, rng: mulberry32(42) });
     useConfigStore.getState().updateFatigue({ clutchGain: 0 });
-    const sinOficio = averageScores(ctx);
+    const sinOficio = averageScores({ ...ctx, rng: mulberry32(42) });
 
     expect(conOficio.home - conOficio.away).toBeGreaterThan(sinOficio.home - sinOficio.away);
   });
