@@ -2,7 +2,6 @@ import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiv
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { getEngineConfig } from '../../store/useConfigStore';
-import { ENERGY_MAX } from '../../core/energy';
 import { scoreAtMinute } from '../../core/liveMatch';
 import {
   useLiveMatchdayPlayback,
@@ -16,7 +15,7 @@ import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
 import { Pause, Play, Radio, Star, X } from 'lucide-react';
 import { useEffect } from 'react';
-import type { Cycle, Team } from '../../types';
+import type { Team } from '../../types';
 
 const SPEEDS: LiveSpeed[] = [1, 2, 4];
 
@@ -32,7 +31,6 @@ export function LiveMatchdayOverlay() {
   const closeSession = useLiveMatchdayStore((s) => s.closeSession);
   const showResults = useMatchResultsStore((s) => s.showResults);
   const teams = useTournamentStore((s) => s.teams);
-  const cycle = useTournamentStore((s) => s.currentTournament);
 
   const hasAnyPenalties = session?.entries.some((e) => e.timeline.penalties) ?? false;
   // Si UN SOLO partido de la grilla fue a alargue, el reloj compartido llega
@@ -145,7 +143,7 @@ export function LiveMatchdayOverlay() {
       <div className="max-w-7xl mx-auto p-4 space-y-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <div className={`grid ${gridCols} gap-3`}>
           {session.entries.map((entry) => (
-            <LiveGridCard key={entry.matchId} entry={entry} teams={teams} cycle={cycle} playback={playback} />
+            <LiveGridCard key={entry.matchId} entry={entry} teams={teams} playback={playback} />
           ))}
         </div>
 
@@ -170,12 +168,10 @@ export function LiveMatchdayOverlay() {
 function LiveGridCard({
   entry,
   teams,
-  cycle,
   playback,
 }: {
   entry: LiveMatchdayEntry;
   teams: Team[];
-  cycle: Cycle | null;
   playback: LiveMatchdayPlaybackState;
 }) {
   const home = teams.find((t) => t.id === entry.homeTeamId);
@@ -185,17 +181,17 @@ function LiveGridCard({
   const showPenalties = playback.penaltiesRevealed && entry.timeline.penalties;
   const hasGoals = score.homeGoalMinutes.length > 0 || score.awayGoalMinutes.length > 0;
 
-  // Commit-then-replay: cuando esta tarjeta se muestra el partido YA fue
-  // simulado y comprometido al ciclo, así que la energía actual en
-  // `cycle.energy` ES la energía posterior a este partido (no hace falta
-  // resolverla con `buildEnergyContext`: para el `matchdayIndex` recién
-  // jugado, `resolveEnergy` devolvería exactamente este mismo valor sin
-  // recuperación de por medio). `LiveMatchdayEntry` no trae la etapa/ronda
-  // del partido, así que leer el valor comprometido es la única forma de
-  // mostrar la energía acá sin agregar ese contexto al store en vivo.
+  // Energía de ENTRADA de cada equipo, la que resolvió `buildEnergyContext`
+  // al simular (viaja desde el store por `MatchdayOutcome` →
+  // `LiveMatchdayEntry`, ver useLiveMatchdayStore.ts). NO se lee de
+  // `cycle.energy`: para cuando esta tarjeta se muestra, commit-then-replay
+  // ya comprometió el partido, así que el ciclo tiene la energía POSTERIOR
+  // al costo del partido (sistemáticamente menor, el costo resta 6 como
+  // mínimo). El criterio es que en pantalla el partido "se sigue jugando",
+  // así que corresponde mostrar con cuánta energía llegaron, no con cuánta
+  // quedaron.
   const fatigueEnabled = getEngineConfig().fatigue.enabled;
-  const homeEnergy = cycle?.energy?.byTeam[entry.homeTeamId]?.value ?? ENERGY_MAX;
-  const awayEnergy = cycle?.energy?.byTeam[entry.awayTeamId]?.value ?? ENERGY_MAX;
+  const { homeEnergy, awayEnergy } = entry;
 
   // El "FINAL" de CADA tarjeta se decide con el minuto de cierre de SU
   // partido, no con la fase del reloj compartido: si otro partido de la

@@ -13,6 +13,14 @@ export interface LiveMatchdayEntry {
   groupName: string;
   region?: Region;
   isFavorite: boolean;
+  // Energía de ENTRADA de cada equipo, resuelta al simular (viaja desde
+  // `MatchdayOutcome`). El partido ya está comprometido cuando se arma esta
+  // sesión (commit-then-replay), así que `cycle.energy` ya tiene el valor
+  // POSTERIOR al costo del partido — no sirve para mostrar "con cuánta
+  // energía llegaron", que es lo que la tarjeta necesita mientras el partido
+  // "se sigue jugando" en pantalla.
+  homeEnergy: number;
+  awayEnergy: number;
 }
 
 export interface LiveMatchdaySession {

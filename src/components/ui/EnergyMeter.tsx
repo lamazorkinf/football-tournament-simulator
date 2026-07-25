@@ -1,20 +1,30 @@
 import { PixelBar } from './PixelBar';
-import { DEFAULT_FATIGUE, ENERGY_MAX } from '../../core/energy';
+import { ENERGY_MAX } from '../../core/energy';
+import { getEngineConfig } from '../../store/useConfigStore';
 
 interface EnergyMeterProps {
-  /** 60-100. */
+  /** 60-100 (o el rango que tenga configurado el piso de fatiga). */
   energy: number;
   /** Nombre del equipo, para el lector de pantalla. */
   label: string;
 }
 
 /**
- * La barra arranca en el piso de energía y no en cero: entre 60 y 100 hay 40
- * puntos útiles, y mapearlos sobre 0-100 dejaría la barra siempre más de medio
- * llena y sin diferencias visibles.
+ * La barra arranca en el piso de energía y no en cero: entre el piso y 100
+ * hay puntos útiles, y mapearlos sobre 0-100 dejaría la barra siempre más de
+ * medio llena y sin diferencias visibles.
+ *
+ * El piso sale del config EN VIVO (`getEngineConfig().fatigue.energyMin`),
+ * no de `DEFAULT_FATIGUE` — mismo criterio que ya sigue `commitEnergy` en
+ * `core/energy.ts`: el usuario puede bajarlo desde Ajustes (Task 9, rango
+ * 40-90) y clampear contra el default lo ignoraría en silencio. Si el piso
+ * bajara a 40, tratar como vacío todo lo que cae entre 40 y 60 rompería la
+ * barra Y el `aria-valuemin`/`aria-valuenow` (un `aria-valuenow` por debajo
+ * de `aria-valuemin` es un estado ARIA inválido); si subiera a 90, perdería
+ * la resolución visual que es la razón de ser de este componente.
  */
 export function EnergyMeter({ energy, label }: EnergyMeterProps) {
-  const floor = DEFAULT_FATIGUE.energyMin;
+  const floor = getEngineConfig().fatigue.energyMin;
   const span = ENERGY_MAX - floor;
   const normalized = Math.max(0, Math.min(span, energy - floor));
 

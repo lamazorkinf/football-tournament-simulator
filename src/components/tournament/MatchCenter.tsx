@@ -24,6 +24,7 @@ import { selectLiveMatches } from '../../core/liveSelection';
 import type { PenaltiesScore } from '../../utils/matchLabels';
 import { showMatchResultToast } from '../ui/MatchResultToast';
 import { buildMatchTimeline, hashSeed } from '../../core/liveMatch';
+import { ENERGY_MAX } from '../../core/energy';
 import type { MatchResult } from '../../store/useMatchResultsStore';
 
 interface MatchCenterProps {
@@ -298,6 +299,12 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
           groupName: ctx.groupName,
           region: ctx.region,
           isFavorite: favorites.has(outcome.homeTeamId) || favorites.has(outcome.awayTeamId),
+          // Energía de ENTRADA: la que ya resolvió `buildEnergyContext` al
+          // simular (ver `SimulatedMatchOutcome`), no la que queda después
+          // del costo del partido. El fallback sólo cubriría un outcome que
+          // no vino de una acción simulate* real (no ocurre en este flujo).
+          homeEnergy: outcome.homeEnergy ?? ENERGY_MAX,
+          awayEnergy: outcome.awayEnergy ?? ENERGY_MAX,
         });
       }
 

@@ -266,6 +266,13 @@ export interface SimulatedMatchOutcome {
   awayScore: number;
   penalties?: { homeScore: number; awayScore: number };
   extraTime?: { homeGoals: number; awayGoals: number };
+  // Energía de ENTRADA de cada equipo (la que resolvió `buildEnergyContext`
+  // antes de simular), no la que queda después del costo del partido. Todas
+  // las acciones simulate* del store la completan; opcional acá para no
+  // forzar a los fixtures de test que arman este tipo a mano (y no la
+  // necesitan) a inventar un valor.
+  homeEnergy?: number;
+  awayEnergy?: number;
 }
 
 /** Resultado de un partido dentro de un batch de jornada, con sus equipos. */

@@ -1067,7 +1067,12 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Reset saving state after everything is done
         set({ isSavingMatch: false });
-        return { homeScore: result.homeScore, awayScore: result.awayScore };
+        return {
+          homeScore: result.homeScore,
+          awayScore: result.awayScore,
+          homeEnergy: energyCtx.homeEnergy,
+          awayEnergy: energyCtx.awayEnergy,
+        };
       },
 
       simulateMatchdayBatch: async (matches) => {
@@ -1098,6 +1103,8 @@ export const useTournamentStore = create<TournamentState>()(
             awayTeamId: string;
             homeScore: number;
             awayScore: number;
+            homeEnergy: number;
+            awayEnergy: number;
           }> = [];
           const teamSkillUpdates: Map<string, number> = new Map();
           const updatedMatchesByGroup: Map<string, { groupId: string; stage: 'qualifier' | 'world-cup'; region?: Region; matches: Match[] }> = new Map();
@@ -1234,6 +1241,12 @@ export const useTournamentStore = create<TournamentState>()(
               awayTeamId: awayTeam.id,
               homeScore: result.homeScore,
               awayScore: result.awayScore,
+              // Energía de ENTRADA (la que ya resolvió batchEnergyCtx arriba,
+              // antes de correr `simulateGroupMatch`), no la posterior al
+              // costo del partido: es lo que necesita la grilla en vivo para
+              // mostrar con cuánta energía llegó cada equipo.
+              homeEnergy: batchEnergyCtx.homeEnergy,
+              awayEnergy: batchEnergyCtx.awayEnergy,
             });
 
             // Store updated match by group
@@ -1390,13 +1403,17 @@ export const useTournamentStore = create<TournamentState>()(
 
           // Outcomes con equipos para que el caller pueda armar el resumen o
           // reproducir la jornada en vivo sin re-leer y diffear el torneo.
-          return matchResultUpdates.map(({ matchId, homeTeamId, awayTeamId, homeScore, awayScore }) => ({
-            matchId,
-            homeTeamId,
-            awayTeamId,
-            homeScore,
-            awayScore,
-          }));
+          return matchResultUpdates.map(
+            ({ matchId, homeTeamId, awayTeamId, homeScore, awayScore, homeEnergy, awayEnergy }) => ({
+              matchId,
+              homeTeamId,
+              awayTeamId,
+              homeScore,
+              awayScore,
+              homeEnergy,
+              awayEnergy,
+            }),
+          );
         } catch (error) {
           console.error('❌ Error in batch simulation:', error);
           set({ isBatchProcessing: false });
@@ -2641,7 +2658,16 @@ export const useTournamentStore = create<TournamentState>()(
 
           // Reset saving state
           set({ isSavingMatch: false });
-          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
+          return {
+            homeScore: result.homeScore,
+            awayScore: result.awayScore,
+            penalties: result.penalties,
+            extraTime: result.extraTime,
+            // Energía de ENTRADA (`energyCtx`, resuelta antes de simular), no la
+            // que queda después del costo del partido — ver nota en LiveMatchdayOverlay.
+            homeEnergy: energyCtx.homeEnergy,
+            awayEnergy: energyCtx.awayEnergy,
+          };
         } else if (roundName === 'thirdPlace' && updatedKnockout.thirdPlace?.winnerId) {
           // El partido por el tercer puesto puede jugarse DESPUÉS de la final.
           // En ese caso la rama de la final ya corrió leyendo un thirdPlace sin
@@ -2661,7 +2687,16 @@ export const useTournamentStore = create<TournamentState>()(
           set({ teams: updatedTeams });
           updateTournamentInState(set, get, updatedTournament);
           set({ isSavingMatch: false });
-          return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
+          return {
+            homeScore: result.homeScore,
+            awayScore: result.awayScore,
+            penalties: result.penalties,
+            extraTime: result.extraTime,
+            // Energía de ENTRADA (`energyCtx`, resuelta antes de simular), no la
+            // que queda después del costo del partido — ver nota en LiveMatchdayOverlay.
+            homeEnergy: energyCtx.homeEnergy,
+            awayEnergy: energyCtx.awayEnergy,
+          };
         }
 
         const updatedTournament = {
@@ -2678,7 +2713,16 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Reset saving state
         set({ isSavingMatch: false });
-        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
+        return {
+          homeScore: result.homeScore,
+          awayScore: result.awayScore,
+          penalties: result.penalties,
+          extraTime: result.extraTime,
+          // Energía de ENTRADA (`energyCtx`, resuelta antes de simular), no la
+          // que queda después del costo del partido — ver nota en LiveMatchdayOverlay.
+          homeEnergy: energyCtx.homeEnergy,
+          awayEnergy: energyCtx.awayEnergy,
+        };
       },
 
       drawContinental: () => {
@@ -2793,7 +2837,16 @@ export const useTournamentStore = create<TournamentState>()(
         set({ teams: updatedTeams });
         updateTournamentInState(set, get, updated);
         set({ isSavingMatch: false });
-        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
+        return {
+          homeScore: result.homeScore,
+          awayScore: result.awayScore,
+          penalties: result.penalties,
+          extraTime: result.extraTime,
+          // Energía de ENTRADA (`energyCtx`, resuelta antes de simular), no la
+          // que queda después del costo del partido — ver nota en LiveMatchdayOverlay.
+          homeEnergy: energyCtx.homeEnergy,
+          awayEnergy: energyCtx.awayEnergy,
+        };
       },
 
       drawConfederations: () => {
@@ -2930,7 +2983,16 @@ export const useTournamentStore = create<TournamentState>()(
         set({ teams: updatedTeams });
         updateTournamentInState(set, get, updated);
         set({ isSavingMatch: false });
-        return { homeScore: result.homeScore, awayScore: result.awayScore, penalties: result.penalties, extraTime: result.extraTime };
+        return {
+          homeScore: result.homeScore,
+          awayScore: result.awayScore,
+          penalties: result.penalties,
+          extraTime: result.extraTime,
+          // Energía de ENTRADA (`energyCtx`, resuelta antes de simular), no la
+          // que queda después del costo del partido — ver nota en LiveMatchdayOverlay.
+          homeEnergy: energyCtx.homeEnergy,
+          awayEnergy: energyCtx.awayEnergy,
+        };
       },
 
       advanceToQualifiers: () => {

@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, fireEvent, within } from '@testing-library/react';
-import type { Team } from '../../../types';
+import type { Cycle, Team } from '../../../types';
 import { LiveMatchdayOverlay } from '../LiveMatchdayOverlay';
 import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../../store/useLiveMatchdayStore';
 import { useMatchResultsStore } from '../../../store/useMatchResultsStore';
 import { useTournamentStore } from '../../../store/useTournamentStore';
+import { useConfigStore, DEFAULT_CONFIG } from '../../../store/useConfigStore';
+import { toCycle } from '../../../core/cycle';
+import { baseTournament } from '../../../test/fixtures/cycle';
 
 const teams: Team[] = [
   { id: 'arg', name: 'Argentina', flag: '🇦🇷', region: 'America', skill: 90 },
@@ -29,6 +32,11 @@ const entry: LiveMatchdayEntry = {
   groupName: 'Octavos',
   region: 'America',
   isFavorite: true,
+  // Energía de ENTRADA (con la que llegaron al partido), distinta a propósito
+  // de cualquier valor que pueda quedar comprometido en `cycle.energy` — ver
+  // describe('energía en vivo').
+  homeEnergy: 82,
+  awayEnergy: 91,
 };
 
 function openSession(e: LiveMatchdayEntry = entry) {
@@ -137,6 +145,8 @@ describe('LiveMatchdayOverlay', () => {
         groupName: 'Octavos',
         region: 'America',
         isFavorite: false,
+        homeEnergy: 100,
+        awayEnergy: 100,
       };
       useTournamentStore.setState({
         teams: [
@@ -256,5 +266,51 @@ describe('LiveMatchdayOverlay', () => {
 
     unmount();
     expect(document.body.style.overflow).not.toBe('hidden');
+  });
+
+  describe('energía en vivo', () => {
+    afterEach(() => {
+      useConfigStore.setState({ config: DEFAULT_CONFIG });
+      useTournamentStore.setState({ currentTournament: null });
+    });
+
+    // Regresión: la tarjeta mostraba la energía YA comprometida al ciclo
+    // (`cycle.energy`), que en commit-then-replay es la energía POSTERIOR al
+    // costo del partido — sistemáticamente menor a la de entrada. La tarjeta
+    // tiene que mostrar con cuánta energía llegaron los equipos (la que
+    // viaja en `entry.homeEnergy`/`awayEnergy`), no con cuánta quedaron.
+    it('muestra la energía de entrada del partido, no la del ciclo ya comprometido', () => {
+      const committedCycle: Cycle = {
+        ...toCycle(baseTournament()),
+        energy: {
+          scope: 'world-cup',
+          byTeam: {
+            // Valores POST-partido, deliberadamente distintos (más bajos) que
+            // entry.homeEnergy/awayEnergy (82/91): si la tarjeta leyera acá
+            // en vez del entry, este test lo detectaría.
+            arg: { value: 58, lastMatchdayIndex: 1 },
+            bra: { value: 71, lastMatchdayIndex: 1 },
+          },
+        },
+      };
+      useTournamentStore.setState({ teams, currentTournament: committedCycle });
+
+      openSession();
+      render(<LiveMatchdayOverlay />);
+
+      expect(screen.getByText('82%')).toBeInTheDocument();
+      expect(screen.getByText('91%')).toBeInTheDocument();
+      expect(screen.queryByText('58%')).not.toBeInTheDocument();
+      expect(screen.queryByText('71%')).not.toBeInTheDocument();
+    });
+
+    it('con la fatiga apagada en la config no muestra energía', () => {
+      useConfigStore.getState().updateFatigue({ enabled: false });
+      openSession();
+      render(<LiveMatchdayOverlay />);
+
+      expect(screen.queryByText('82%')).not.toBeInTheDocument();
+      expect(screen.queryByText('91%')).not.toBeInTheDocument();
+    });
   });
 });
