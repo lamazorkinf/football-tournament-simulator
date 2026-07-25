@@ -423,7 +423,7 @@ export function EngineSettings() {
             <div>
               <p className="font-semibold text-white">Restaurar valores predeterminados</p>
               <p className="text-sm text-grass-soft mt-1">
-                K-Factor: 1.5, Divisor Elo: 75, Ventaja local: 3, Límites: 30-100
+                K-Factor: 1.5, Divisor Elo: 75, Ventaja local: 3, Límites: 30-100, Cansancio: activado (oficio 0.15)
               </p>
             </div>
             <Button

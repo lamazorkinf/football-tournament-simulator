@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useConfigStore, DEFAULT_CONFIG } from '../useConfigStore';
 import { queueSettingsSave } from '../../lib/persistSettings';
+import { DEFAULT_FATIGUE, ENERGY_MAX, type FatigueConfig } from '../../core/energy';
 
 vi.mock('../../lib/persistSettings', () => ({
   queueSettingsSave: vi.fn(),
@@ -90,6 +91,80 @@ describe('importanceByStage', () => {
   it('updateImportance ignora valores no numéricos', () => {
     useConfigStore.getState().updateImportance('wcGroup', Number.NaN);
     expect(config().importanceByStage.wcGroup).toBe(1.25);
+  });
+});
+
+describe('fatigue (Task 9: controles de cansancio y oficio)', () => {
+  beforeEach(() => {
+    useConfigStore.getState().resetToDefaults();
+  });
+
+  it('updateFatigue cambia un solo campo sin tocar los demás', () => {
+    useConfigStore.getState().updateFatigue({ clutchGain: 0.35 });
+    expect(config().fatigue.clutchGain).toBe(0.35);
+    expect(config().fatigue.energyMin).toBe(DEFAULT_FATIGUE.energyMin);
+    expect(config().fatigue.recovery).toBe(DEFAULT_FATIGUE.recovery);
+  });
+
+  // Con los sliders reales esto es inalcanzable (un <input type="range"> no
+  // emite valores fuera de min/max), pero `updateFatigue` recibe un patch
+  // libre — igual que los cinco setters hermanos, no debería confiar en que
+  // el único llamador sea la UI.
+  it('clampea energyMin por debajo de ENERGY_MAX', () => {
+    useConfigStore.getState().updateFatigue({ energyMin: 500 });
+    expect(config().fatigue.energyMin).toBeLessThan(ENERGY_MAX);
+
+    useConfigStore.getState().updateFatigue({ energyMin: -20 });
+    expect(config().fatigue.energyMin).toBe(0);
+  });
+
+  it('clampea clutchGain a no negativo', () => {
+    useConfigStore.getState().updateFatigue({ clutchGain: -1 });
+    expect(config().fatigue.clutchGain).toBe(0);
+  });
+
+  it('clampea recovery a no negativo', () => {
+    useConfigStore.getState().updateFatigue({ recovery: -5 });
+    expect(config().fatigue.recovery).toBe(0);
+  });
+
+  it('ignora valores no numéricos y conserva el que había', () => {
+    useConfigStore.getState().updateFatigue({ energyMin: Number.NaN });
+    expect(config().fatigue.energyMin).toBe(DEFAULT_FATIGUE.energyMin);
+  });
+
+  // El riesgo real que motivó este saneamiento no entra por los sliders (que
+  // ya emiten valores válidos) sino por `applySettings`: hidrata `fatigue`
+  // tal cual desde `app_settings`, así que un registro corrupto o guardado
+  // por una versión con otros límites entraba sin filtro. Sin el clamp acá,
+  // un `energyMin` por encima de `ENERGY_MAX` deja a `EnergyMeter` con
+  // `aria-valuemin` por encima de `aria-valuemax` (estado ARIA inválido) y a
+  // `commitEnergy` clampeando la energía guardada por encima de 100.
+  it('applySettings sanea un fatigue fuera de rango llegado desde la DB', () => {
+    const corrupted: FatigueConfig = {
+      ...DEFAULT_FATIGUE,
+      energyMin: 999,
+      clutchGain: -3,
+      recovery: -7,
+    };
+    useConfigStore.getState().applySettings({
+      engineConfig: { ...DEFAULT_CONFIG, fatigue: corrupted },
+    });
+
+    expect(config().fatigue.energyMin).toBeLessThan(ENERGY_MAX);
+    expect(config().fatigue.clutchGain).toBeGreaterThanOrEqual(0);
+    expect(config().fatigue.recovery).toBeGreaterThanOrEqual(0);
+  });
+
+  it('applySettings sin fatigue guardado (config de una versión anterior) usa el default', () => {
+    const legacyConfig: Partial<typeof DEFAULT_CONFIG> = { ...DEFAULT_CONFIG };
+    delete legacyConfig.fatigue;
+
+    useConfigStore.getState().applySettings({
+      engineConfig: legacyConfig as typeof DEFAULT_CONFIG,
+    });
+
+    expect(config().fatigue).toEqual(DEFAULT_FATIGUE);
   });
 });
 

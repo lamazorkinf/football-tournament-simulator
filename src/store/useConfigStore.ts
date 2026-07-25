@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { queueSettingsSave } from '../lib/persistSettings';
-import { DEFAULT_FATIGUE, type FatigueConfig } from '../core/energy';
+import { DEFAULT_FATIGUE, ENERGY_MAX, type FatigueConfig } from '../core/energy';
 
 export type ImportanceKey =
   | 'qualifier'
@@ -59,6 +59,35 @@ export const DEFAULT_CONFIG: EngineConfig = {
   importanceByStage: DEFAULT_IMPORTANCE,
   fatigue: DEFAULT_FATIGUE,
 };
+
+/**
+ * Sanea los campos de fatiga que se pueden mover desde Ajustes (Task 9),
+ * un único lugar para las dos vías por las que `fatigue` cambia:
+ * `updateFatigue` (sliders, que ya emiten valores dentro de rango) y
+ * `applySettings` (hidratación desde la DB, que copia lo que haya guardado
+ * sin ninguna garantía — un registro corrupto o escrito por una versión con
+ * otros límites entra tal cual si nadie lo valida acá).
+ *
+ * `energyMin` en particular no puede llegar o superar `ENERGY_MAX`: eso deja
+ * a `EnergyMeter` en un estado ARIA inválido (`aria-valuemin` por encima de
+ * `aria-valuemax`, que está fijo en `ENERGY_MAX`) y a `commitEnergy`
+ * (`core/energy.ts`) clampeando la energía guardada por encima de 100.
+ */
+function sanitizeFatigue(fatigue: FatigueConfig): FatigueConfig {
+  const energyMin = Number.isFinite(fatigue.energyMin)
+    ? Math.max(0, Math.min(ENERGY_MAX - 1, fatigue.energyMin))
+    : DEFAULT_FATIGUE.energyMin;
+
+  const clutchGain = Number.isFinite(fatigue.clutchGain)
+    ? Math.max(0, Math.min(2, fatigue.clutchGain))
+    : DEFAULT_FATIGUE.clutchGain;
+
+  const recovery = Number.isFinite(fatigue.recovery)
+    ? Math.max(0, Math.min(50, fatigue.recovery))
+    : DEFAULT_FATIGUE.recovery;
+
+  return { ...fatigue, energyMin, clutchGain, recovery };
+}
 
 /**
  * Config del motor + preferencias visuales. NO se persiste en localStorage: el
@@ -127,7 +156,7 @@ export const useConfigStore = create<ConfigStore>()((set) => ({
 
   updateFatigue: (patch: Partial<FatigueConfig>) =>
     set((state) => {
-      const fatigue = { ...state.config.fatigue, ...patch };
+      const fatigue = sanitizeFatigue({ ...state.config.fatigue, ...patch });
       const config = { ...state.config, fatigue };
       queueSettingsSave({ engineConfig: config });
       return { config };
@@ -151,10 +180,13 @@ export const useConfigStore = create<ConfigStore>()((set) => ({
   // vuelta sería un round-trip inútil. Un engineConfig guardado por una
   // versión anterior de la app puede no traer `fatigue`: sin este relleno
   // quedaría `undefined` y el motor explotaría en tiempo de ejecución.
+  // `sanitizeFatigue` sanea lo que venga (ver su comentario): es la vía por
+  // la que un valor corrupto o fuera de rango entraría sin que ningún slider
+  // lo haya tocado.
   applySettings: ({ engineConfig, scanlines }) =>
     set((state) => ({
       config: engineConfig
-        ? { ...engineConfig, fatigue: engineConfig.fatigue ?? DEFAULT_FATIGUE }
+        ? { ...engineConfig, fatigue: sanitizeFatigue(engineConfig.fatigue ?? DEFAULT_FATIGUE) }
         : state.config,
       scanlines: scanlines ?? state.scanlines,
     })),
