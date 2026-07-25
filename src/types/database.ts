@@ -57,6 +57,7 @@ export interface Database {
           away_skill_change: number
           played_at: string
           metadata: Json
+          went_to_extra_time: boolean
         }
         Insert: {
           id?: string
@@ -76,6 +77,7 @@ export interface Database {
           away_skill_change: number
           played_at?: string
           metadata?: Json
+          went_to_extra_time?: boolean
         }
         Update: {
           id?: string
@@ -95,6 +97,7 @@ export interface Database {
           away_skill_change?: number
           played_at?: string
           metadata?: Json
+          went_to_extra_time?: boolean
         }
       }
       tournaments: {

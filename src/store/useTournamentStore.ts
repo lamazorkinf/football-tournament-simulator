@@ -2467,6 +2467,7 @@ export const useTournamentStore = create<TournamentState>()(
                 homeSkillChange: result.homeSkillChange,
                 awaySkillChange: result.awaySkillChange,
                 metadata: result.penalties ? { penalties: result.penalties } : undefined,
+                wentToExtraTime: !!result.extraTime,
               }),
               teamsService.batchUpdateTeams([
                 { id: homeTeam.id, skill: newHomeSkill },
@@ -2778,6 +2779,7 @@ export const useTournamentStore = create<TournamentState>()(
               cycleMatchId: matchId, tournamentId: cycle.id,
               homeSkillBefore: home.skill, awaySkillBefore: away.skill,
               homeSkillAfter: newHome, awaySkillAfter: newAway,
+              wentToExtraTime: !!result.extraTime,
             }))
             .catch((error) => console.error('❌ Error persistiendo partido continental:', error));
         }
@@ -2903,6 +2905,9 @@ export const useTournamentStore = create<TournamentState>()(
               cycleMatchId: matchId, tournamentId: cycle.id,
               homeSkillBefore: home.skill, awaySkillBefore: away.skill,
               homeSkillAfter: newHome, awaySkillAfter: newAway,
+              // Sólo la eliminación directa puede tener alargue; en grupo
+              // `result.extraTime` nunca existe (viene de simulateGroupMatch).
+              wentToExtraTime: !!result.extraTime,
             }))
             .catch((error) => console.error('❌ Error persistiendo partido confed:', error));
         }

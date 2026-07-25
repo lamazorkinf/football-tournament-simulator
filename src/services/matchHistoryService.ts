@@ -22,6 +22,8 @@ export interface MatchHistoryEntry {
   awaySkillChange: number;
   playedAt: string;
   metadata?: Record<string, unknown>;
+  /** El partido se definió en el alargue. Sólo aplica a eliminación directa. */
+  wentToExtraTime?: boolean;
 }
 
 export interface CreateMatchHistoryParams {
@@ -40,6 +42,8 @@ export interface CreateMatchHistoryParams {
   homeSkillChange: number;
   awaySkillChange: number;
   metadata?: Record<string, unknown>;
+  /** El partido se definió en el alargue. Sólo aplica a eliminación directa. */
+  wentToExtraTime?: boolean;
 }
 
 export interface MatchCursor {
@@ -114,6 +118,7 @@ const dbMatchToMatch = (dbMatch: MatchHistoryRow): MatchHistoryEntry => ({
   awaySkillChange: dbMatch.away_skill_change,
   playedAt: dbMatch.played_at,
   metadata: dbMatch.metadata as Record<string, unknown> | undefined,
+  wentToExtraTime: dbMatch.went_to_extra_time ?? false,
 });
 
 export const matchHistoryService = {
@@ -144,6 +149,7 @@ export const matchHistoryService = {
       home_skill_change: params.homeSkillChange,
       away_skill_change: params.awaySkillChange,
       metadata: (params.metadata || {}) as any,
+      went_to_extra_time: params.wentToExtraTime ?? false,
     };
 
     const { data, error } = await supabase
@@ -347,6 +353,7 @@ export const matchHistoryService = {
       home_skill_change: params.homeSkillChange,
       away_skill_change: params.awaySkillChange,
       metadata: (params.metadata || {}) as any,
+      went_to_extra_time: params.wentToExtraTime ?? false,
     }));
 
     const { data, error } = await supabase

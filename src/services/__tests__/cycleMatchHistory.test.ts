@@ -18,13 +18,32 @@ describe('buildMatchParams', () => {
     expect((p.metadata as { cycleMatchId?: string }).cycleMatchId).toBe('m1');
     expect(p.tournamentId).toBe('t1');
   });
+
+  it('sin wentToExtraTime ⇒ default false', () => {
+    const p = buildMatchParams({
+      homeTeamId: 'A', awayTeamId: 'B', homeScore: 1, awayScore: 0,
+      stage: 'confed-group', cycleMatchId: 'm2', tournamentId: 't1',
+      homeSkillBefore: 80, awaySkillBefore: 70, homeSkillAfter: 80, awaySkillAfter: 70,
+    });
+    expect(p.wentToExtraTime).toBe(false);
+  });
+
+  it('con wentToExtraTime: true ⇒ lo propaga', () => {
+    const p = buildMatchParams({
+      homeTeamId: 'A', awayTeamId: 'B', homeScore: 2, awayScore: 2,
+      stage: 'continental', cycleMatchId: 'm3', tournamentId: 't1',
+      homeSkillBefore: 80, awaySkillBefore: 70, homeSkillAfter: 80, awaySkillAfter: 70,
+      wentToExtraTime: true,
+    });
+    expect(p.wentToExtraTime).toBe(true);
+  });
 });
 
 const teams: Team[] = [
   { id: 'A', name: 'A', flag: '', region: 'Europe', skill: 80 },
   { id: 'B', name: 'B', flag: '', region: 'Europe', skill: 70 },
 ];
-const played = (id: string) => ({ id, homeTeamId: 'A', awayTeamId: 'B', homeScore: 1, awayScore: 0, isPlayed: true, round: 'final' as const });
+const played = (id: string, extraTime?: boolean) => ({ id, homeTeamId: 'A', awayTeamId: 'B', homeScore: 1, awayScore: 0, isPlayed: true, round: 'final' as const, extraTime });
 const unplayed = (id: string) => ({ id, homeTeamId: 'A', awayTeamId: 'B', homeScore: null, awayScore: null, isPlayed: false, round: 'semi' as const });
 
 const cycle = {
@@ -32,7 +51,7 @@ const cycle = {
   continental: {
     isComplete: true,
     brackets: {
-      Europe: { region: 'Europe', roundOf64: [], roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [unplayed('c-semi')], final: played('c-final'), thirdPlace: null, byeTeamIds: [] },
+      Europe: { region: 'Europe', roundOf64: [], roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [unplayed('c-semi')], final: played('c-final', true), thirdPlace: null, byeTeamIds: [] },
       America: { region: 'America', roundOf64: [], roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], final: null, thirdPlace: null, byeTeamIds: [] },
       Africa: { region: 'Africa', roundOf64: [], roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], final: null, thirdPlace: null, byeTeamIds: [] },
       Asia: { region: 'Asia', roundOf64: [], roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], final: null, thirdPlace: null, byeTeamIds: [] },
@@ -53,6 +72,12 @@ describe('collectPlayedCycleMatches', () => {
     expect(res.find((p) => (p.metadata as any).cycleMatchId === 'c-final')!.stage).toBe('continental');
     expect(res.find((p) => (p.metadata as any).cycleMatchId === 'cf-g1')!.stage).toBe('confed-group');
     expect(res.every((p) => p.tournamentId === 'cycle-1')).toBe(true);
+  });
+
+  it('propaga extraTime del bracket a wentToExtraTime; los partidos de grupo quedan en false', () => {
+    const res = collectPlayedCycleMatches(cycle, teams);
+    expect(res.find((p) => (p.metadata as any).cycleMatchId === 'c-final')!.wentToExtraTime).toBe(true);
+    expect(res.find((p) => (p.metadata as any).cycleMatchId === 'cf-g1')!.wentToExtraTime).toBe(false);
   });
 });
 

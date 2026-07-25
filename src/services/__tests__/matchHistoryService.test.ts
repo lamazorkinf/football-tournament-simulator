@@ -58,7 +58,7 @@ describe('computeWinRate', () => {
 });
 
 // Fila cruda como la devuelve el RPC (snake_case, mismo shape que match_history).
-const dbRow = (id: string, playedAt: string) => ({
+const dbRow = (id: string, playedAt: string, wentToExtraTime = false) => ({
   id,
   home_team_id: 'A',
   away_team_id: 'B',
@@ -76,6 +76,7 @@ const dbRow = (id: string, playedAt: string) => ({
   away_skill_change: -1,
   played_at: playedAt,
   metadata: {},
+  went_to_extra_time: wentToExtraTime,
 });
 
 afterEach(() => {
@@ -108,6 +109,23 @@ describe('getMatchesPage', () => {
     vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(false);
     const res = await matchHistoryService.getMatchesPage({ pageSize: 30 });
     expect(res).toEqual({ matches: [], nextCursor: null, hasMore: false });
+  });
+
+  it('mapea went_to_extra_time de la fila cruda a wentToExtraTime', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { rpc: (...a: unknown[]) => unknown }, 'rpc')
+      .mockResolvedValue({
+        data: [
+          dbRow('extra', '2026-01-02T00:00:00Z', true),
+          dbRow('normal', '2026-01-01T00:00:00Z', false),
+        ],
+        error: null,
+      } as never);
+
+    const res = await matchHistoryService.getMatchesPage({ pageSize: 2 });
+
+    expect(res.matches.find((m) => m.id === 'extra')?.wentToExtraTime).toBe(true);
+    expect(res.matches.find((m) => m.id === 'normal')?.wentToExtraTime).toBe(false);
   });
 
   it('pasa el cursor al RPC', async () => {

@@ -17,6 +17,8 @@ export interface CycleMatchInput {
   awaySkillBefore: number;
   homeSkillAfter: number;
   awaySkillAfter: number;
+  /** El partido se definió en el alargue. Sólo puede darse en 'continental' o 'confed-knockout'. */
+  wentToExtraTime?: boolean;
 }
 
 /** Construye los params normalizados de match_history para un partido del ciclo. */
@@ -37,6 +39,7 @@ export function buildMatchParams(input: CycleMatchInput): CreateMatchHistoryPara
     homeSkillChange: input.homeSkillAfter - input.homeSkillBefore,
     awaySkillChange: input.awaySkillAfter - input.awaySkillBefore,
     metadata: { cycleMatchId: input.cycleMatchId },
+    wentToExtraTime: input.wentToExtraTime ?? false,
   };
 }
 
@@ -51,7 +54,7 @@ export function collectPlayedCycleMatches(cycle: Cycle, teams: Team[]): CreateMa
   const params: CreateMatchHistoryParams[] = [];
 
   const pushPlayed = (
-    m: { id: string; homeTeamId: string; awayTeamId: string; homeScore: number | null; awayScore: number | null; isPlayed: boolean },
+    m: { id: string; homeTeamId: string; awayTeamId: string; homeScore: number | null; awayScore: number | null; isPlayed: boolean; extraTime?: boolean },
     stage: CycleMatchInput['stage'],
     groupName: string | undefined,
     region?: Region,
@@ -63,6 +66,9 @@ export function collectPlayedCycleMatches(cycle: Cycle, teams: Team[]): CreateMa
       stage, region, groupName, cycleMatchId: m.id, tournamentId: cycle.id,
       homeSkillBefore: skillOf(m.homeTeamId), awaySkillBefore: skillOf(m.awayTeamId),
       homeSkillAfter: skillOf(m.homeTeamId), awaySkillAfter: skillOf(m.awayTeamId),
+      // Sólo los brackets de eliminación directa traen `extraTime`; los partidos
+      // de grupo (confed-group) no tienen esa propiedad y quedan en `false`.
+      wentToExtraTime: m.extraTime ?? false,
     }));
   };
 
