@@ -48,7 +48,7 @@ Todas las fórmulas del spec, puras y testeadas, más los valores en `EngineConf
   - `clutchMultiplier(homeSkill: number, awaySkill: number, importance: number, cfg: FatigueConfig): number`
   - `matchEnergyCost(input: EnergyCostInput, cfg: FatigueConfig): number`
   - `resolveEnergy(state: EnergyState | undefined, scope: TournamentScope, matchdayIndex: number, teamId: string, cfg: FatigueConfig): number`
-  - `commitEnergy(state: EnergyState | undefined, scope: TournamentScope, matchdayIndex: number, updates: Array<{ teamId: string; energy: number }>): EnergyState`
+  - `commitEnergy(state: EnergyState | undefined, scope: TournamentScope, matchdayIndex: number, updates: Array<{ teamId: string; energy: number }>, cfg: FatigueConfig): EnergyState`
   - En `useConfigStore`: `EngineConfig.fatigue: FatigueConfig` y `updateFatigue(patch: Partial<FatigueConfig>): void`
 
 - [ ] **Step 1: Escribir los tests del módulo**
@@ -208,29 +208,29 @@ describe('resolveEnergy', () => {
   });
 
   it('recupera por cada jornada transcurrida desde su último partido', () => {
-    const state = commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 70 }]);
+    const state = commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 70 }], cfg);
     expect(resolveEnergy(state, 'world-cup', 5, 'bel', cfg)).toBeCloseTo(74, 5);
     // Dos jornadas sin jugar (fecha libre o bye) recuperan el doble.
     expect(resolveEnergy(state, 'world-cup', 6, 'bel', cfg)).toBeCloseTo(78, 5);
   });
 
   it('las clasificatorias recuperan más rápido que un torneo corto', () => {
-    const state = commitEnergy(undefined, 'wc-qualifiers', 1, [{ teamId: 'bel', energy: 70 }]);
+    const state = commitEnergy(undefined, 'wc-qualifiers', 1, [{ teamId: 'bel', energy: 70 }], cfg);
     expect(resolveEnergy(state, 'wc-qualifiers', 2, 'bel', cfg)).toBeCloseTo(78, 5);
   });
 
   it('nunca supera el máximo por más que descanse', () => {
-    const state = commitEnergy(undefined, 'world-cup', 1, [{ teamId: 'bel', energy: 90 }]);
+    const state = commitEnergy(undefined, 'world-cup', 1, [{ teamId: 'bel', energy: 90 }], cfg);
     expect(resolveEnergy(state, 'world-cup', 20, 'bel', cfg)).toBe(ENERGY_MAX);
   });
 
   it('cambiar de torneo resetea a lleno', () => {
-    const state = commitEnergy(undefined, 'continental', 6, [{ teamId: 'bel', energy: 62 }]);
+    const state = commitEnergy(undefined, 'continental', 6, [{ teamId: 'bel', energy: 62 }], cfg);
     expect(resolveEnergy(state, 'world-cup', 1, 'bel', cfg)).toBe(ENERGY_MAX);
   });
 
   it('el Mundial NO se resetea al pasar de grupos a knockout', () => {
-    const state = commitEnergy(undefined, 'world-cup', 3, [{ teamId: 'bel', energy: 88 }]);
+    const state = commitEnergy(undefined, 'world-cup', 3, [{ teamId: 'bel', energy: 88 }], cfg);
     // scope 'world-cup' cubre las dos fases: sigue el desgaste, sólo recupera.
     expect(resolveEnergy(state, 'world-cup', 4, 'bel', cfg)).toBeCloseTo(92, 5);
   });
@@ -238,21 +238,21 @@ describe('resolveEnergy', () => {
 
 describe('commitEnergy', () => {
   it('respeta el piso', () => {
-    const state = commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 12 }]);
+    const state = commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 12 }], cfg);
     expect(state.byTeam.bel.value).toBe(cfg.energyMin);
   });
 
   it('descarta el estado del torneo anterior al cambiar de torneo', () => {
-    const previo = commitEnergy(undefined, 'continental', 6, [{ teamId: 'arg', energy: 65 }]);
-    const nuevo = commitEnergy(previo, 'world-cup', 1, [{ teamId: 'bel', energy: 95 }]);
+    const previo = commitEnergy(undefined, 'continental', 6, [{ teamId: 'arg', energy: 65 }], cfg);
+    const nuevo = commitEnergy(previo, 'world-cup', 1, [{ teamId: 'bel', energy: 95 }], cfg);
     expect(nuevo.scope).toBe('world-cup');
     expect(nuevo.byTeam.arg).toBeUndefined();
   });
 
   it('no muta el estado recibido', () => {
-    const previo = commitEnergy(undefined, 'world-cup', 1, [{ teamId: 'bel', energy: 90 }]);
+    const previo = commitEnergy(undefined, 'world-cup', 1, [{ teamId: 'bel', energy: 90 }], cfg);
     const copia = structuredClone(previo);
-    commitEnergy(previo, 'world-cup', 2, [{ teamId: 'bel', energy: 80 }]);
+    commitEnergy(previo, 'world-cup', 2, [{ teamId: 'bel', energy: 80 }], cfg);
     expect(previo).toEqual(copia);
   });
 });
@@ -507,13 +507,16 @@ export function commitEnergy(
   scope: TournamentScope,
   matchdayIndex: number,
   updates: Array<{ teamId: string; energy: number }>,
+  cfg: FatigueConfig,
 ): EnergyState {
   const base = state && state.scope === scope ? state.byTeam : {};
   const byTeam: Record<string, TeamEnergy> = { ...base };
 
   for (const { teamId, energy } of updates) {
     byTeam[teamId] = {
-      value: Math.max(DEFAULT_FATIGUE.energyMin, Math.min(ENERGY_MAX, energy)),
+      // El piso sale del config, no de la constante: el usuario puede bajarlo
+      // desde Ajustes y clampear contra el default lo ignoraría en silencio.
+      value: Math.max(cfg.energyMin, Math.min(ENERGY_MAX, energy)),
       lastMatchdayIndex: matchdayIndex,
     };
   }
@@ -1066,8 +1069,10 @@ Crear `src/core/__tests__/cycle.energy.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { reconstructCycle, serializeCycleState, toCycle } from '../cycle';
-import { commitEnergy } from '../energy';
+import { DEFAULT_FATIGUE, commitEnergy } from '../energy';
 import type { Tournament } from '../../types';
+
+const cfg = DEFAULT_FATIGUE;
 
 const baseTournament = (): Tournament => ({
   id: 't1',
@@ -1087,7 +1092,7 @@ describe('energía en el estado del ciclo', () => {
   it('la energía sobrevive el ida y vuelta por el JSONB', () => {
     const cycle = {
       ...toCycle(baseTournament()),
-      energy: commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 72 }]),
+      energy: commitEnergy(undefined, 'world-cup', 4, [{ teamId: 'bel', energy: 72 }], cfg),
     };
     const payload = serializeCycleState(cycle);
     const restored = reconstructCycle(baseTournament(), payload);
@@ -1202,9 +1207,11 @@ Crear `src/store/__tests__/useTournamentStore.energy.test.ts`. El objetivo es el
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest';
 import { applyEnergyAfterMatch, buildEnergyContext } from '../useTournamentStore';
-import { commitEnergy } from '../../core/energy';
+import { DEFAULT_FATIGUE, commitEnergy } from '../../core/energy';
 import { useConfigStore } from '../../store/useConfigStore';
 import type { Cycle } from '../../types';
+
+const cfg = DEFAULT_FATIGUE;
 
 const cycleWith = (energy?: Cycle['energy']) => ({ energy }) as Cycle;
 
@@ -1222,7 +1229,7 @@ describe('buildEnergyContext', () => {
   });
 
   it('arrastra el desgaste de la fase de grupos al knockout del Mundial', () => {
-    const energy = commitEnergy(undefined, 'world-cup', 3, [{ teamId: 'bel', energy: 80 }]);
+    const energy = commitEnergy(undefined, 'world-cup', 3, [{ teamId: 'bel', energy: 80 }], cfg);
     const ctx = buildEnergyContext(cycleWith(energy), 'world-cup-knockout', 'round-of-32', undefined, 'bel', 'arg');
     // R32 es la jornada 4 del Mundial: una jornada de recuperación desde la 3.
     expect(ctx.matchdayIndex).toBe(4);
@@ -1231,7 +1238,7 @@ describe('buildEnergyContext', () => {
   });
 
   it('empezar otro torneo devuelve a todos al 100%', () => {
-    const energy = commitEnergy(undefined, 'continental', 6, [{ teamId: 'bel', energy: 61 }]);
+    const energy = commitEnergy(undefined, 'continental', 6, [{ teamId: 'bel', energy: 61 }], cfg);
     const ctx = buildEnergyContext(cycleWith(energy), 'world-cup-group', undefined, 1, 'bel', 'arg');
     expect(ctx.homeEnergy).toBe(100);
   });
@@ -1371,10 +1378,16 @@ export function applyEnergyAfterMatch(
     cfg,
   );
 
-  return commitEnergy(state, outcome.scope, outcome.matchdayIndex, [
-    { teamId: outcome.home.teamId, energy: outcome.home.energy - homeCost },
-    { teamId: outcome.away.teamId, energy: outcome.away.energy - awayCost },
-  ]);
+  return commitEnergy(
+    state,
+    outcome.scope,
+    outcome.matchdayIndex,
+    [
+      { teamId: outcome.home.teamId, energy: outcome.home.energy - homeCost },
+      { teamId: outcome.away.teamId, energy: outcome.away.energy - awayCost },
+    ],
+    cfg,
+  );
 }
 ```
 
@@ -1786,18 +1799,11 @@ export function EnergyMeter({ energy, label }: EnergyMeterProps) {
 
   const color = energy >= 85 ? 'led' : energy >= 72 ? 'gold' : 'loss';
 
+  // `PixelBar` trae su propio role="meter", pero con los valores normalizados
+  // (0-40), que no son los que el usuario ve ni los que sirven a un lector de
+  // pantalla. Se la marca aria-hidden y el medidor accesible es el contenedor,
+  // que declara la energía real.
   return (
-    <div className="flex items-center gap-2" aria-label={`Energía de ${label}`}>
-      <PixelBar value={normalized} max={span} color={color} />
-      <span className="text-xs text-grass-soft tabular-nums">{Math.round(energy)}%</span>
-    </div>
-  );
-}
-```
-
-Nota: `PixelBar` ya pone `role="meter"`, pero con los valores normalizados. Para que `aria-valuenow` sea la energía real que espera el test, envolver con los atributos correctos: pasarle `value={energy}` y `max={ENERGY_MAX}` haría la barra poco expresiva, así que en su lugar el contenedor lleva `role="meter"` propio y la `PixelBar` interna se marca `aria-hidden`. Ajustar el JSX a:
-
-```tsx
     <div
       className="flex items-center gap-2"
       role="meter"
@@ -1811,6 +1817,8 @@ Nota: `PixelBar` ya pone `role="meter"`, pero con los valores normalizados. Para
       </div>
       <span className="text-xs text-grass-soft tabular-nums">{Math.round(energy)}%</span>
     </div>
+  );
+}
 ```
 
 - [ ] **Step 4: Correr el test**
