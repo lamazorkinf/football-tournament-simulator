@@ -130,11 +130,24 @@ energíaNueva = max(60, energía − costo)
 
 ### Recuperación y reset
 
-- Al **avanzar de jornada**, todos recuperan: **+4** en continental,
-  Confederaciones y Mundial; **+8** en clasificatorias, cuyas fechas en la
-  ficción están separadas por meses. La recuperación se aplica a **todos los
-  equipos del torneo**, hayan jugado esa jornada o no: descansar es
-  precisamente lo que hace un equipo con fecha libre o con bye.
+- Cada equipo recupera **+4 por jornada transcurrida desde su último partido**
+  en continental, Confederaciones y Mundial; **+8** en clasificatorias, cuyas
+  fechas en la ficción están separadas por meses. Quien tuvo fecha libre o bye
+  recupera el doble, que es exactamente lo que debe pasar.
+
+  La recuperación se resuelve **de forma perezosa, al simular**, no en un evento
+  global de avance de jornada. Motivo verificado en el código: `getNextCalendarState`
+  sólo se invoca desde `cycle.ts` para las fases continental y confed — las
+  clasificatorias y el Mundial nunca mueven el puntero de jornada, así que un
+  enganche en "avanzar jornada" no existiría en 3 de las 5 fases. Cada equipo
+  guarda su energía junto con el índice de jornada de su último partido, y al
+  entrar a un partido nuevo recupera `(índiceActual − índiceGuardado) × recuperación`.
+
+  El índice de jornada **se deriva de la ronda**, no de `Match.matchday`: los
+  partidos de eliminación directa del Mundial no llevan `matchday` (`knockout.ts`
+  no lo asigna; sólo continental y confed lo hacen). El mapa es R32→1, octavos→2,
+  cuartos→3, semis→4, tercer puesto y final→5, desplazado por las 3 jornadas de
+  la fase de grupos cuando el torneo las tiene.
 - Al **cambiar de torneo**, todos vuelven a 100. Los torneos son cuatro:
   continental, Confederaciones, clasificatorias y Mundial. **`wc-groups` y
   `wc-knockout` son fases distintas del calendario pero el mismo torneo**, así
@@ -268,10 +281,20 @@ JSONB. **La única migración es la 017**: una columna `went_to_extra_time` en
 en vivo reproduce un resultado ya comprometido y necesita saber cuáles van
 después del minuto 90.
 
-### Enganches con el calendario
+### Enganches
 
-- Transición de jornada → recuperación de todos.
-- Transición de torneo → reset a 100.
+No hay hooks en transiciones de calendario. Todo se resuelve en el momento de
+simular un partido, a partir de su etapa y su ronda:
+
+- La **etapa** define el torneo (`qualifier` → clasificatorias; `world-cup-group`
+  y `world-cup-knockout` → Mundial; `continental`; `confed-group` y
+  `confed-knockout` → Confederaciones). Si el torneo cambió respecto al guardado,
+  el estado de energía se reinicia entero.
+- La **ronda** define el índice de jornada, y con él cuánto recuperó cada equipo
+  desde su último partido.
+
+Esto mantiene el módulo puro: no necesita el `Cycle` completo, sólo `(etapa,
+ronda, jornada)`.
 
 ### Configuración
 
