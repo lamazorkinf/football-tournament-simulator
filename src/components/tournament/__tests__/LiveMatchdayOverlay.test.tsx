@@ -9,6 +9,13 @@ import { useConfigStore, DEFAULT_CONFIG } from '../../../store/useConfigStore';
 import { toCycle } from '../../../core/cycle';
 import { baseTournament } from '../../../test/fixtures/cycle';
 
+// Sin este mock, updateFatigue() deja armada una escritura real a Supabase
+// (mismo proyecto que producción): ver src/store/__tests__/useConfigStore.test.ts.
+vi.mock('../../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
+
 const teams: Team[] = [
   { id: 'arg', name: 'Argentina', flag: '🇦🇷', region: 'America', skill: 90 },
   { id: 'bra', name: 'Brasil', flag: '🇧🇷', region: 'America', skill: 85 },

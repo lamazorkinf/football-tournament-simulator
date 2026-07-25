@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   generateConfederationsGroups,
   generateConfederationsSemiFinals,
@@ -9,6 +9,13 @@ import type { ConfederationFinalists } from '../confederations';
 import type { Team, Region, WorldCupGroup, TeamStanding, KnockoutMatch } from '../../types';
 import { getStageImportance } from '../engine';
 import { useConfigStore } from '../../store/useConfigStore';
+
+// Sin este mock, resetToDefaults() deja armada una escritura real a Supabase
+// (mismo proyecto que producción): ver src/store/__tests__/useConfigStore.test.ts.
+vi.mock('../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
 
 /** 4 confederaciones (Europe, America, Africa, Asia), campeón + subcampeón c/u. */
 const FINALISTS: ConfederationFinalists[] = [

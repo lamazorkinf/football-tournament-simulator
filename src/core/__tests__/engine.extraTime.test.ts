@@ -1,6 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { simulateMatch, simulateMatchWithPenalties } from '../engine';
 import { useConfigStore } from '../../store/useConfigStore';
+
+// Sin este mock, resetToDefaults() deja armada una escritura real a Supabase
+// (mismo proyecto que producción): ver src/store/__tests__/useConfigStore.test.ts.
+vi.mock('../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
 
 const ctx = {
   home: { skill: 85, energy: 100 },

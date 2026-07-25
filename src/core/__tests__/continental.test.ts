@@ -1,9 +1,18 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getContinentalByeCount,
   getContinentalRoundOf64Count,
   seedSlots,
 } from '../continental';
+
+// Sin este mock, resetToDefaults() (más abajo, en "FU-B") deja armada una
+// escritura real a Supabase (mismo proyecto que producción): ver
+// src/store/__tests__/useConfigStore.test.ts. vi.mock se hoistea sobre todos
+// los imports del archivo, así que da igual que el uso esté lejos de acá.
+vi.mock('../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
 
 describe('getContinentalByeCount', () => {
   it('confederaciones de 55 → 9 byes, de 45 → 19 byes', () => {

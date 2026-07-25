@@ -1,8 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { applyEnergyAfterMatch, buildEnergyContext } from '../useTournamentStore';
 import { DEFAULT_FATIGUE, commitEnergy } from '../../core/energy';
 import { useConfigStore } from '../../store/useConfigStore';
 import type { Cycle } from '../../types';
+
+// Sin este mock, resetToDefaults() deja armada una escritura real a Supabase
+// (mismo proyecto que producción): ver src/store/__tests__/useConfigStore.test.ts.
+vi.mock('../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
 
 const cfg = DEFAULT_FATIGUE;
 

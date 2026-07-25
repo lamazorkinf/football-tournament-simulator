@@ -1,7 +1,14 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { EnergyMeter } from '../EnergyMeter';
 import { useConfigStore, DEFAULT_CONFIG } from '../../../store/useConfigStore';
+
+// Sin este mock, updateFatigue() deja armada una escritura real a Supabase
+// (mismo proyecto que producción): ver src/store/__tests__/useConfigStore.test.ts.
+vi.mock('../../../lib/persistSettings', () => ({
+  queueSettingsSave: vi.fn(),
+  flushSettingsSave: vi.fn(),
+}));
 
 describe('EnergyMeter', () => {
   afterEach(() => {
