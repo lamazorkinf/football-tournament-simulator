@@ -3,9 +3,12 @@ import type { Team, Group, WorldCupGroup } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
 import { ClickableTeamName } from '../ui/ClickableTeamName';
+import { EnergyMeter } from '../ui/EnergyMeter';
 import { useTeamProfile } from '../../hooks/useTeamProfile';
 import { History } from 'lucide-react';
 import { matchHistoryService, type MatchHistoryEntry } from '../../services/matchHistoryService';
+import { useTournamentStore, buildEnergyContext } from '../../store/useTournamentStore';
+import { getEngineConfig } from '../../store/useConfigStore';
 
 interface MatchPreviewProps {
   homeTeam: Team;
@@ -16,6 +19,7 @@ interface MatchPreviewProps {
 
 export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewProps) {
   const { openTeamProfile } = useTeamProfile();
+  const cycle = useTournamentStore((s) => s.currentTournament);
   const [homeTeamHistory, setHomeTeamHistory] = useState<MatchHistoryEntry[]>([]);
   const [awayTeamHistory, setAwayTeamHistory] = useState<MatchHistoryEntry[]>([]);
   const [h2hHistory, setH2hHistory] = useState<{ home: number; draw: number; away: number }>({
@@ -112,6 +116,28 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
     return 'bg-loss text-white';
   };
 
+  // Energía de los dos equipos, vía `buildEnergyContext` (única fuente del
+  // cálculo). La previa solo se muestra para partidos de fase de grupos (ver
+  // MatchCenter, que la invoca únicamente cuando encuentra un `group`), así
+  // que alcanza con distinguir clasificatorias de grupos de Mundial: `Group`
+  // (clasificatorias) trae `region`, `WorldCupGroup` no. El `matchday` sale
+  // de buscar el partido sin jugar entre esos dos equipos dentro del grupo,
+  // porque la previa no recibe el `Match` en sí, solo sus equipos.
+  const fatigueEnabled = getEngineConfig().fatigue.enabled;
+  const previewedMatch = group.matches.find(
+    (m) => m.homeTeamId === homeTeam.id && m.awayTeamId === awayTeam.id && !m.isPlayed
+  );
+  const energyContext =
+    cycle && fatigueEnabled
+      ? buildEnergyContext(
+          cycle,
+          'region' in group ? 'qualifier' : 'world-cup-group',
+          undefined,
+          previewedMatch?.matchday,
+          homeTeam.id,
+          awayTeam.id
+        )
+      : null;
 
   return (
     <div className="space-y-4">
@@ -191,83 +217,89 @@ export function MatchPreview({ homeTeam, awayTeam, group, teams }: MatchPreviewP
         <CardContent>
           <div className="space-y-3">
             {/* Home Team Form */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TeamFlag
-                  teamId={homeTeam.id}
-                  teamName={homeTeam.name}
-                  size={24}
-                  onClick={() => openTeamProfile(homeTeam)}
-                  clickable
-                />
-                <ClickableTeamName team={homeTeam}>
-                  <span className="font-medium text-sm">{homeTeam.name}</span>
-                </ClickableTeamName>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TeamFlag
+                    teamId={homeTeam.id}
+                    teamName={homeTeam.name}
+                    size={24}
+                    onClick={() => openTeamProfile(homeTeam)}
+                    clickable
+                  />
+                  <ClickableTeamName team={homeTeam}>
+                    <span className="font-medium text-sm">{homeTeam.name}</span>
+                  </ClickableTeamName>
+                </div>
+                <div className="flex gap-1">
+                  {homeTeamHistory.length > 0 ? (
+                    homeTeamHistory.map((match) => {
+                      const result = getMatchResult(match, homeTeam.id);
+                      return (
+                        <div
+                          key={match.id}
+                          className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
+                            result
+                          )}`}
+                          title={`${
+                            match.homeTeamId === homeTeam.id
+                              ? match.homeScore + '-' + match.awayScore
+                              : match.awayScore + '-' + match.homeScore
+                          }`}
+                        >
+                          {result}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <span className="text-xs text-grass-soft">Sin historial</span>
+                  )}
+                </div>
               </div>
-              <div className="flex gap-1">
-                {homeTeamHistory.length > 0 ? (
-                  homeTeamHistory.map((match) => {
-                    const result = getMatchResult(match, homeTeam.id);
-                    return (
-                      <div
-                        key={match.id}
-                        className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
-                          result
-                        )}`}
-                        title={`${
-                          match.homeTeamId === homeTeam.id
-                            ? match.homeScore + '-' + match.awayScore
-                            : match.awayScore + '-' + match.homeScore
-                        }`}
-                      >
-                        {result}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <span className="text-xs text-grass-soft">Sin historial</span>
-                )}
-              </div>
+              {energyContext && <EnergyMeter energy={energyContext.homeEnergy} label={homeTeam.name} />}
             </div>
 
             {/* Away Team Form */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TeamFlag
-                  teamId={awayTeam.id}
-                  teamName={awayTeam.name}
-                  size={24}
-                  onClick={() => openTeamProfile(awayTeam)}
-                  clickable
-                />
-                <ClickableTeamName team={awayTeam}>
-                  <span className="font-medium text-sm">{awayTeam.name}</span>
-                </ClickableTeamName>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TeamFlag
+                    teamId={awayTeam.id}
+                    teamName={awayTeam.name}
+                    size={24}
+                    onClick={() => openTeamProfile(awayTeam)}
+                    clickable
+                  />
+                  <ClickableTeamName team={awayTeam}>
+                    <span className="font-medium text-sm">{awayTeam.name}</span>
+                  </ClickableTeamName>
+                </div>
+                <div className="flex gap-1">
+                  {awayTeamHistory.length > 0 ? (
+                    awayTeamHistory.map((match) => {
+                      const result = getMatchResult(match, awayTeam.id);
+                      return (
+                        <div
+                          key={match.id}
+                          className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
+                            result
+                          )}`}
+                          title={`${
+                            match.homeTeamId === awayTeam.id
+                              ? match.homeScore + '-' + match.awayScore
+                              : match.awayScore + '-' + match.homeScore
+                          }`}
+                        >
+                          {result}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <span className="text-xs text-grass-soft">Sin historial</span>
+                  )}
+                </div>
               </div>
-              <div className="flex gap-1">
-                {awayTeamHistory.length > 0 ? (
-                  awayTeamHistory.map((match) => {
-                    const result = getMatchResult(match, awayTeam.id);
-                    return (
-                      <div
-                        key={match.id}
-                        className={`w-6 h-6 flex items-center justify-center text-xs font-bold border border-line ${getResultColor(
-                          result
-                        )}`}
-                        title={`${
-                          match.homeTeamId === awayTeam.id
-                            ? match.homeScore + '-' + match.awayScore
-                            : match.awayScore + '-' + match.homeScore
-                        }`}
-                      >
-                        {result}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <span className="text-xs text-grass-soft">Sin historial</span>
-                )}
-              </div>
+              {energyContext && <EnergyMeter energy={energyContext.awayEnergy} label={awayTeam.name} />}
             </div>
           </div>
         </CardContent>

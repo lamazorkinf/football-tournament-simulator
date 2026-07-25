@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingUp, TrendingDown, Target, Clock, Users } from 'lucide-react';
-import type { Match, Team } from '../../types';
+import type { KnockoutMatch, Match, Team } from '../../types';
 import { TeamFlag } from '../ui/TeamFlag';
 import { Button } from '../ui/Button';
 
@@ -43,6 +43,10 @@ export function MatchDetailModal({
 
   const homeWon = (match.homeScore ?? 0) > (match.awayScore ?? 0);
   const draw = match.homeScore === match.awayScore;
+  // `extraTime` solo existe en `KnockoutMatch`; `match` llega tipado como
+  // `Match` (los partidos de fase de grupos no lo tienen), pero en runtime
+  // los partidos de eliminación directa sí traen el campo.
+  const extraTime = (match as KnockoutMatch).extraTime;
 
   return (
     <AnimatePresence>
@@ -114,6 +118,11 @@ export function MatchDetailModal({
                   <Clock className="w-4 h-4" />
                   <span>90'</span>
                 </div>
+                {extraTime && (
+                  <div className="flex justify-center mt-1">
+                    <span className="border border-gold px-1 text-[10px] text-gold">ALARGUE</span>
+                  </div>
+                )}
               </div>
 
               {/* Away Team */}

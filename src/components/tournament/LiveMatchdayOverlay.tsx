@@ -1,6 +1,8 @@
 import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiveMatchdayStore';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { getEngineConfig } from '../../store/useConfigStore';
+import { ENERGY_MAX } from '../../core/energy';
 import { scoreAtMinute } from '../../core/liveMatch';
 import {
   useLiveMatchdayPlayback,
@@ -14,7 +16,7 @@ import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
 import { Pause, Play, Radio, Star, X } from 'lucide-react';
 import { useEffect } from 'react';
-import type { Team } from '../../types';
+import type { Cycle, Team } from '../../types';
 
 const SPEEDS: LiveSpeed[] = [1, 2, 4];
 
@@ -30,6 +32,7 @@ export function LiveMatchdayOverlay() {
   const closeSession = useLiveMatchdayStore((s) => s.closeSession);
   const showResults = useMatchResultsStore((s) => s.showResults);
   const teams = useTournamentStore((s) => s.teams);
+  const cycle = useTournamentStore((s) => s.currentTournament);
 
   const hasAnyPenalties = session?.entries.some((e) => e.timeline.penalties) ?? false;
   // Si UN SOLO partido de la grilla fue a alargue, el reloj compartido llega
@@ -142,7 +145,7 @@ export function LiveMatchdayOverlay() {
       <div className="max-w-7xl mx-auto p-4 space-y-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <div className={`grid ${gridCols} gap-3`}>
           {session.entries.map((entry) => (
-            <LiveGridCard key={entry.matchId} entry={entry} teams={teams} playback={playback} />
+            <LiveGridCard key={entry.matchId} entry={entry} teams={teams} cycle={cycle} playback={playback} />
           ))}
         </div>
 
@@ -167,10 +170,12 @@ export function LiveMatchdayOverlay() {
 function LiveGridCard({
   entry,
   teams,
+  cycle,
   playback,
 }: {
   entry: LiveMatchdayEntry;
   teams: Team[];
+  cycle: Cycle | null;
   playback: LiveMatchdayPlaybackState;
 }) {
   const home = teams.find((t) => t.id === entry.homeTeamId);
@@ -179,6 +184,18 @@ function LiveGridCard({
   const justScored = score.lastGoalMinute === playback.minute && playback.phase === 'playing';
   const showPenalties = playback.penaltiesRevealed && entry.timeline.penalties;
   const hasGoals = score.homeGoalMinutes.length > 0 || score.awayGoalMinutes.length > 0;
+
+  // Commit-then-replay: cuando esta tarjeta se muestra el partido YA fue
+  // simulado y comprometido al ciclo, así que la energía actual en
+  // `cycle.energy` ES la energía posterior a este partido (no hace falta
+  // resolverla con `buildEnergyContext`: para el `matchdayIndex` recién
+  // jugado, `resolveEnergy` devolvería exactamente este mismo valor sin
+  // recuperación de por medio). `LiveMatchdayEntry` no trae la etapa/ronda
+  // del partido, así que leer el valor comprometido es la única forma de
+  // mostrar la energía acá sin agregar ese contexto al store en vivo.
+  const fatigueEnabled = getEngineConfig().fatigue.enabled;
+  const homeEnergy = cycle?.energy?.byTeam[entry.homeTeamId]?.value ?? ENERGY_MAX;
+  const awayEnergy = cycle?.energy?.byTeam[entry.awayTeamId]?.value ?? ENERGY_MAX;
 
   // El "FINAL" de CADA tarjeta se decide con el minuto de cierre de SU
   // partido, no con la fase del reloj compartido: si otro partido de la
@@ -239,6 +256,11 @@ function LiveGridCard({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {home && <TeamFlag teamId={home.id} teamName={home.name} size={24} />}
           <span className={teamClass(homeLeads)}>{home?.id.toUpperCase() ?? entry.homeTeamId}</span>
+          {fatigueEnabled && (
+            <span className="text-[10px] text-grass-soft tabular-nums flex-shrink-0">
+              {Math.round(homeEnergy)}%
+            </span>
+          )}
         </div>
         <span
           className={`font-terminal text-2xl tabular-nums whitespace-nowrap px-1 ${
@@ -248,6 +270,11 @@ function LiveGridCard({
           {score.homeScore} - {score.awayScore}
         </span>
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+          {fatigueEnabled && (
+            <span className="text-[10px] text-grass-soft tabular-nums flex-shrink-0">
+              {Math.round(awayEnergy)}%
+            </span>
+          )}
           <span className={teamClass(awayLeads)}>{away?.id.toUpperCase() ?? entry.awayTeamId}</span>
           {away && <TeamFlag teamId={away.id} teamName={away.name} size={24} />}
         </div>
