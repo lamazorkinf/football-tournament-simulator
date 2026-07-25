@@ -20,10 +20,10 @@ export const cycleStateService = {
       {
         tournament_id: cycle.id,
         state: serializeCycleState(cycle),
-        // v2: el snapshot incluye ahora el Mundial completo (grupos + llave +
-        // campeón), no sólo continental/confed/calendario. loadCycleState no
-        // gatea por versión; el bump es documental.
-        schema_version: 2,
+        // v3: el snapshot incluye ahora la energía de los equipos dentro del
+        // ciclo. v2 → v3 es transparente: documentos legacy sin la clave se
+        // cargan sin errores (energía ausente = todos al 100%).
+        schema_version: 3,
       },
       { onConflict: 'tournament_id' },
     );

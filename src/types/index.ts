@@ -1,3 +1,5 @@
+import type { EnergyState } from '../core/energy';
+
 export type Region = 'Europe' | 'America' | 'Africa' | 'Asia';
 
 export type SkillTier = 'Elite' | 'Strong' | 'Average' | 'Weak';
@@ -235,6 +237,11 @@ export interface Cycle extends Tournament {
   continental: ContinentalStage;
   confederationsCup: ConfederationsCup;
   calendar: CalendarState;
+  /**
+   * Energía de los equipos en el torneo en curso. Ausente en torneos guardados
+   * antes de la feature: se interpreta como "todos al 100%".
+   */
+  energy?: EnergyState;
 }
 
 /**

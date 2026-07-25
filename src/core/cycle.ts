@@ -12,6 +12,7 @@ import type {
   WorldCup,
   WorldCupGroup,
 } from '../types';
+import type { EnergyState } from './energy';
 import {
   generateContinentalBracket,
   generateContinentalRoundOf32,
@@ -117,6 +118,8 @@ export interface CycleStatePayload {
    * `worldCup` de `base` (reconstruido de las filas normalizadas).
    */
   worldCup?: WorldCup | null;
+  /** Ausente en documentos previos a la feature de energía. */
+  energy?: EnergyState;
 }
 
 /** Extrae el estado del ciclo (para persistir como documento JSONB). */
@@ -126,6 +129,7 @@ export function serializeCycleState(cycle: Cycle): CycleStatePayload {
     confederationsCup: cycle.confederationsCup,
     calendar: cycle.calendar,
     worldCup: cycle.worldCup ?? null,
+    energy: cycle.energy,
   };
 }
 
@@ -159,6 +163,7 @@ export function reconstructCycle(base: Tournament, state: CycleStatePayload | nu
       continental: state.continental,
       confederationsCup: state.confederationsCup,
       calendar: state.calendar,
+      energy: state.energy,
     };
   }
   return {

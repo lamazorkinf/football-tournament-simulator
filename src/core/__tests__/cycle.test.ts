@@ -319,6 +319,7 @@ describe('serializeCycleState / reconstructCycle (persistencia)', () => {
       'calendar',
       'confederationsCup',
       'continental',
+      'energy',
       'worldCup',
     ]);
     expect(payload.calendar).toBe(cycle.calendar);
