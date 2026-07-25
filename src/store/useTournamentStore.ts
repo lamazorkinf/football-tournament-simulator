@@ -828,10 +828,15 @@ export const useTournamentStore = create<TournamentState>()(
         }
 
         // Simulate the match (disable home advantage for World Cup)
-        const disableHomeAdvantage = stage === 'world-cup';
+        const neutral = stage === 'world-cup';
         const stageKey = stage === 'qualifier' ? 'qualifier' : 'world-cup-group';
         const importance = importanceFor(stageKey, undefined);
-        const result = simulateGroupMatch(homeTeam.skill, awayTeam.skill, disableHomeAdvantage, importance);
+        const result = simulateGroupMatch({
+          home: { skill: homeTeam.skill, energy: 100 },
+          away: { skill: awayTeam.skill, energy: 100 },
+          importance,
+          neutral,
+        });
 
         // Update match
         const updatedMatch: Match = {
@@ -1046,9 +1051,14 @@ export const useTournamentStore = create<TournamentState>()(
             const awaySkill = teamSkillUpdates.get(awayTeam.id) ?? awayTeam.skill;
 
             // Simulate the match
-            const disableHomeAdvantage = stage === 'world-cup';
+            const neutral = stage === 'world-cup';
             const batchImportance = importanceFor(stage === 'qualifier' ? 'qualifier' : 'world-cup-group', undefined);
-            const result = simulateGroupMatch(homeSkill, awaySkill, disableHomeAdvantage, batchImportance);
+            const result = simulateGroupMatch({
+              home: { skill: homeSkill, energy: 100 },
+              away: { skill: awaySkill, energy: 100 },
+              importance: batchImportance,
+              neutral,
+            });
 
             // Update match
             const updatedMatch: Match = {
@@ -2224,7 +2234,12 @@ export const useTournamentStore = create<TournamentState>()(
 
         // Simulate with penalties (sede neutral: eliminatorias del Mundial sin ventaja local)
         const koImportance = importanceFor('world-cup-knockout', targetMatch.round);
-        const result = simulateMatchWithPenalties(homeTeam.skill, awayTeam.skill, true, koImportance);
+        const result = simulateMatchWithPenalties({
+          home: { skill: homeTeam.skill, energy: 100 },
+          away: { skill: awayTeam.skill, energy: 100 },
+          importance: koImportance,
+          neutral: true,
+        });
 
         // Determine winner
         let winnerId: string;
@@ -2554,7 +2569,12 @@ export const useTournamentStore = create<TournamentState>()(
 
         set({ isSavingMatch: true });
         const importance = importanceFor('continental', match.round);
-        const result = simulateMatchWithPenalties(home.skill, away.skill, true, importance);
+        const result = simulateMatchWithPenalties({
+          home: { skill: home.skill, energy: 100 },
+          away: { skill: away.skill, energy: 100 },
+          importance,
+          neutral: true,
+        });
 
         // Winner por goles; si empate, por penales.
         let winnerId = home.id, loserId = away.id;
@@ -2653,7 +2673,12 @@ export const useTournamentStore = create<TournamentState>()(
         set({ isSavingMatch: true });
         const isKo = Boolean(koMatch);
         const importance = importanceFor(isKo ? 'confed-knockout' : 'confed-group', isKo ? (match as KnockoutMatch).round : undefined);
-        const result = simulateMatchWithPenalties(home.skill, away.skill, true, importance);
+        const result = simulateMatchWithPenalties({
+          home: { skill: home.skill, energy: 100 },
+          away: { skill: away.skill, energy: 100 },
+          importance,
+          neutral: true,
+        });
         const newHome = updateTeamSkill(home.skill, result.homeSkillChange);
         const newAway = updateTeamSkill(away.skill, result.awaySkillChange);
         const updatedTeams = state.teams.map((t) =>

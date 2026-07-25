@@ -1,5 +1,6 @@
 import type { EngineConfig, KnockoutMatch, MatchResult } from '../types';
 import { getEngineConfig } from '../store/useConfigStore';
+import { clutchMultiplier, effectiveSkill } from './energy';
 
 // Rondas continentales "tardías" (mayor peso Elo). El resto (R64/R32/R16) es "temprana".
 const CONTINENTAL_LATE_ROUNDS: ReadonlyArray<KnockoutMatch['round']> = ['quarter', 'semi', 'third-place', 'final'];
@@ -32,38 +33,51 @@ export function getStageImportance(
   }
 }
 
+export interface MatchTeamContext {
+  skill: number;
+  /** 60-100. Usar 100 cuando no hay estado de energía (torneo legacy). */
+  energy: number;
+}
+
+export interface MatchContext {
+  home: MatchTeamContext;
+  away: MatchTeamContext;
+  /** Peso de la etapa, de `getStageImportance`. */
+  importance: number;
+  /** Cancha neutral: sin ventaja de local (Mundial y toda eliminación directa). */
+  neutral: boolean;
+  /** Inyectable para tests; por defecto Math.random. */
+  rng?: () => number;
+}
+
 /**
- * Simulates a football match based on team skills
- * @param homeSkill - Home team skill rating (0-100)
- * @param awaySkill - Away team skill rating (0-100)
- * @param disableHomeAdvantage - If true, no home advantage is applied (for World Cup/Knockouts)
- * @param importance - Multiplier for skill changes (default 1)
- * @returns Match result with scores and skill changes
+ * Simula un partido. El cansancio y el oficio entran por el skill efectivo; el
+ * Elo se calcula SIEMPRE con el skill real, así que ganar cansado premia igual.
  */
-export function simulateMatch(homeSkill: number, awaySkill: number, disableHomeAdvantage = false, importance = 1): MatchResult {
+export function simulateMatch(ctx: MatchContext): MatchResult {
   const config = getEngineConfig();
+  const rng = ctx.rng ?? Math.random;
 
-  // Home advantage: configurable skill points (disabled for World Cup and knockouts)
-  const adjustedHomeSkill = disableHomeAdvantage ? homeSkill : homeSkill + config.homeAdvantage;
+  const homeEffective =
+    effectiveSkill(ctx.home.skill, ctx.home.energy, config.fatigue) +
+    (ctx.neutral ? 0 : config.homeAdvantage);
+  const awayEffective = effectiveSkill(ctx.away.skill, ctx.away.energy, config.fatigue);
 
-  // Calculate skill difference (affects expected goals)
-  const skillDiff = adjustedHomeSkill - awaySkill;
+  // El oficio amplifica la diferencia según lo exigente que sea el partido.
+  const skillDiff =
+    (homeEffective - awayEffective) *
+    clutchMultiplier(ctx.home.skill, ctx.away.skill, ctx.importance, config.fatigue);
 
-  // Base expected goals (Poisson-like distribution)
-  const homeExpectedGoals = 1.5 + (skillDiff / 50);
-  const awayExpectedGoals = 1.5 - (skillDiff / 50);
+  const homeScore = generateGoals(1.5 + skillDiff / 50, rng);
+  const awayScore = generateGoals(1.5 - skillDiff / 50, rng);
 
-  // Generate actual goals with randomness
-  const homeScore = generateGoals(homeExpectedGoals);
-  const awayScore = generateGoals(awayExpectedGoals);
-
-  // Calculate skill updates (ELO-like system)
+  // El Elo usa el skill real (no el efectivo): ganar cansado premia igual.
   const { homeChange, awayChange } = calculateSkillChanges(
-    homeSkill,
-    awaySkill,
+    ctx.home.skill,
+    ctx.away.skill,
     homeScore,
     awayScore,
-    importance,
+    ctx.importance,
   );
 
   return {
@@ -78,7 +92,7 @@ export function simulateMatch(homeSkill: number, awaySkill: number, disableHomeA
  * Generates goals based on expected goals using a Poisson distribution
  * (Knuth's algorithm), capped at 7 goals per team
  */
-function generateGoals(expectedGoals: number): number {
+function generateGoals(expectedGoals: number, rng: () => number = Math.random): number {
   // Clamp expected goals to reasonable range
   const lambda = Math.max(0.05, Math.min(4, expectedGoals));
 
@@ -88,7 +102,7 @@ function generateGoals(expectedGoals: number): number {
 
   do {
     goals++;
-    product *= Math.random();
+    product *= rng();
   } while (product > limit);
 
   return Math.min(goals, 7);
@@ -141,20 +155,18 @@ export function updateTeamSkill(currentSkill: number, change: number): number {
 }
 
 /**
- * Simulates a match with potential penalties (for knockout stages)
- * @param importance - Multiplier for skill changes (default 1)
+ * Simula un partido de eliminación directa, con penales si termina empatado.
+ * El alargue llega en la Task 3; por ahora el contexto se pasa igual que en
+ * `simulateMatch`.
  */
 export function simulateMatchWithPenalties(
-  homeSkill: number,
-  awaySkill: number,
-  disableHomeAdvantage = true, // Knockouts are always neutral
-  importance = 1,
+  ctx: MatchContext,
 ): MatchResult & { penalties?: { homeScore: number; awayScore: number } } {
-  const result = simulateMatch(homeSkill, awaySkill, disableHomeAdvantage, importance);
+  const result = simulateMatch(ctx);
 
   // If it's a draw, simulate penalties
   if (result.homeScore === result.awayScore) {
-    const penalties = simulatePenalties(homeSkill, awaySkill);
+    const penalties = simulatePenalties(ctx.home.skill, ctx.away.skill, ctx.rng);
     return { ...result, penalties };
   }
 
