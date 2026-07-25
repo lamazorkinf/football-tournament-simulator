@@ -264,6 +264,15 @@ export function applyEnergyAfterMatch(
   outcome: EnergyOutcome,
 ): EnergyState {
   const cfg = getEngineConfig().fatigue;
+
+  // Con la fatiga apagada el costo es 0 y `resolveEnergy` ignora el estado
+  // guardado (retorna ENERGY_MAX sin mirarlo): escribir igual sólo engorda
+  // el JSONB con 100 por equipo, partido tras partido, para algo que nadie
+  // lee. No tocar el estado deja lista la reactivación a mitad de torneo:
+  // si se prende de nuevo, `resolveEnergy` retoma desde los últimos valores
+  // reales que quedaron guardados antes de apagarla.
+  if (!cfg.enabled) return state ?? { scope: outcome.scope, byTeam: {} };
+
   const shared = {
     importance: outcome.importance,
     tight: outcome.tight,

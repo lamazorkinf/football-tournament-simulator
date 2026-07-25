@@ -116,7 +116,7 @@ export function MatchDetailModal({
                 </div>
                 <div className="flex items-center justify-center gap-1 text-sm text-grass-soft">
                   <Clock className="w-4 h-4" />
-                  <span>90'</span>
+                  <span>{extraTime ? "120'" : "90'"}</span>
                 </div>
                 {extraTime && (
                   <div className="flex justify-center mt-1">

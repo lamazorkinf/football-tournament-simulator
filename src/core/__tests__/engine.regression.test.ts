@@ -13,37 +13,27 @@ vi.mock('../../lib/persistSettings', () => ({
 /**
  * Red de seguridad de la calibración. Si alguien mueve una constante del motor
  * sin querer, esto lo caza antes de que se note jugando 40 torneos.
- * Los rangos salen del banco de pruebas del spec y son anchos a propósito.
+ *
+ * El otro escenario típico de esta red —la proporción de alargues y penales
+ * entre pares parejos— vive en `engine.extraTime.test.ts` ("entre un quinto
+ * y un cuarto..."), que ya lo mide con el mismo contexto: no se duplica acá.
  */
 describe('calibración del motor', () => {
   beforeEach(() => {
     useConfigStore.getState().resetToDefaults();
   });
 
-  it('los partidos de eliminación directa entre pares van al alargue y a penales en la proporción esperada', () => {
-    const runs = 30000;
-    let alargues = 0;
-    let penales = 0;
-
-    for (let i = 0; i < runs; i++) {
-      const r = simulateMatchWithPenalties({
-        home: { skill: 85, energy: 100 },
-        away: { skill: 85, energy: 100 },
-        importance: 1.6,
-        neutral: true,
-      });
-      if (r.extraTime) alargues++;
-      if (r.penalties) penales++;
-    }
-
-    expect(alargues / runs).toBeGreaterThan(0.18);
-    expect(alargues / runs).toBeLessThan(0.28);
-    expect(penales / runs).toBeGreaterThan(0.08);
-    expect(penales / runs).toBeLessThan(0.16);
-  });
-
   it('un equipo exhausto pierde ventaja pero no deja de ser favorito ante un rival muy inferior', () => {
-    const runs = 20000;
+    // Cota angosta a propósito: es la única red que existe para el oficio
+    // (`clutchGain`). Medido con el motor real, 600.000 corridas por punto:
+    // oficio 0 → 76,2%, oficio 0,15 (default) → 77,5%, oficio 0,35 → 79,2%.
+    // Con 100.000 corridas el desvío estándar de esta proporción es ~0,13
+    // puntos, así que [0,768; 0,782] deja al valor por defecto a ~5 desvíos
+    // de cada borde (no debería tocarse por ruido) y a las dos regresiones
+    // más cercanas —oficio en 0 o en 0,35— a 4,5 y 7,6 desvíos por fuera del
+    // rango (se cazan de forma confiable). Lo que esta cota NO caza: mover el
+    // oficio a un valor intermedio cercano, como 0,20 (77,8%, cae adentro).
+    const runs = 100000;
     let victorias = 0;
 
     for (let i = 0; i < runs; i++) {
@@ -57,9 +47,7 @@ describe('calibración del motor', () => {
       if (gana) victorias++;
     }
 
-    // Medido en 79,2%: el cansancio le cuesta, pero el oficio no se lo compensa
-    // (con la fórmula aditiva descartada, este caso daba MÁS que sin fatiga).
-    expect(victorias / runs).toBeGreaterThan(0.72);
-    expect(victorias / runs).toBeLessThan(0.86);
+    expect(victorias / runs).toBeGreaterThan(0.768);
+    expect(victorias / runs).toBeLessThan(0.782);
   });
 });

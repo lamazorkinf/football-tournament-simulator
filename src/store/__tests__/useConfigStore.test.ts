@@ -156,6 +156,22 @@ describe('fatigue (Task 9: controles de cansancio y oficio)', () => {
     expect(config().fatigue.recovery).toBeGreaterThanOrEqual(0);
   });
 
+  // Distinto del caso anterior (falta `fatigue` entero): acá `fatigue`
+  // existe pero le falta una sub-clave, como dejaría un registro guardado
+  // por una versión con menos campos. Sin el merge con DEFAULT_FATIGUE
+  // ANTES de clampear, `extraTimeShare` quedaba `undefined` y el motor
+  // generaba 0 goles en silencio (`generateGoals(NaN)`), sin excepción.
+  it('applySettings rellena una sub-clave faltante de fatigue con el default', () => {
+    const partial = { ...DEFAULT_FATIGUE } as Partial<FatigueConfig>;
+    delete partial.extraTimeShare;
+
+    useConfigStore.getState().applySettings({
+      engineConfig: { ...DEFAULT_CONFIG, fatigue: partial as FatigueConfig },
+    });
+
+    expect(config().fatigue.extraTimeShare).toBe(DEFAULT_FATIGUE.extraTimeShare);
+  });
+
   it('applySettings sin fatigue guardado (config de una versión anterior) usa el default', () => {
     const legacyConfig: Partial<typeof DEFAULT_CONFIG> = { ...DEFAULT_CONFIG };
     delete legacyConfig.fatigue;

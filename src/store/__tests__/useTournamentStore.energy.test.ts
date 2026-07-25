@@ -88,4 +88,59 @@ describe('applyEnergyAfterMatch', () => {
     });
     expect(state.byTeam.chico.value).toBeLessThan(state.byTeam.grande.value);
   });
+
+  // Con la fatiga apagada, `resolveEnergy` ignora el estado guardado y
+  // siempre da 100: escribir igual sólo engorda el JSONB sin que nada lo
+  // lea. El caso sin estado previo es el que se juega en cada partido de un
+  // torneo arrancado con el cansancio ya desactivado.
+  it('con la fatiga apagada no escribe nada si no había estado previo', () => {
+    useConfigStore.getState().updateFatigue({ enabled: false });
+
+    const state = applyEnergyAfterMatch(undefined, {
+      scope: 'world-cup',
+      matchdayIndex: 4,
+      importance: 1.6,
+      home: { teamId: 'bel', skill: 96, energy: 100 },
+      away: { teamId: 'arg', skill: 90, energy: 100 },
+      tight: false,
+      extraTime: false,
+      penalties: false,
+    });
+
+    expect(state.byTeam).toEqual({});
+  });
+
+  // El caso que importa para "reactivar a mitad de torneo": si ya había
+  // energía real guardada de antes de apagar la fatiga, apagarla no debe
+  // pisarla con 100 — tiene que quedar intacta para cuando se prenda de
+  // nuevo.
+  it('con la fatiga apagada conserva sin tocar el estado previo, para poder reactivarla después', () => {
+    const previous = applyEnergyAfterMatch(undefined, {
+      scope: 'world-cup',
+      matchdayIndex: 4,
+      importance: 1.6,
+      home: { teamId: 'bel', skill: 96, energy: 100 },
+      away: { teamId: 'arg', skill: 90, energy: 100 },
+      tight: true,
+      extraTime: true,
+      penalties: true,
+    });
+    const belEnergyAntes = previous.byTeam.bel.value;
+    expect(belEnergyAntes).toBeLessThan(100);
+
+    useConfigStore.getState().updateFatigue({ enabled: false });
+    const afterDisabled = applyEnergyAfterMatch(previous, {
+      scope: 'world-cup',
+      matchdayIndex: 5,
+      importance: 1.6,
+      home: { teamId: 'bel', skill: 96, energy: 100 },
+      away: { teamId: 'arg', skill: 90, energy: 100 },
+      tight: false,
+      extraTime: false,
+      penalties: false,
+    });
+
+    expect(afterDisabled).toBe(previous);
+    expect(afterDisabled.byTeam.bel.value).toBe(belEnergyAntes);
+  });
 });

@@ -212,14 +212,16 @@ fuera del top-16.
 
 ### Verificaciones
 
-**Duelos sueltos** (200.000 repeticiones cada uno):
+**Duelos sueltos** (200.000 repeticiones cada uno; remedidos con el oficio en
+0,15, el valor efectivamente elegido — la tabla original se había quedado
+con las cifras del oficio en 0,35):
 
 | Cruce | actual | nuevo |
 |---|---|---|
-| Bélgica–Argentina, semi, ambos frescos | 56,0% | 57,9% |
+| Bélgica–Argentina, semi, ambos frescos | 56,0% | 57,0% |
 | Bélgica–Argentina, semi, Bélgica viene de 2 alargues | 56,1% | 50,9% |
-| Bélgica–Argentina, semi, Argentina la fundida | 55,9% | 64,8% |
-| Marruecos en el piso vs Ghana, octavos | 81,0% | 79,2% |
+| Bélgica–Argentina, semi, Argentina la fundida | 55,9% | 63,0% |
+| Marruecos en el piso vs Ghana, octavos | 81,0% | 77,5% |
 
 **Desgaste a lo largo del Mundial** (8.000 torneos, energía media de los que
 juegan cada ronda): R32 87,2 · octavos 81,4 · cuartos 76,0 · semis 71,2 · final

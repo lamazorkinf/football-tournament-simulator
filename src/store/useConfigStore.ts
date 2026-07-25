@@ -72,21 +72,34 @@ export const DEFAULT_CONFIG: EngineConfig = {
  * a `EnergyMeter` en un estado ARIA inválido (`aria-valuemin` por encima de
  * `aria-valuemax`, que está fijo en `ENERGY_MAX`) y a `commitEnergy`
  * (`core/energy.ts`) clampeando la energía guardada por encima de 100.
+ *
+ * Se completa con `DEFAULT_FATIGUE` ANTES de clampear porque el saneo de
+ * arriba sólo toca `energyMin`/`clutchGain`/`recovery`: si un `fatigue`
+ * guardado llegara con otra sub-clave ausente (`extraTimeShare`, por
+ * ejemplo, que no tiene su propio clamp), quedaría `undefined` sin que nada
+ * lo note. El motor no lanza en ese caso: `generateGoals(NaN)` da
+ * `Math.exp(-NaN)` (`NaN`) y el `do/while` de la generación de goles corta
+ * en la primera vuelta, así que el partido termina en 0 goles en silencio.
+ * Hoy es inalcanzable porque `updateFatigue`/`resetToDefaults` siempre
+ * escriben el objeto entero, pero un `applySettings` con un registro viejo
+ * o corrupto de la DB es la vía por la que sí podría pasar.
  */
 function sanitizeFatigue(fatigue: FatigueConfig): FatigueConfig {
-  const energyMin = Number.isFinite(fatigue.energyMin)
-    ? Math.max(0, Math.min(ENERGY_MAX - 1, fatigue.energyMin))
+  const merged = { ...DEFAULT_FATIGUE, ...fatigue };
+
+  const energyMin = Number.isFinite(merged.energyMin)
+    ? Math.max(0, Math.min(ENERGY_MAX - 1, merged.energyMin))
     : DEFAULT_FATIGUE.energyMin;
 
-  const clutchGain = Number.isFinite(fatigue.clutchGain)
-    ? Math.max(0, Math.min(2, fatigue.clutchGain))
+  const clutchGain = Number.isFinite(merged.clutchGain)
+    ? Math.max(0, Math.min(2, merged.clutchGain))
     : DEFAULT_FATIGUE.clutchGain;
 
-  const recovery = Number.isFinite(fatigue.recovery)
-    ? Math.max(0, Math.min(50, fatigue.recovery))
+  const recovery = Number.isFinite(merged.recovery)
+    ? Math.max(0, Math.min(50, merged.recovery))
     : DEFAULT_FATIGUE.recovery;
 
-  return { ...fatigue, energyMin, clutchGain, recovery };
+  return { ...merged, energyMin, clutchGain, recovery };
 }
 
 /**

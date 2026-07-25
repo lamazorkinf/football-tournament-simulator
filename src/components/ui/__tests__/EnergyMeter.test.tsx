@@ -60,4 +60,26 @@ describe('EnergyMeter', () => {
 
     expect(meter).toHaveAttribute('aria-valuemin', '40');
   });
+
+  // Regresión: los umbrales de color eran absolutos (85/72) sobre una escala
+  // 0-100, sin relación con el piso configurable (40-90). Con el piso en 90,
+  // toda energía alcanzable (90-100) quedaba por encima de 85 y se veía
+  // siempre verde, sin importar qué tan cerca del piso estuviera.
+  it('con el piso alto no muestra verde cerca del propio piso', () => {
+    useConfigStore.getState().updateFatigue({ energyMin: 90 });
+    const { container } = render(<EnergyMeter energy={92} label="Bélgica" />);
+    // 92 está a sólo 2 de los 10 puntos útiles por encima del piso (90): la
+    // posición relativa es baja, así que no debería pintarse de verde.
+    expect(container.querySelector('.bg-led')).toBeNull();
+    expect(container.querySelector('.bg-loss')).not.toBeNull();
+  });
+
+  // Mismo bug, en la otra punta: con el piso en 40 la barra se ponía roja en
+  // un rango (65 de 100, a mitad de camino entre el piso y el máximo) que esa
+  // misma configuración considera sano.
+  it('con el piso bajo no muestra rojo a mitad del rango útil', () => {
+    useConfigStore.getState().updateFatigue({ energyMin: 40 });
+    const { container } = render(<EnergyMeter energy={65} label="Bélgica" />);
+    expect(container.querySelector('.bg-loss')).toBeNull();
+  });
 });

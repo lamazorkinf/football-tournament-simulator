@@ -41,6 +41,16 @@ describe('EngineSettings — Cansancio y oficio', () => {
     expect(useConfigStore.getState().config.fatigue.clutchGain).toBe(0.35);
   });
 
+  // clutchMultiplier devuelve 1 (sin efecto) cuando fatigue.enabled es false
+  // (core/energy.ts): el slider de oficio no debería seguir mostrándose
+  // operativo como si moverlo hiciera algo.
+  it('el slider de oficio se deshabilita cuando el cansancio está apagado', () => {
+    useConfigStore.getState().updateFatigue({ enabled: false });
+    render(<EngineSettings />);
+    const slider = screen.getByLabelText(/Oficio en partidos exigentes/);
+    expect(slider).toBeDisabled();
+  });
+
   it.each([
     [0.1, 'Sutil'],
     [0.2, 'Equilibrado'],

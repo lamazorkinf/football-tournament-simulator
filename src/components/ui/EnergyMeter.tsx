@@ -31,7 +31,13 @@ export function EnergyMeter({ energy, label }: EnergyMeterProps) {
   const span = ENERGY_MAX - floor;
   const normalized = Math.max(0, Math.min(span, energy - floor));
 
-  const color = energy >= 85 ? 'led' : energy >= 72 ? 'gold' : 'loss';
+  // Umbrales relativos a la posición dentro del rango útil (piso-100), no
+  // absolutos: con 85/72 fijos, un piso de 90 dejaba todo verde y un piso de
+  // 40 pintaba de rojo energía que esa misma configuración considera sana.
+  // Los cortes (62,5% / 30% del rango) reproducen los 85/72 de antes para el
+  // piso por defecto (60) y escalan igual para cualquier otro piso.
+  const fraction = span > 0 ? normalized / span : 1;
+  const color = fraction >= 0.625 ? 'led' : fraction >= 0.3 ? 'gold' : 'loss';
 
   // `PixelBar` trae su propio role="meter", pero con los valores normalizados
   // (0-40), que no son los que el usuario ve ni los que sirven a un lector de

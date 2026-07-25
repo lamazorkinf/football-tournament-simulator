@@ -346,7 +346,12 @@ export function EngineSettings() {
               </button>
             </label>
 
-            <div>
+            {/* El oficio se aplica vía `clutchMultiplier`, que devuelve 1 (sin
+                efecto) cuando `fatigue.enabled` es false (ver core/energy.ts):
+                el interruptor de arriba apaga cansancio Y oficio juntos. La
+                prórroga es la excepción: su parámetro vive en esta misma
+                config pero no está gateado por este interruptor. */}
+            <div className={!config.fatigue.enabled ? 'opacity-50' : undefined}>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm text-grass-soft" htmlFor="clutch-gain">
                   Oficio en partidos exigentes:{' '}
@@ -365,8 +370,9 @@ export function EngineSettings() {
                 max={0.4}
                 step={0.05}
                 value={config.fatigue.clutchGain}
+                disabled={!config.fatigue.enabled}
                 onChange={(e) => updateFatigue({ clutchGain: Number(e.target.value) })}
-                className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led"
+                className="w-full h-2 bg-grass-dark border-2 border-line appearance-none cursor-pointer accent-led disabled:cursor-not-allowed"
               />
             </div>
 
