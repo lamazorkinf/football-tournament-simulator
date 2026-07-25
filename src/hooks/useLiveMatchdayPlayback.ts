@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { LivePhase, LiveSpeed } from './useLiveMatchPlayback';
 
-const MATCH_MINUTES = 90;
+const REGULATION_MINUTES = 90;
+const EXTRA_TIME_MINUTES = 120;
 const PENALTY_REVEAL_MS = 1200;
 
 export interface LiveMatchdayPlaybackState {
@@ -19,13 +20,18 @@ export interface LiveMatchdayPlaybackState {
 
 /**
  * Reloj compartido de la jornada en vivo: un único intervalo mueve el minuto
- * 0→90 para todas las tarjetas; los marcadores por tarjeta se derivan con
- * scoreAtMinute, no son estado de este hook. `sessionKey` identifica la
- * sesión activa para resetear el reloj al abrir una nueva.
+ * 0→90 (o 0→120 si algún partido de la sesión fue a alargue) para todas las
+ * tarjetas; los marcadores por tarjeta se derivan con scoreAtMinute, no son
+ * estado de este hook. `sessionKey` identifica la sesión activa para
+ * resetear el reloj al abrir una nueva. El reloj es único para toda la
+ * grilla, así que si UN SOLO partido tuvo alargue, todos esperan hasta el 120
+ * antes de pasar a penales/final (evita revelar penales de otro partido antes
+ * de que termine el alargue del que todavía juega).
  */
 export function useLiveMatchdayPlayback(
   sessionKey: string | null,
   hasAnyPenalties: boolean,
+  hasAnyExtraTime: boolean,
   initialSpeed: LiveSpeed = 1,
 ): LiveMatchdayPlaybackState {
   const [minute, setMinute] = useState(0);
@@ -45,24 +51,26 @@ export function useLiveMatchdayPlayback(
     setIsPaused(false);
   }
 
+  const finalMinute = hasAnyExtraTime ? EXTRA_TIME_MINUTES : REGULATION_MINUTES;
+
   // Reloj compartido.
   useEffect(() => {
     if (!sessionKey || phase !== 'playing' || isPaused) return;
     const id = setInterval(() => {
-      setMinute((prev) => (prev + 1 >= MATCH_MINUTES ? MATCH_MINUTES : prev + 1));
+      setMinute((prev) => (prev + 1 >= finalMinute ? finalMinute : prev + 1));
     }, 1000 / speed);
     return () => clearInterval(id);
-  }, [sessionKey, phase, speed, isPaused]);
+  }, [sessionKey, phase, speed, isPaused, finalMinute]);
 
-  // Transición al llegar a los 90'.
+  // Transición al llegar al final (90' o 120' con alargue).
   useEffect(() => {
     if (!sessionKey || phase !== 'playing') return;
-    if (minute >= MATCH_MINUTES) {
+    if (minute >= finalMinute) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase(hasAnyPenalties ? 'penalties' : 'finished');
       if (!hasAnyPenalties) setPenaltiesRevealed(true);
     }
-  }, [minute, sessionKey, phase, hasAnyPenalties]);
+  }, [minute, sessionKey, phase, hasAnyPenalties, finalMinute]);
 
   // Ventana de suspenso única para todos los penales de la jornada. En pausa
   // el suspenso también espera: al reanudar arranca de nuevo la ventana.
@@ -77,11 +85,11 @@ export function useLiveMatchdayPlayback(
 
   const skipToEnd = useCallback(() => {
     if (!sessionKey) return;
-    setMinute(MATCH_MINUTES);
+    setMinute(finalMinute);
     setPenaltiesRevealed(true);
     setPhase('finished');
     setIsPaused(false);
-  }, [sessionKey]);
+  }, [sessionKey, finalMinute]);
 
   const togglePause = useCallback(() => setIsPaused((p) => !p), []);
 

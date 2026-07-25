@@ -4,7 +4,8 @@ import type { LiveGoalEvent, LivePenaltiesResult, LiveTimeline } from '../core/l
 export type LivePhase = 'playing' | 'penalties' | 'finished';
 export type LiveSpeed = 1 | 2 | 4;
 
-const MATCH_MINUTES = 90;
+const REGULATION_MINUTES = 90;
+const EXTRA_TIME_MINUTES = 120;
 const PENALTY_REVEAL_MS = 900;
 
 export interface LivePlaybackState {
@@ -44,24 +45,27 @@ export function useLiveMatchPlayback(
     setIsPaused(false);
   }
 
+  // Si el partido fue a alargue, el reloj llega a 120 en vez de a 90.
+  const finalMinute = timeline?.hasExtraTime ? EXTRA_TIME_MINUTES : REGULATION_MINUTES;
+
   // Reloj: incrementa el minuto mientras se juega.
   useEffect(() => {
     if (!timeline || phase !== 'playing' || isPaused) return;
     const id = setInterval(() => {
-      setMinute((prev) => (prev + 1 >= MATCH_MINUTES ? MATCH_MINUTES : prev + 1));
+      setMinute((prev) => (prev + 1 >= finalMinute ? finalMinute : prev + 1));
     }, 1000 / speed);
     return () => clearInterval(id);
-  }, [timeline, phase, speed, isPaused]);
+  }, [timeline, phase, speed, isPaused, finalMinute]);
 
-  // Transición al llegar a los 90'. Reacciona al reloj externo (setInterval
-  // de arriba), no es estado derivable en el render.
+  // Transición al llegar al final (90' o 120' con alargue). Reacciona al
+  // reloj externo (setInterval de arriba), no es estado derivable en el render.
   useEffect(() => {
     if (!timeline || phase !== 'playing') return;
-    if (minute >= MATCH_MINUTES) {
+    if (minute >= finalMinute) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase(timeline.penalties ? 'penalties' : 'finished');
     }
-  }, [minute, timeline, phase]);
+  }, [minute, timeline, phase, finalMinute]);
 
   // Suspenso de penales y cierre. En pausa el suspenso también espera: al
   // reanudar arranca de nuevo la ventana completa.
@@ -76,11 +80,11 @@ export function useLiveMatchPlayback(
 
   const skipToEnd = useCallback(() => {
     if (!timeline) return;
-    setMinute(MATCH_MINUTES);
+    setMinute(finalMinute);
     setPenaltiesShown(Boolean(timeline.penalties));
     setPhase('finished');
     setIsPaused(false);
-  }, [timeline]);
+  }, [timeline, finalMinute]);
 
   const togglePause = useCallback(() => setIsPaused((p) => !p), []);
 

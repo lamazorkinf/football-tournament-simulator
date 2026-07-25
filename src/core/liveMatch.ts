@@ -1,7 +1,7 @@
 export type LiveSide = 'home' | 'away';
 
 export interface LiveGoalEvent {
-  minute: number; // 1..90
+  minute: number; // 1..90, o hasta 120 si el partido fue a alargue
   side: LiveSide;
   homeScore: number; // marcador acumulado tras este gol
   awayScore: number;
@@ -17,6 +17,8 @@ export interface LiveTimeline {
   finalHomeScore: number;
   finalAwayScore: number;
   penalties?: LivePenaltiesResult;
+  /** El reloj llega a 120 en vez de a 90. */
+  hasExtraTime: boolean;
 }
 
 /** Hash FNV-1a determinista de un string a uint32, para sembrar el PRNG. */
@@ -40,23 +42,42 @@ function mulberry32(seed: number): () => number {
   };
 }
 
+export interface BuildTimelineInput {
+  homeScore: number;
+  awayScore: number;
+  seed: number;
+  penalties?: LivePenaltiesResult;
+  /** Goles marcados EN el alargue; ya incluidos en homeScore/awayScore. */
+  extraTime?: { homeGoals: number; awayGoals: number };
+  rng?: () => number;
+}
+
 /**
- * Reparte `homeScore`+`awayScore` goles en minutos plausibles [1,90] y arma el
+ * Reparte `homeScore`+`awayScore` goles en minutos plausibles: los de los 90
+ * minutos en [1,90] y los del alargue (si los hay) en [91,120]. Arma el
  * timeline con el marcador acumulado. Determinista dado (marcador, seed).
  * `rng` inyectable para tests. No recalcula nada del resultado.
  */
-export function buildMatchTimeline(
-  homeScore: number,
-  awayScore: number,
-  seed: number,
-  penalties?: LivePenaltiesResult,
-  rng: () => number = mulberry32(seed),
-): LiveTimeline {
+export function buildMatchTimeline(input: BuildTimelineInput): LiveTimeline {
+  const { homeScore, awayScore, seed, penalties, extraTime } = input;
+  const rng = input.rng ?? mulberry32(seed);
+
+  const etHome = extraTime?.homeGoals ?? 0;
+  const etAway = extraTime?.awayGoals ?? 0;
+
   const pending: { minute: number; side: LiveSide }[] = [];
-  for (let i = 0; i < homeScore; i++) pending.push({ minute: 1 + Math.floor(rng() * 90), side: 'home' });
-  for (let i = 0; i < awayScore; i++) pending.push({ minute: 1 + Math.floor(rng() * 90), side: 'away' });
+  const push = (count: number, side: LiveSide, from: number, span: number) => {
+    for (let i = 0; i < count; i++) pending.push({ minute: from + Math.floor(rng() * span), side });
+  };
+
+  // Los goles de los 90 minutos son el total menos los del alargue.
+  push(homeScore - etHome, 'home', 1, 90);
+  push(awayScore - etAway, 'away', 1, 90);
+  push(etHome, 'home', 91, 30);
+  push(etAway, 'away', 91, 30);
+
   // Array.prototype.sort es estable (ES2019+): a igual minuto, se conserva el
-  // orden de encolado (locales antes que visitantes).
+  // orden de encolado (locales antes que visitantes; 90' antes que 91'+).
   pending.sort((a, b) => a.minute - b.minute);
 
   let h = 0;
@@ -67,7 +88,13 @@ export function buildMatchTimeline(
     return { minute: p.minute, side: p.side, homeScore: h, awayScore: a };
   });
 
-  return { goals, finalHomeScore: homeScore, finalAwayScore: awayScore, penalties };
+  return {
+    goals,
+    finalHomeScore: homeScore,
+    finalAwayScore: awayScore,
+    penalties,
+    hasExtraTime: !!extraTime,
+  };
 }
 
 export interface LiveScoreAt {

@@ -24,6 +24,7 @@ const entry: LiveMatchdayEntry = {
     ],
     finalHomeScore: 2,
     finalAwayScore: 1,
+    hasExtraTime: false,
   },
   groupName: 'Octavos',
   region: 'America',
@@ -92,6 +93,36 @@ describe('LiveMatchdayOverlay', () => {
     });
   });
 
+  describe('alargue', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('si algún partido de la grilla fue a alargue, el reloj compartido sigue hasta el 120', () => {
+      openSession({
+        ...entry,
+        timeline: { ...entry.timeline, hasExtraTime: true },
+      });
+      render(<LiveMatchdayOverlay />);
+
+      act(() => vi.advanceTimersByTime(90 * 1000));
+      // A los 90' la grilla sigue en juego: el alargue todavía no terminó.
+      expect(screen.getByText("90'")).toBeInTheDocument();
+      expect(screen.queryByText('FINAL')).not.toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(30 * 1000));
+      // Termina en el 120: header y tarjeta muestran FINAL.
+      expect(screen.getAllByText('FINAL')).toHaveLength(2);
+    });
+
+    it('sin alargue en la grilla, el reloj compartido sigue terminando a los 90', () => {
+      openSession();
+      render(<LiveMatchdayOverlay />);
+
+      act(() => vi.advanceTimersByTime(90 * 1000));
+      expect(screen.getAllByText('FINAL')).toHaveLength(2);
+    });
+  });
+
   it('marca FINAL en la tarjeta cuando el partido terminó', () => {
     openSession();
     render(<LiveMatchdayOverlay />);
@@ -122,6 +153,7 @@ describe('LiveMatchdayOverlay', () => {
         ],
         finalHomeScore: 1,
         finalAwayScore: 1,
+        hasExtraTime: false,
       },
     });
     render(<LiveMatchdayOverlay />);

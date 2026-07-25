@@ -11,10 +11,30 @@ const timeline: LiveTimeline = {
   ],
   finalHomeScore: 1,
   finalAwayScore: 1,
+  hasExtraTime: false,
 };
 
 const timelineWithPens: LiveTimeline = {
   ...timeline,
+  penalties: { homeScore: 5, awayScore: 4 },
+};
+
+const timelineWithExtraTime: LiveTimeline = {
+  goals: [
+    { minute: 10, side: 'home', homeScore: 1, awayScore: 0 },
+    { minute: 80, side: 'away', homeScore: 1, awayScore: 1 },
+    { minute: 105, side: 'home', homeScore: 2, awayScore: 1 },
+  ],
+  finalHomeScore: 2,
+  finalAwayScore: 1,
+  hasExtraTime: true,
+};
+
+const timelineWithExtraTimeAndPens: LiveTimeline = {
+  ...timelineWithExtraTime,
+  goals: timelineWithExtraTime.goals.slice(0, 2), // el alargue termina 1-1
+  finalHomeScore: 1,
+  finalAwayScore: 1,
   penalties: { homeScore: 5, awayScore: 4 },
 };
 
@@ -45,6 +65,48 @@ describe('useLiveMatchPlayback', () => {
     expect(result.current.minute).toBe(90);
     expect(result.current.phase).toBe('finished');
     expect(result.current.revealedGoals).toHaveLength(2);
+  });
+
+  it('con alargue el reloj sigue del 90 al 120 y no termina antes', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timelineWithExtraTime, 1));
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    // A los 90' el partido sigue jugándose: el alargue todavía no terminó.
+    expect(result.current.minute).toBe(90);
+    expect(result.current.phase).toBe('playing');
+    expect(result.current.displayHomeScore).toBe(1);
+    expect(result.current.displayAwayScore).toBe(1);
+
+    act(() => vi.advanceTimersByTime(15 * 1000)); // minuto 105: gol del alargue
+    expect(result.current.displayHomeScore).toBe(2);
+
+    act(() => vi.advanceTimersByTime(15 * 1000)); // minuto 120
+    expect(result.current.minute).toBe(120);
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.revealedGoals).toHaveLength(3);
+  });
+
+  it('con alargue y penales, los penales no aparecen hasta pasado el 120', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timelineWithExtraTimeAndPens, 1));
+    act(() => vi.advanceTimersByTime(90 * 1000));
+    expect(result.current.phase).toBe('playing');
+    expect(result.current.penalties).toBeUndefined();
+
+    act(() => vi.advanceTimersByTime(30 * 1000)); // minuto 120
+    expect(result.current.phase).toBe('penalties');
+    expect(result.current.penalties).toBeUndefined();
+
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.penalties).toEqual({ homeScore: 5, awayScore: 4 });
+  });
+
+  it('skipToEnd con alargue salta al 120', () => {
+    const { result } = renderHook(() => useLiveMatchPlayback(timelineWithExtraTime, 1));
+    act(() => result.current.skipToEnd());
+    expect(result.current.phase).toBe('finished');
+    expect(result.current.minute).toBe(120);
+    expect(result.current.displayHomeScore).toBe(2);
+    expect(result.current.displayAwayScore).toBe(1);
   });
 
   it('con penales: playing → penalties → finished y revela el marcador de penales', () => {
@@ -111,11 +173,13 @@ describe('useLiveMatchPlayback', () => {
       goals: [{ minute: 10, side: 'home', homeScore: 1, awayScore: 0 }],
       finalHomeScore: 1,
       finalAwayScore: 0,
+      hasExtraTime: false,
     };
     const next: LiveTimeline = {
       goals: [{ minute: 80, side: 'away', homeScore: 0, awayScore: 1 }],
       finalHomeScore: 0,
       finalAwayScore: 1,
+      hasExtraTime: false,
     };
 
     // Registra el estado en CADA commit pintado (efecto sin deps), no solo el

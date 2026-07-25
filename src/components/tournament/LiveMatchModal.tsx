@@ -73,7 +73,13 @@ export function LiveMatchModal() {
         return;
       }
       setTimeline(
-        buildMatchTimeline(outcome.homeScore, outcome.awayScore, hashSeed(matchId), outcome.penalties),
+        buildMatchTimeline({
+          homeScore: outcome.homeScore,
+          awayScore: outcome.awayScore,
+          seed: hashSeed(matchId),
+          penalties: outcome.penalties,
+          extraTime: outcome.extraTime,
+        }),
       );
     };
     void run();

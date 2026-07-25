@@ -18,14 +18,14 @@ describe('hashSeed', () => {
 
 describe('buildMatchTimeline', () => {
   it('0-0 produce timeline vacío', () => {
-    const tl = buildMatchTimeline(0, 0, 123);
+    const tl = buildMatchTimeline({ homeScore: 0, awayScore: 0, seed: 123 });
     expect(tl.goals).toEqual([]);
     expect(tl.finalHomeScore).toBe(0);
     expect(tl.finalAwayScore).toBe(0);
   });
 
   it('el total y el conteo por lado coinciden con el marcador', () => {
-    const tl = buildMatchTimeline(3, 2, hashSeed('m'));
+    const tl = buildMatchTimeline({ homeScore: 3, awayScore: 2, seed: hashSeed('m') });
     expect(tl.goals).toHaveLength(5);
     expect(tl.goals.filter((g) => g.side === 'home')).toHaveLength(3);
     expect(tl.goals.filter((g) => g.side === 'away')).toHaveLength(2);
@@ -34,7 +34,7 @@ describe('buildMatchTimeline', () => {
   });
 
   it('todos los minutos están en [1, 90] y ordenados ascendente', () => {
-    const tl = buildMatchTimeline(4, 4, hashSeed('x'));
+    const tl = buildMatchTimeline({ homeScore: 4, awayScore: 4, seed: hashSeed('x') });
     for (const g of tl.goals) {
       expect(g.minute).toBeGreaterThanOrEqual(1);
       expect(g.minute).toBeLessThanOrEqual(90);
@@ -44,30 +44,86 @@ describe('buildMatchTimeline', () => {
   });
 
   it('el marcador acumulado del último evento coincide con el final', () => {
-    const tl = buildMatchTimeline(2, 3, hashSeed('y'));
+    const tl = buildMatchTimeline({ homeScore: 2, awayScore: 3, seed: hashSeed('y') });
     const last = tl.goals[tl.goals.length - 1];
     expect(last.homeScore).toBe(2);
     expect(last.awayScore).toBe(3);
   });
 
   it('es determinista para la misma (marcador, seed)', () => {
-    const a = buildMatchTimeline(3, 1, 999);
-    const b = buildMatchTimeline(3, 1, 999);
+    const a = buildMatchTimeline({ homeScore: 3, awayScore: 1, seed: 999 });
+    const b = buildMatchTimeline({ homeScore: 3, awayScore: 1, seed: 999 });
     expect(a).toEqual(b);
   });
 
   it('pasa las penales sin tocarlas', () => {
-    const tl = buildMatchTimeline(1, 1, 5, { homeScore: 4, awayScore: 3 });
+    const tl = buildMatchTimeline({
+      homeScore: 1,
+      awayScore: 1,
+      seed: 5,
+      penalties: { homeScore: 4, awayScore: 3 },
+    });
     expect(tl.penalties).toEqual({ homeScore: 4, awayScore: 3 });
   });
 
   it('con rng inyectado ubica los goles en minutos calculables', () => {
     // rng=0 → minute = 1 + floor(0*90) = 1 para todos
-    const tl = buildMatchTimeline(1, 1, 0, undefined, seqRng([0, 0]));
+    const tl = buildMatchTimeline({ homeScore: 1, awayScore: 1, seed: 0, rng: seqRng([0, 0]) });
     expect(tl.goals.map((g) => g.minute)).toEqual([1, 1]);
     // tie-break estable: el gol local (encolado primero) va antes que el visitante
     expect(tl.goals[0].side).toBe('home');
     expect(tl.goals[1].side).toBe('away');
+  });
+
+  it('sin alargue, hasExtraTime queda en false', () => {
+    const tl = buildMatchTimeline({ homeScore: 2, awayScore: 1, seed: hashSeed('sin-et') });
+    expect(tl.hasExtraTime).toBe(false);
+  });
+});
+
+describe('timeline con alargue', () => {
+  it('los goles del alargue caen entre el 91 y el 120', () => {
+    const timeline = buildMatchTimeline({
+      homeScore: 2,
+      awayScore: 1,
+      seed: hashSeed('m1'),
+      extraTime: { homeGoals: 1, awayGoals: 0 },
+    });
+
+    expect(timeline.hasExtraTime).toBe(true);
+    const tardios = timeline.goals.filter((g) => g.minute > 90);
+    expect(tardios).toHaveLength(1);
+    expect(tardios[0].minute).toBeLessThanOrEqual(120);
+    expect(tardios[0].side).toBe('home');
+  });
+
+  it('los goles de los 90 minutos siguen cayendo antes del 91', () => {
+    const timeline = buildMatchTimeline({
+      homeScore: 3,
+      awayScore: 2,
+      seed: hashSeed('m2'),
+      extraTime: { homeGoals: 1, awayGoals: 1 },
+    });
+    const regulares = timeline.goals.filter((g) => g.minute <= 90);
+    expect(regulares).toHaveLength(3); // 5 goles totales − 2 del alargue
+  });
+
+  it('sin alargue el partido termina a los 90', () => {
+    const timeline = buildMatchTimeline({ homeScore: 1, awayScore: 0, seed: hashSeed('m3') });
+    expect(timeline.hasExtraTime).toBe(false);
+    expect(timeline.goals.every((g) => g.minute <= 90)).toBe(true);
+  });
+
+  it('el marcador acumulado sigue siendo coherente cruzando el minuto 90', () => {
+    const timeline = buildMatchTimeline({
+      homeScore: 2,
+      awayScore: 2,
+      seed: hashSeed('m4'),
+      extraTime: { homeGoals: 1, awayGoals: 1 },
+    });
+    const ultimo = timeline.goals[timeline.goals.length - 1];
+    expect(ultimo.homeScore).toBe(2);
+    expect(ultimo.awayScore).toBe(2);
   });
 });
 
@@ -80,6 +136,7 @@ describe('scoreAtMinute', () => {
     ],
     finalHomeScore: 2,
     finalAwayScore: 1,
+    hasExtraTime: false,
   };
 
   it('antes del primer gol devuelve 0-0 sin último minuto', () => {
@@ -110,7 +167,7 @@ describe('scoreAtMinute', () => {
   });
 
   it('es consistente con cualquier timeline generado', () => {
-    const generated = buildMatchTimeline(3, 2, hashSeed('consistencia'));
+    const generated = buildMatchTimeline({ homeScore: 3, awayScore: 2, seed: hashSeed('consistencia') });
     const at90 = scoreAtMinute(generated, 90);
     expect(at90.homeScore).toBe(generated.finalHomeScore);
     expect(at90.awayScore).toBe(generated.finalAwayScore);

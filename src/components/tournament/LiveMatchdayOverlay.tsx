@@ -26,13 +26,16 @@ export function LiveMatchdayOverlay() {
   const teams = useTournamentStore((s) => s.teams);
 
   const hasAnyPenalties = session?.entries.some((e) => e.timeline.penalties) ?? false;
+  // Si UN SOLO partido de la grilla fue a alargue, el reloj compartido llega
+  // a 120 en vez de a 90: todas las tarjetas esperan juntas a que termine.
+  const hasAnyExtraTime = session?.entries.some((e) => e.timeline.hasExtraTime) ?? false;
   // La clave de sesión resetea el reloj al abrir una jornada nueva. El espacio
   // separa el título de la lista de ids: evita que un título terminado en
   // dígitos colisione con el primer matchId al concatenar la clave.
   const sessionKey = session
     ? `${session.title} ${session.entries.map((e) => e.matchId).join(',')}`
     : null;
-  const playback = useLiveMatchdayPlayback(sessionKey, hasAnyPenalties);
+  const playback = useLiveMatchdayPlayback(sessionKey, hasAnyPenalties, hasAnyExtraTime);
   const trapRef = useFocusTrap<HTMLDivElement>(Boolean(session));
 
   // Cierre con Escape y bloqueo del scroll del fondo, como el resto de los
