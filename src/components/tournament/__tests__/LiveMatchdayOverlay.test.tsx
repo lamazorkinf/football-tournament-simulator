@@ -121,6 +121,54 @@ describe('LiveMatchdayOverlay', () => {
       act(() => vi.advanceTimersByTime(90 * 1000));
       expect(screen.getAllByText('FINAL')).toHaveLength(2);
     });
+
+    it('grilla mixta: la tarjeta sin alargue muestra FINAL a los 90 aunque la otra siga jugando hasta el 120', () => {
+      const finishedAt90: LiveMatchdayEntry = entry; // arg vs bra, 2-1, sin alargue
+      const stillPlayingExtraTime: LiveMatchdayEntry = {
+        matchId: 'm2',
+        homeTeamId: 'usa',
+        awayTeamId: 'mex',
+        timeline: {
+          goals: [{ minute: 105, side: 'home', homeScore: 1, awayScore: 0 }],
+          finalHomeScore: 1,
+          finalAwayScore: 0,
+          hasExtraTime: true,
+        },
+        groupName: 'Octavos',
+        region: 'America',
+        isFavorite: false,
+      };
+      useTournamentStore.setState({
+        teams: [
+          ...teams,
+          { id: 'usa', name: 'Estados Unidos', flag: '🇺🇸', region: 'America', skill: 70 },
+          { id: 'mex', name: 'México', flag: '🇲🇽', region: 'America', skill: 72 },
+        ],
+      });
+      useLiveMatchdayStore.setState({
+        session: {
+          title: 'Mixta',
+          entries: [finishedAt90, stillPlayingExtraTime],
+          allResults: [],
+          hiddenCount: 0,
+        },
+      });
+      render(<LiveMatchdayOverlay />);
+
+      act(() => vi.advanceTimersByTime(90 * 1000));
+      // A los 90': el reloj compartido sigue en 'playing' (hay alargue en la
+      // grilla), pero la tarjeta que ya terminó sus 90' lo comunica igual...
+      let [cardA, cardB] = screen.getAllByTestId('live-card');
+      expect(screen.getByText("90'")).toBeInTheDocument();
+      expect(within(cardA).getByText('FINAL')).toBeInTheDocument();
+      // ...mientras la que sigue en alargue no muestra FINAL todavía.
+      expect(within(cardB).queryByText('FINAL')).not.toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(30 * 1000)); // minuto 120: termina el alargue
+      [cardA, cardB] = screen.getAllByTestId('live-card');
+      expect(within(cardA).getByText('FINAL')).toBeInTheDocument();
+      expect(within(cardB).getByText('FINAL')).toBeInTheDocument();
+    });
   });
 
   it('marca FINAL en la tarjeta cuando el partido terminó', () => {

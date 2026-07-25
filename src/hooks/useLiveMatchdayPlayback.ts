@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { LivePhase, LiveSpeed } from './useLiveMatchPlayback';
 
-const REGULATION_MINUTES = 90;
-const EXTRA_TIME_MINUTES = 120;
+// Exportadas: LiveMatchdayOverlay las necesita para decidir el "FINAL" de
+// CADA tarjeta según el minuto de cierre de SU partido (90 o 120), no según
+// la fase del reloj compartido (que puede seguir corriendo por el alargue de
+// otro partido de la grilla).
+export const REGULATION_MINUTES = 90;
+export const EXTRA_TIME_MINUTES = 120;
 const PENALTY_REVEAL_MS = 1200;
 
 export interface LiveMatchdayPlaybackState {

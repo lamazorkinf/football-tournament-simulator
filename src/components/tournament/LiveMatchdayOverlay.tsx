@@ -2,7 +2,12 @@ import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiv
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { scoreAtMinute } from '../../core/liveMatch';
-import { useLiveMatchdayPlayback, type LiveMatchdayPlaybackState } from '../../hooks/useLiveMatchdayPlayback';
+import {
+  useLiveMatchdayPlayback,
+  REGULATION_MINUTES,
+  EXTRA_TIME_MINUTES,
+  type LiveMatchdayPlaybackState,
+} from '../../hooks/useLiveMatchdayPlayback';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { LiveSpeed } from '../../hooks/useLiveMatchPlayback';
 import { Button } from '../ui/Button';
@@ -15,9 +20,10 @@ const SPEEDS: LiveSpeed[] = [1, 2, 4];
 
 /**
  * Overlay full-screen de la "jornada en vivo": una grilla de marcadores con
- * un único reloj compartido 0→90. Commit-then-replay: cuando la sesión se
- * abre, TODOS los resultados ya están comprometidos en el store; cerrar en
- * cualquier momento es seguro y muestra el resumen completo.
+ * un único reloj compartido 0→90 (0→120 si algún partido de la grilla fue a
+ * alargue). Commit-then-replay: cuando la sesión se abre, TODOS los
+ * resultados ya están comprometidos en el store; cerrar en cualquier momento
+ * es seguro y muestra el resumen completo.
  */
 export function LiveMatchdayOverlay() {
   const session = useLiveMatchdayStore((s) => s.session);
@@ -174,6 +180,17 @@ function LiveGridCard({
   const showPenalties = playback.penaltiesRevealed && entry.timeline.penalties;
   const hasGoals = score.homeGoalMinutes.length > 0 || score.awayGoalMinutes.length > 0;
 
+  // El "FINAL" de CADA tarjeta se decide con el minuto de cierre de SU
+  // partido, no con la fase del reloj compartido: si otro partido de la
+  // grilla fue a alargue, el reloj sigue corriendo hasta el 120 aunque este
+  // ya haya terminado a los 90. Si el partido definió por penales, esperamos
+  // al mismo reveal compartido que ya usa el badge "PEN" (es un evento único
+  // de toda la sesión, no por tarjeta).
+  const ownFinalMinute = entry.timeline.hasExtraTime ? EXTRA_TIME_MINUTES : REGULATION_MINUTES;
+  const isCardFinal = entry.timeline.penalties
+    ? playback.penaltiesRevealed
+    : playback.minute >= ownFinalMinute;
+
   // Quién va ganando ahora mismo. Con penales manda el punto: un 1-1 que se
   // definió desde los doce pasos no es empate.
   const pens = showPenalties ? entry.timeline.penalties! : null;
@@ -209,8 +226,10 @@ function LiveGridCard({
           {entry.groupName}
         </span>
         {/* Con 20 tarjetas, el reloj del header no alcanza para saber si lo que
-            estás viendo es el resultado definitivo. */}
-        {playback.phase === 'finished' && (
+            estás viendo es el resultado definitivo — y con alargue mixto en
+            la grilla, la fase global tampoco: puede seguir en 'playing' por
+            OTRO partido mientras este ya cerró su propio marcador. */}
+        {isCardFinal && (
           <span className="ml-auto font-arcade text-[9px] text-gold flex-shrink-0">FINAL</span>
         )}
       </div>
