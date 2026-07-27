@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { phaseYear } from '../../core/calendar';
 import { RegionView } from './RegionView';
 import { GroupView } from './GroupView';
 import { RunnersUpModal } from './RunnersUpModal';
@@ -127,7 +128,7 @@ export function QualifiersView({ initialRegion, initialGroupId, onNavigate }: Qu
       <Card className="overflow-hidden">
         <ViewHeader
           icon={Globe2}
-          title="Clasificatorias"
+          title={`Clasificatorias ${phaseYear('wc-qualifiers', currentTournament.year)}`}
           subtitle={currentTournament.name}
           actions={
             <Button

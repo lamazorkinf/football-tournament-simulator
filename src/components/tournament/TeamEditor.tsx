@@ -43,7 +43,7 @@ export function TeamEditor() {
 
   const handleEdit = (team: Team) => {
     setEditingTeam(team.id);
-    setEditForm({ skill: Math.round(team.skill), region: team.region });
+    setEditForm({ skill: Math.round(team.skill), region: team.region ?? 'Europe' });
   };
 
   const handleSave = (teamId: string) => {
@@ -86,7 +86,7 @@ export function TeamEditor() {
   const teamsByRegion = useMemo(() => {
     const grouped: Record<string, number> = {};
     teams.forEach((team) => {
-      grouped[team.region] = (grouped[team.region] || 0) + 1;
+      if (team.region) grouped[team.region] = (grouped[team.region] || 0) + 1;
     });
     return grouped;
   }, [teams]);

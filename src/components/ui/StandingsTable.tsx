@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import { TeamFlag } from './TeamFlag';
 import { TeamNameTooltip } from './TeamNameTooltip';
 import { sortStandings } from '../../core/scheduler';
+import { hasCountryCode } from '../../data/country-codes';
 
 interface StandingsTableProps {
   standings: TeamStanding[];
@@ -121,12 +122,17 @@ export function StandingsTable({
                       {(() => {
                         const team = getTeam(standing.teamId);
                         if (team) {
+                          // Selecciones: el id ES el código de país (ARG, BRA…) y
+                          // queda bien como etiqueta corta. Clubes (sin código de
+                          // país): el id es un slug (vm-9-de-julio), así que se
+                          // muestra el nombre real.
+                          const label = hasCountryCode(team.id) ? team.id.toUpperCase() : team.name;
                           return (
                             <>
                               <TeamFlag teamId={team.id} teamName={team.name} size={24} />
                               <TeamNameTooltip teamName={team.name}>
                                 <span className="font-arcade text-[10px] uppercase">
-                                  {team.id.toUpperCase()}
+                                  {label}
                                 </span>
                               </TeamNameTooltip>
                             </>

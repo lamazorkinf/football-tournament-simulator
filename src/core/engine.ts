@@ -28,6 +28,12 @@ export function getStageImportance(
       return w.wcGroup;
     case 'world-cup-knockout':
       return w.wcKnockout;
+    // Modos de ligas: la liga pesa como una fase de grupos/clasificatoria y la
+    // copa como una eliminación directa. Reutiliza los mismos tunables.
+    case 'league':
+      return w.qualifier;
+    case 'cup':
+      return w.wcKnockout;
     default:
       return 1;
   }
@@ -162,6 +168,23 @@ export function updateTeamSkill(currentSkill: number, change: number): number {
 }
 
 /**
+ * Goles de 30' de alargue: mismo caudal del partido, escalado por
+ * `extraTimeShare` (algo más lento). Se expone para que un empate GLOBAL de una
+ * eliminatoria a doble partido resuelva su prórroga con la misma lógica que un
+ * partido único, sin duplicarla.
+ */
+export function simulateExtraTimeGoals(ctx: MatchContext): { homeGoals: number; awayGoals: number } {
+  const config = getEngineConfig();
+  const rng = ctx.rng ?? Math.random;
+  const lambdas = expectedGoalsFor(ctx);
+  const share = config.fatigue.extraTimeShare;
+  return {
+    homeGoals: generateGoals(lambdas.home * share, rng),
+    awayGoals: generateGoals(lambdas.away * share, rng),
+  };
+}
+
+/**
  * Simula un partido de eliminación directa: si termina empatado a los 90',
  * juega 30' de alargue con el mismo caudal de goles del partido; si sigue
  * empatado, define por penales.
@@ -169,7 +192,6 @@ export function updateTeamSkill(currentSkill: number, change: number): number {
 export function simulateMatchWithPenalties(
   ctx: MatchContext,
 ): MatchResult & { penalties?: { homeScore: number; awayScore: number } } {
-  const config = getEngineConfig();
   const rng = ctx.rng ?? Math.random;
   const result = simulateMatch(ctx);
 
@@ -177,10 +199,7 @@ export function simulateMatchWithPenalties(
 
   // 30 minutos con el mismo caudal del partido, escalado y algo más lento:
   // resuelve la mitad de los empates y deja la otra mitad para los penales.
-  const lambdas = expectedGoalsFor(ctx);
-  const share = config.fatigue.extraTimeShare;
-  const homeGoals = generateGoals(lambdas.home * share, rng);
-  const awayGoals = generateGoals(lambdas.away * share, rng);
+  const { homeGoals, awayGoals } = simulateExtraTimeGoals(ctx);
 
   const withExtraTime: MatchResult = {
     ...result,

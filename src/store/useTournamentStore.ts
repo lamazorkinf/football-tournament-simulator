@@ -48,6 +48,8 @@ import { performDraw, generateGroupMatches, initializeStandings } from '../utils
 import { isQualifiersDrawn, isContinentalDrawn, isConfederationsDrawn } from '../utils/cycleProgress';
 import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
+import { useModeStore } from './useModeStore';
+import { SELECCIONES_MODE_ID } from '../constants/modes';
 import { supabase } from '../lib/supabase';
 import { getEngineConfig } from './useConfigStore';
 import {
@@ -320,7 +322,8 @@ export const useTournamentStore = create<TournamentState>()(
         }
 
         try {
-          const dbTeams = await teamsService.getAllTeams();
+          const modeId = useModeStore.getState().activeModeId;
+          const dbTeams = await teamsService.getAllTeams(modeId);
           if (dbTeams && dbTeams.length > 0) {
             console.log(`Loaded ${dbTeams.length} teams from database`);
             const teamsWithTiers = updateTeamsTiers(dbTeams);
@@ -345,9 +348,42 @@ export const useTournamentStore = create<TournamentState>()(
 
           set({ initStatus: 'loading' });
 
+          // Los modos deben estar cargados ANTES de decidir el tipo: si no, el
+          // kind cae al default 'national-cycle' y un modo de ligas se trataría
+          // como Mundial (incluso creando un "Mundial fantasma"). loadModes es
+          // idempotente y barato.
+          if (!useModeStore.getState().isLoaded) {
+            try {
+              await useModeStore.getState().loadModes();
+            } catch (error) {
+              console.error('No se pudieron cargar los modos:', error);
+            }
+          }
+
+          // El ciclo mundialista (crear/cargar Cycle) sólo aplica a los modos
+          // de selecciones. En un modo de ligas (league-system) no hay Cycle:
+          // se deja el estado listo y sin torneo activo (los torneos de esos
+          // modos se manejan aparte, en su propia capa).
+          // Si los modos NO cargaron (fallo de red), sólo 'selecciones' se trata
+          // como national: así un modo de ligas nunca crea un "Mundial fantasma".
+          const modeState = useModeStore.getState();
+          const activeModeId = modeState.activeModeId;
+          const isNational = modeState.isLoaded
+            ? modeState.activeModeKind() === 'national-cycle'
+            : activeModeId === SELECCIONES_MODE_ID;
+          if (!isNational) {
+            set({
+              tournaments: [],
+              currentTournamentId: null,
+              currentTournament: null,
+              initStatus: 'ready' as const,
+            });
+            return;
+          }
+
           try {
             // 1. Torneo activo: el más reciente por updated_at.
-            const latest = await adaptiveTournamentService.getLatestTournament();
+            const latest = await adaptiveTournamentService.getLatestTournament(activeModeId);
 
             // DB alcanzable pero vacía → primer arranque de la app.
             if (!latest) {
@@ -387,7 +423,7 @@ export const useTournamentStore = create<TournamentState>()(
           //    trae el más reciente (el activo). Este paso es best-effort: si
           //    falla, la app ya es usable con el torneo activo.
           try {
-            const summaries = await adaptiveTournamentService.getTournamentsList();
+            const summaries = await adaptiveTournamentService.getTournamentsList(activeModeId);
             const known = new Set(get().tournaments.map((t) => t.id));
             const missingIds = summaries.map((s) => s.id).filter((id) => !known.has(id));
 
@@ -2751,7 +2787,7 @@ export const useTournamentStore = create<TournamentState>()(
         }
 
         const byRegion: Record<Region, Team[]> = { Europe: [], America: [], Africa: [], Asia: [] };
-        for (const t of state.teams) byRegion[t.region].push(t);
+        for (const t of state.teams) if (t.region) byRegion[t.region].push(t);
         const updated = drawContinentalStage(cycle, byRegion);
         updateTournamentInState(set, get, updated);
         return true;

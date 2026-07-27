@@ -19,6 +19,11 @@ export const db = {
   teams: () => (supabase.from('teams') as any),
   match_history: () => (supabase.from('match_history') as any),
 
+  // Modos (competiciones aisladas)
+  modes: () => (supabase.from('modes') as any),
+  mode_tournaments: () => (supabase.from('mode_tournaments') as any),
+  mode_season_state: () => (supabase.from('mode_season_state') as any),
+
   // Normalized tables
   tournaments_new: () => (supabase.from('tournaments_new') as any),
   qualifier_groups: () => (supabase.from('qualifier_groups') as any),

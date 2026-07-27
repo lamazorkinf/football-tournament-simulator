@@ -48,6 +48,24 @@
   --animate-slide-in: slide-in 0.3s steps(4);
 }
 
+/* Temas por modo: cada modo puede repintar la app con otra tonalidad (ver
+   src/lib/modeTheme.ts, que setea data-theme en <html>). Sólo redefinimos las
+   variables de color; como las utilidades de Tailwind v4 referencian
+   var(--color-*), toda la app se recolorea sin tocar una sola clase.
+   'selecciones' es la paleta verde base (la del bloque @theme), así que no
+   necesita override. */
+
+/* Liga Villamariense (y modos de ligas por defecto): paleta nocturna azul,
+   estilo estadio con reflectores. El dorado se mantiene como acento de trofeo. */
+:root[data-theme='villamariense'] {
+  --color-night: #05080f;
+  --color-grass: #1d3f86;      /* azul medio (equiv. al "grass" verde) */
+  --color-grass-dark: #071229; /* panel profundo */
+  --color-grass-soft: #7f9dd6; /* texto/acento atenuado */
+  --color-line: #3f7bff;       /* bordes y brillos */
+  --color-led: #8fd0ff;        /* highlight (equiv. al LED verde) */
+}
+
 @keyframes slide-in {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }

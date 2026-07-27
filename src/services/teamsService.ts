@@ -11,7 +11,8 @@ const dbTeamToTeam = (dbTeam: TeamRow): Team => ({
   id: dbTeam.id,
   name: dbTeam.name,
   flag: dbTeam.flag,
-  region: dbTeam.region,
+  region: dbTeam.region ?? undefined,
+  modeId: dbTeam.mode_id,
   skill: dbTeam.skill,
 });
 
@@ -20,21 +21,23 @@ const teamToDbInsert = (team: Team): TeamInsert => ({
   id: team.id,
   name: team.name,
   flag: team.flag,
-  region: team.region,
+  region: team.region ?? null,
+  ...(team.modeId ? { mode_id: team.modeId } : {}),
   skill: team.skill,
 });
 
 export const teamsService = {
-  // Get all teams
-  async getAllTeams(): Promise<Team[]> {
+  // Get all teams. Con `modeId`, sólo los equipos de ese modo (aislamiento entre
+  // competiciones); sin él, todos (compat/legacy).
+  async getAllTeams(modeId?: string): Promise<Team[]> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured');
     }
 
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*')
-      .order('name');
+    let query = supabase.from('teams').select('*');
+    if (modeId) query = query.eq('mode_id', modeId);
+
+    const { data, error } = await query.order('name');
 
     if (error) throw error;
     return data.map(dbTeamToTeam);
@@ -116,6 +119,7 @@ export const teamsService = {
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.region !== undefined) dbUpdates.region = updates.region;
     if (updates.skill !== undefined) dbUpdates.skill = updates.skill;
+    if (updates.flag !== undefined) dbUpdates.flag = updates.flag;
 
     const { data, error } = await (supabase
       .from('teams') as any)

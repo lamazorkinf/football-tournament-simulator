@@ -503,7 +503,7 @@ export const normalizedTournamentService = {
    * inicial". Si un fallo de red también devolviera null, cada arranque sin
    * conexión crearía un torneo fantasma en vez de mostrar el error.
    */
-  async getLatestTournament(): Promise<{ tournament: Tournament; updatedAt: string | null } | null> {
+  async getLatestTournament(modeId?: string): Promise<{ tournament: Tournament; updatedAt: string | null } | null> {
     if (!isSupabaseConfigured()) {
       console.log('Supabase not configured, cannot load tournament');
       return null;
@@ -511,11 +511,13 @@ export const normalizedTournamentService = {
 
     // Ordenar por updated_at (última jugada), no created_at: así "el último"
     // es el torneo tocado más recientemente en cualquier dispositivo.
-    const { data, error } = await db
+    let query = db
       .tournaments_new()
       .select('id, updated_at')
       .order('updated_at', { ascending: false })
       .limit(1);
+    if (modeId) query = query.eq('mode_id', modeId);
+    const { data, error } = await query;
 
     if (error) throw error;
     if (!data || data.length === 0) {
@@ -566,16 +568,18 @@ export const normalizedTournamentService = {
    * Get lightweight tournament metadata (for lazy loading)
    * Returns basic info without loading all matches/groups
    */
-  async getTournamentsList(): Promise<Array<{ id: string; name: string; year: number; status: string }>> {
+  async getTournamentsList(modeId?: string): Promise<Array<{ id: string; name: string; year: number; status: string }>> {
     if (!isSupabaseConfigured()) {
       return [];
     }
 
     try {
-      const { data, error } = await db
+      let query = db
         .tournaments_new()
         .select('id, name, year, status')
         .order('created_at', { ascending: false });
+      if (modeId) query = query.eq('mode_id', modeId);
+      const { data, error } = await query;
 
       if (error) throw error;
       return data || [];

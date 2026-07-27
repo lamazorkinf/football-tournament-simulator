@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
+import { useModeStore } from './store/useModeStore';
 import { useLiveMatchStore } from './store/useLiveMatchStore';
 import { useLiveMatchdayStore } from './store/useLiveMatchdayStore';
 import { hydrateSettings } from './lib/hydrateSettings';
@@ -31,11 +32,12 @@ import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { ConnectionError } from './components/ui/ConnectionError';
 import { PixelBar } from './components/ui/PixelBar';
+import { LeagueModeView } from './components/tournament/LeagueModeView';
 import { MobileActionProvider } from './hooks/useMobileAction';
 import { isContinentalDrawn, isConfederationsDrawn } from './utils/cycleProgress';
+import { themeForMode } from './lib/modeTheme';
 import { Trophy } from 'lucide-react';
-
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
+import type { View } from './types/view';
 
 function App() {
   const {
@@ -48,6 +50,8 @@ function App() {
   } = useTournamentStore();
 
   const { isCollapsed } = useSidebarCollapse();
+  const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
+  const activeMode = useModeStore((s) => s.activeMode());
   const [currentView, setCurrentView] = useState<View>('wizard');
   const [isPauseOpen, setIsPauseOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
@@ -69,6 +73,20 @@ function App() {
   };
 
   // Load teams from database on mount
+  // Lista de modos (competiciones). Debe cargar antes que nada dependa del
+  // `kind` del modo activo; el id activo ya viene de localStorage, así que el
+  // filtrado por modo funciona aun antes de que resuelva esta llamada.
+  useEffect(() => {
+    useModeStore.getState().loadModes();
+  }, []);
+
+  // Tonalidad de la app según el modo activo: cada modo puede repintar la
+  // interfaz (verde selecciones / azul nocturno ligas) escribiendo data-theme
+  // en <html>. Las paletas viven en src/index.css.
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeForMode(activeMode);
+  }, [activeMode]);
+
   useEffect(() => {
     loadTeamsFromDatabase();
   }, [loadTeamsFromDatabase]);
@@ -77,6 +95,18 @@ function App() {
   useEffect(() => {
     hydrateSettings();
   }, []);
+
+  // Al cambiar el tipo de modo, encarrilar la vista para no quedar en una que no
+  // aplica (p. ej. 'worldcup' en un modo de liga, o 'league' en selecciones).
+  // Las vistas mode-agnósticas (Comparar/Favoritos/Historial/Ajustes) se respetan.
+  useEffect(() => {
+    const leagueValid: View[] = ['league', 'comparison', 'favorites', 'history', 'settings'];
+    if (isNationalMode) {
+      if (currentView === 'league') setCurrentView('wizard');
+    } else if (!leagueValid.includes(currentView)) {
+      setCurrentView('league');
+    }
+  }, [isNationalMode, currentView]);
 
   // Carga inicial desde la DB, la única fuente de verdad. Es idempotente vía
   // initializationInFlight, así que se llama incondicionalmente.
@@ -124,7 +154,11 @@ function App() {
     );
   }
 
-  if (!currentTournament) {
+  // Sólo el modo selecciones bloquea hasta tener un torneo cargado. Los modos de
+  // ligas arrancan sin `currentTournament` (sus torneos son Etapa 2): ahí se cae
+  // a la pantalla principal con un placeholder, para no atrapar al usuario en un
+  // "Cargando…" sin salida (el selector de modo vive en el Sidebar).
+  if (!currentTournament && isNationalMode) {
     return (
       <>
         <Scanlines />
@@ -168,7 +202,7 @@ function App() {
       <Sidebar
         currentView={currentView}
         onViewChange={setCurrentView}
-        tournamentYear={currentTournament.year}
+        tournamentYear={currentTournament?.year ?? 0}
         lockedViews={lockedViews}
       />
 
@@ -179,17 +213,31 @@ function App() {
           <div className="px-4 py-2 flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="font-arcade text-xs text-white text-shadow-retro truncate">
-                {currentTournament.name}
+                {currentTournament?.name ?? activeMode?.name ?? 'Football Sim'}
               </h1>
             </div>
             <div className="flex-shrink-0">
-              <TournamentSelector />
+              {isNationalMode && <TournamentSelector />}
             </div>
           </div>
         </header>
 
         <main className="px-4 sm:px-6 lg:px-8 py-6">
-        {currentView === 'wizard' ? (
+        {!currentTournament ? (
+          // Modo de ligas: sus vistas propias (liga, copa, temporada). Ajustes,
+          // historial, comparación y favoritos son mode-agnósticos y siguen a mano.
+          currentView === 'settings' ? (
+            <SettingsHub />
+          ) : currentView === 'history' ? (
+            <MatchHistory teams={teams} />
+          ) : currentView === 'comparison' ? (
+            <TeamComparison />
+          ) : currentView === 'favorites' ? (
+            <FavoritesView />
+          ) : (
+            <LeagueModeView />
+          )
+        ) : currentView === 'wizard' ? (
           <TournamentWizard onNavigate={handleNavigate} />
         ) : currentView === 'matches' ? (
           <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />

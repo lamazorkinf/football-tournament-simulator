@@ -4,11 +4,34 @@ export type Region = 'Europe' | 'America' | 'Africa' | 'Asia';
 
 export type SkillTier = 'Elite' | 'Strong' | 'Average' | 'Weak';
 
+/**
+ * Un "modo" es una competición aislada, dueña de su propio pool de equipos y
+ * torneos. `national-cycle` es el ciclo mundialista clásico (selecciones);
+ * `league-system` son ligas/copas por temporada (ej: Liga Villamariense).
+ * Ningún dato de un modo se cruza con otro: todo se filtra por `mode_id`.
+ */
+export type ModeKind = 'national-cycle' | 'league-system';
+
+export interface GameMode {
+  id: string;
+  name: string;
+  kind: ModeKind;
+  config: Record<string, unknown>;
+  currentYear: number | null;
+}
+
 export interface Team {
   id: string;
   name: string;
   flag: string; // emoji or URL
-  region: Region;
+  /**
+   * Confederación. Sólo aplica al modo selecciones (national-cycle). En los
+   * modos de clubes (league-system) los equipos no tienen región: queda
+   * `undefined`. El motor y las tablas son agnósticos a la región.
+   */
+  region?: Region;
+  /** Modo al que pertenece el equipo. Ausente = 'selecciones' (legacy). */
+  modeId?: string;
   skill: number; // 0-100, dynamic rating
   tier?: SkillTier; // Calculated based on skill
   manager?: string; // Optional manager name
