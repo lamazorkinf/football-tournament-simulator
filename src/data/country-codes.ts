@@ -104,3 +104,12 @@ export function getFlagUrl(teamId: string, size: FlagSize = 64): string {
   }
   return `https://flagcdn.com/${FLAG_WIDTHS[size]}/${code}.png`;
 }
+
+/**
+ * ¿El id corresponde a una selección (tiene código de país)? Predicado liviano y
+ * SIN warning, para distinguir selecciones de clubes sin ensuciar la consola
+ * (getFlagUrl loguea a propósito cuando no encuentra el código).
+ */
+export function hasCountryCode(teamId: string): boolean {
+  return teamId in COUNTRY_CODES;
+}
