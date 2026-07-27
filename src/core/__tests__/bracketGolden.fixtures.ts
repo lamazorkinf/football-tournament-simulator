@@ -94,7 +94,7 @@ function standingsFor(teamIds: string[]): TeamStanding[] {
  */
 export function makeWorldCupGroups(): WorldCupGroup[] {
   const letters = 'ABCDEFGHIJKLMNOP'.split('');
-  return letters.map((letter, g) => {
+  return letters.map((letter) => {
     const teamIds = Array.from({ length: 4 }, (_, i) => `${letter}${i + 1}`);
     return {
       id: `wc-group-${letter}`,

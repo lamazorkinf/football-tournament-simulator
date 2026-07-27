@@ -72,14 +72,19 @@ describe('saveTournament — atribución de modo', () => {
   } as never;
 
   function saveBuilder(existing: unknown) {
-    const insert = vi.fn(() => ({
+    const inserted: Record<string, unknown>[] = [];
+    const updated: Record<string, unknown>[] = [];
+    const ok = () => ({
       select: vi.fn(() => ({ single: vi.fn(async () => ({ data: { updated_at: 'x' }, error: null })) })),
-    }));
-    const update = vi.fn(() => ({
-      eq: vi.fn(() => ({
-        select: vi.fn(() => ({ single: vi.fn(async () => ({ data: { updated_at: 'x' }, error: null })) })),
-      })),
-    }));
+    });
+    const insert = vi.fn((row: Record<string, unknown>) => {
+      inserted.push(row);
+      return ok();
+    });
+    const update = vi.fn((row: Record<string, unknown>) => {
+      updated.push(row);
+      return { eq: vi.fn(ok) };
+    });
     const builder = {
       select: vi.fn(() => builder),
       eq: vi.fn(() => builder),
@@ -87,7 +92,7 @@ describe('saveTournament — atribución de modo', () => {
       insert,
       update,
     };
-    return { builder, insert, update };
+    return { builder, insert, update, inserted, updated };
   }
 
   beforeEach(() => {
@@ -96,7 +101,7 @@ describe('saveTournament — atribución de modo', () => {
   });
 
   it('el torneo nuevo se inserta con el mode_id que se le pasa', async () => {
-    const { builder, insert } = saveBuilder(null); // no existe ⇒ rama INSERT
+    const { builder, insert, inserted } = saveBuilder(null); // no existe ⇒ rama INSERT
     vi.spyOn(db, 'tournaments_new').mockReturnValue(builder as never);
     vi.spyOn(db, 'qualifier_groups').mockImplementation(() => {
       throw new Error('corte adrede: sólo interesa el header');
@@ -105,11 +110,11 @@ describe('saveTournament — atribución de modo', () => {
     await normalizedTournamentService.saveTournament(cycle, 'villamariense').catch(() => {});
 
     expect(insert).toHaveBeenCalledTimes(1);
-    expect(insert.mock.calls[0][0]).toMatchObject({ id: 't-nuevo', mode_id: 'villamariense' });
+    expect(inserted[0]).toMatchObject({ id: 't-nuevo', mode_id: 'villamariense' });
   });
 
   it('el UPDATE de un torneo existente no reescribe mode_id', async () => {
-    const { builder, update } = saveBuilder({ id: 't-nuevo' }); // existe ⇒ rama UPDATE
+    const { builder, update, updated } = saveBuilder({ id: 't-nuevo' }); // existe ⇒ rama UPDATE
     vi.spyOn(db, 'tournaments_new').mockReturnValue(builder as never);
     vi.spyOn(db, 'qualifier_groups').mockImplementation(() => {
       throw new Error('corte adrede: sólo interesa el header');
@@ -118,6 +123,6 @@ describe('saveTournament — atribución de modo', () => {
     await normalizedTournamentService.saveTournament(cycle, 'villamariense').catch(() => {});
 
     expect(update).toHaveBeenCalledTimes(1);
-    expect(update.mock.calls[0][0]).not.toHaveProperty('mode_id');
+    expect(updated[0]).not.toHaveProperty('mode_id');
   });
 });
