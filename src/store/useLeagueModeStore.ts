@@ -53,6 +53,37 @@ const PROMOTION_COUNT = 3;
 
 type LeagueModeStatus = 'idle' | 'loading' | 'ready' | 'needs-seed' | 'error';
 
+export interface LeagueTab {
+  key: string;
+  label: string;
+}
+
+/**
+ * Pestañas de un modo de ligas según su estado. Fuente única de verdad para la
+ * navegación: la usan tanto la sidebar (desktop) como la barra de pestañas del
+ * contenido (mobile), así siempre coinciden. La pestaña "Escudos" está siempre
+ * disponible (aun sin temporada iniciada); las de la temporada aparecen cuando
+ * hay torneos en juego.
+ */
+export function deriveLeagueTabs(status: LeagueModeStatus, tournaments: ModeTournament[]): LeagueTab[] {
+  const ready = status === 'ready' && tournaments.length > 0;
+  if (!ready) return [{ key: 'main', label: 'Inicio' }, { key: 'crests', label: 'Escudos' }];
+
+  const leagues = tournaments.filter((t): t is LeagueTournament => t.format === 'league');
+  const cup = tournaments.find((t): t is CupTournament => t.format === 'cup') ?? null;
+  return [
+    ...leagues.map((l) => ({ key: `league-${l.division}`, label: `Liga ${l.division}` })),
+    ...(cup ? [{ key: 'cup', label: 'Copa' }] : []),
+    { key: 'season', label: 'Temporada' },
+    { key: 'crests', label: 'Escudos' },
+  ];
+}
+
+/** Pestaña efectiva: la pedida si sigue siendo válida, si no la primera. */
+export function resolveLeagueTab(tabs: LeagueTab[], requested: string): string {
+  return tabs.some((t) => t.key === requested) ? requested : (tabs[0]?.key ?? 'main');
+}
+
 interface LeagueModeState {
   modeId: string | null;
   year: number | null;
@@ -60,6 +91,8 @@ interface LeagueModeState {
   tournaments: ModeTournament[]; // ligas + copa del año
   status: LeagueModeStatus;
   busy: boolean;
+  /** Sub-vista activa dentro del modo (Liga A/B, Copa, Temporada, Escudos). */
+  activeTab: string;
 
   loadForMode: (mode: GameMode) => Promise<void>;
   startSeason: () => Promise<void>;
@@ -67,6 +100,7 @@ interface LeagueModeState {
   simulateLeagueMatchday: (tournamentId: string, matchday: number, rng?: () => number) => Promise<void>;
   simulateCupTie: (tournamentId: string, tieId: string, rng?: () => number) => Promise<void>;
   closeSeason: () => Promise<void>;
+  setActiveTab: (tab: string) => void;
   reset: () => void;
 }
 
@@ -182,8 +216,11 @@ export const useLeagueModeStore = create<LeagueModeState>((set, get) => ({
   tournaments: [],
   status: 'idle',
   busy: false,
+  activeTab: 'season',
 
-  reset: () => set({ modeId: null, year: null, divisions: {}, tournaments: [], status: 'idle', busy: false }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  reset: () => set({ modeId: null, year: null, divisions: {}, tournaments: [], status: 'idle', busy: false, activeTab: 'season' }),
 
   loadForMode: async (mode: GameMode) => {
     const year = mode.currentYear ?? new Date().getFullYear();

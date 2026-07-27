@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Trophy, Play, Hammer, ChevronRight, Shield } from 'lucide-react';
-import { useLeagueModeStore } from '../../store/useLeagueModeStore';
+import { useLeagueModeStore, deriveLeagueTabs, resolveLeagueTab } from '../../store/useLeagueModeStore';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -33,7 +33,7 @@ function teamName(teams: Team[], id: string | null): string {
 export function LeagueModeView() {
   const activeModeId = useModeStore((s) => s.activeModeId);
   const activeMode = useModeStore((s) => s.activeMode());
-  const { status, year, tournaments, busy, startSeason } = useLeagueModeStore();
+  const { status, year, tournaments, busy, startSeason, activeTab: requestedTab, setActiveTab } = useLeagueModeStore();
 
   // (Re)cargar la temporada cada vez que cambia el modo activo.
   useEffect(() => {
@@ -42,8 +42,6 @@ export function LeagueModeView() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModeId]);
-
-  const [tab, setTab] = useState<string>('season');
 
   if (status === 'loading' || status === 'idle') {
     return <Centered>Cargando temporada…</Centered>;
@@ -56,25 +54,18 @@ export function LeagueModeView() {
   const cup = tournaments.find((t): t is CupTournament => t.format === 'cup') ?? null;
   const seasonReady = status === 'ready' && tournaments.length > 0;
 
-  // La pestaña Escudos está siempre disponible (aun sin temporada iniciada);
-  // las de la temporada aparecen cuando hay torneos en juego.
-  const seasonTabs: Array<{ key: string; label: string }> = seasonReady
-    ? [
-        ...leagues.map((l) => ({ key: `league-${l.division}`, label: `Liga ${l.division}` })),
-        ...(cup ? [{ key: 'cup', label: 'Copa' }] : []),
-        { key: 'season', label: 'Temporada' },
-      ]
-    : [{ key: 'main', label: 'Inicio' }];
-  const tabs = [...seasonTabs, { key: 'crests', label: 'Escudos' }];
-  const activeTab = tabs.some((t) => t.key === tab) ? tab : tabs[0].key;
+  // Navegación compartida con la sidebar (deriveLeagueTabs). En desktop la
+  // sidebar es la que navega; acá la barra de pestañas queda para mobile.
+  const tabs = deriveLeagueTabs(status, tournaments);
+  const activeTab = resolveLeagueTab(tabs, requestedTab);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 lg:hidden">
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => setActiveTab(t.key)}
             className={`px-3 py-2 font-arcade text-[10px] uppercase border-2 transition-colors ${
               activeTab === t.key
                 ? 'bg-grass text-white border-gold'

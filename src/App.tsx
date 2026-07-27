@@ -35,9 +35,9 @@ import { PixelBar } from './components/ui/PixelBar';
 import { LeagueModeView } from './components/tournament/LeagueModeView';
 import { MobileActionProvider } from './hooks/useMobileAction';
 import { isContinentalDrawn, isConfederationsDrawn } from './utils/cycleProgress';
+import { themeForMode } from './lib/modeTheme';
 import { Trophy } from 'lucide-react';
-
-type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
+import type { View } from './types/view';
 
 function App() {
   const {
@@ -51,6 +51,7 @@ function App() {
 
   const { isCollapsed } = useSidebarCollapse();
   const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
+  const activeMode = useModeStore((s) => s.activeMode());
   const [currentView, setCurrentView] = useState<View>('wizard');
   const [isPauseOpen, setIsPauseOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
@@ -79,6 +80,13 @@ function App() {
     useModeStore.getState().loadModes();
   }, []);
 
+  // Tonalidad de la app según el modo activo: cada modo puede repintar la
+  // interfaz (verde selecciones / azul nocturno ligas) escribiendo data-theme
+  // en <html>. Las paletas viven en src/index.css.
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeForMode(activeMode);
+  }, [activeMode]);
+
   useEffect(() => {
     loadTeamsFromDatabase();
   }, [loadTeamsFromDatabase]);
@@ -87,6 +95,18 @@ function App() {
   useEffect(() => {
     hydrateSettings();
   }, []);
+
+  // Al cambiar el tipo de modo, encarrilar la vista para no quedar en una que no
+  // aplica (p. ej. 'worldcup' en un modo de liga, o 'league' en selecciones).
+  // Las vistas mode-agnósticas (Comparar/Favoritos/Historial/Ajustes) se respetan.
+  useEffect(() => {
+    const leagueValid: View[] = ['league', 'comparison', 'favorites', 'history', 'settings'];
+    if (isNationalMode) {
+      if (currentView === 'league') setCurrentView('wizard');
+    } else if (!leagueValid.includes(currentView)) {
+      setCurrentView('league');
+    }
+  }, [isNationalMode, currentView]);
 
   // Carga inicial desde la DB, la única fuente de verdad. Es idempotente vía
   // initializationInFlight, así que se llama incondicionalmente.
@@ -193,7 +213,7 @@ function App() {
           <div className="px-4 py-2 flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="font-arcade text-xs text-white text-shadow-retro truncate">
-                {currentTournament?.name ?? 'Football Sim'}
+                {currentTournament?.name ?? activeMode?.name ?? 'Football Sim'}
               </h1>
             </div>
             <div className="flex-shrink-0">
