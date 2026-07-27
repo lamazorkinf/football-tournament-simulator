@@ -228,6 +228,46 @@ describe('LiveMatchdayOverlay', () => {
     expect(screen.getByText('BRA')).not.toHaveClass('text-led');
   });
 
+  describe('modo de ligas (clubes)', () => {
+    const clubs: Team[] = [
+      { id: 'vm-alumni', name: 'Alumni', flag: '⚽', skill: 60 },
+      { id: 'vm-9-de-julio', name: '9 de Julio', flag: '⚽', skill: 61 },
+    ];
+    const clubEntry: LiveMatchdayEntry = {
+      matchId: 'c1',
+      homeTeamId: 'vm-alumni',
+      awayTeamId: 'vm-9-de-julio',
+      timeline: { goals: [], finalHomeScore: 0, finalAwayScore: 0, hasExtraTime: false },
+      groupName: 'Liga A · Fecha 1',
+      isFavorite: false,
+      homeEnergy: 100,
+      awayEnergy: 100,
+      energyHidden: true,
+    };
+
+    it('muestra el nombre del club (no el id) porque no tiene código de país', () => {
+      useTournamentStore.setState({ teams: clubs });
+      useLiveMatchdayStore.setState({
+        session: { title: 'Liga A · Fecha 1', entries: [clubEntry], allResults: [], hiddenCount: 0 },
+      });
+      render(<LiveMatchdayOverlay />);
+
+      expect(screen.getByText('Alumni')).toBeInTheDocument();
+      expect(screen.getByText('9 de Julio')).toBeInTheDocument();
+      expect(screen.queryByText('VM-ALUMNI')).not.toBeInTheDocument();
+    });
+
+    it('no muestra energía aunque la fatiga esté activada (la liga no la modela)', () => {
+      useTournamentStore.setState({ teams: clubs });
+      useLiveMatchdayStore.setState({
+        session: { title: 'Liga A · Fecha 1', entries: [clubEntry], allResults: [], hiddenCount: 0 },
+      });
+      render(<LiveMatchdayOverlay />);
+
+      expect(screen.queryByText('100%')).not.toBeInTheDocument();
+    });
+  });
+
   it('es un diálogo modal rotulado con el título de la jornada', () => {
     openSession();
     render(<LiveMatchdayOverlay />);

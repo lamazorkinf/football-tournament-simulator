@@ -3,6 +3,10 @@ import { Trophy, Play, Hammer, ChevronRight, Shield } from 'lucide-react';
 import { useLeagueModeStore, deriveLeagueTabs, resolveLeagueTab } from '../../store/useLeagueModeStore';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useFavoritesStore } from '../../store/useFavoritesStore';
+import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiveMatchdayStore';
+import { type MatchResult } from '../../store/useMatchResultsStore';
+import { buildMatchTimeline, hashSeed } from '../../core/liveMatch';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
@@ -123,7 +127,8 @@ function Centered({ children }: { children: React.ReactNode }) {
 function LeaguePanel({ league }: { league: LeagueTournament }) {
   const teams = useTournamentStore((s) => s.teams);
   const busy = useLeagueModeStore((s) => s.busy);
-  const { simulateLeagueMatchday } = useLeagueModeStore();
+  const favoriteTeamIds = useFavoritesStore((s) => s.favoriteTeamIds);
+  const openLiveSession = useLiveMatchdayStore((s) => s.openSession);
 
   const nextMatchday = useMemo(() => {
     const unplayed = league.state.matches.filter((m) => !m.isPlayed);
@@ -137,6 +142,46 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
   );
 
   const currentFixtures = league.state.matches.filter((m) => m.matchday === nextMatchday);
+
+  // Juega una fecha y la reproduce en vivo (mismo overlay que el Mundial):
+  // commit-then-replay. La fecha se simula/persiste en el store; después se
+  // arma el timeline minuto a minuto desde el marcador final (seed = matchId).
+  const playFechaLive = async (md: number) => {
+    await useLeagueModeStore.getState().simulateLeagueMatchday(league.id, md);
+    const updated = useLeagueModeStore
+      .getState()
+      .tournaments.find((t) => t.id === league.id) as LeagueTournament | undefined;
+    if (!updated) return;
+    const played = updated.state.matches.filter(
+      (m) => m.matchday === md && m.isPlayed && m.homeScore != null && m.awayScore != null,
+    );
+    if (played.length === 0) return;
+
+    const favs = new Set(favoriteTeamIds);
+    const title = `Liga ${league.division} · Fecha ${md}`;
+    const entries: LiveMatchdayEntry[] = played.map((m) => ({
+      matchId: m.id,
+      homeTeamId: m.homeTeamId,
+      awayTeamId: m.awayTeamId,
+      timeline: buildMatchTimeline({ homeScore: m.homeScore!, awayScore: m.awayScore!, seed: hashSeed(m.id) }),
+      groupName: title,
+      isFavorite: favs.has(m.homeTeamId) || favs.has(m.awayTeamId),
+      homeEnergy: 100,
+      awayEnergy: 100,
+      energyHidden: true, // la liga no modela energía
+    }));
+    const allResults: MatchResult[] = played.map((m) => ({
+      homeTeam: teamName(teams, m.homeTeamId),
+      awayTeam: teamName(teams, m.awayTeamId),
+      homeTeamId: m.homeTeamId,
+      awayTeamId: m.awayTeamId,
+      homeScore: m.homeScore!,
+      awayScore: m.awayScore!,
+      groupName: title,
+      isFavorite: favs.has(m.homeTeamId) || favs.has(m.awayTeamId),
+    }));
+    openLiveSession({ title, entries, allResults, hiddenCount: 0 });
+  };
 
   const playAll = async () => {
     for (let md = 1; md <= totalMatchdays; md++) {
@@ -153,8 +198,8 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
             <div className="flex gap-2">
               {nextMatchday !== null ? (
                 <>
-                  <Button size="sm" onClick={() => simulateLeagueMatchday(league.id, nextMatchday)} loading={busy} className="gap-1">
-                    <Play className="w-3 h-3" /> Fecha {nextMatchday}
+                  <Button size="sm" onClick={() => playFechaLive(nextMatchday)} loading={busy} className="gap-1">
+                    <Play className="w-3 h-3" /> Fecha {nextMatchday} en vivo
                   </Button>
                   <Button size="sm" variant="secondary" onClick={playAll} loading={busy}>
                     Jugar todo

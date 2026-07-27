@@ -13,6 +13,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { LiveSpeed } from '../../hooks/useLiveMatchPlayback';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
+import { hasCountryCode } from '../../data/country-codes';
 import { Pause, Play, Radio, Star, X } from 'lucide-react';
 import { useEffect } from 'react';
 import type { Team } from '../../types';
@@ -195,6 +196,13 @@ function LiveGridCard({
   // se refleja en las tarjetas ya montadas, no solo tras recargar.
   const fatigueEnabled = useConfigStore((s) => s.config.fatigue.enabled);
   const { homeEnergy, awayEnergy } = entry;
+  // Los modos de ligas no modelan energía: la tarjeta la oculta (energyHidden).
+  const showEnergy = fatigueEnabled && !entry.energyHidden;
+
+  // Etiqueta del equipo: para selecciones el id es el código de país (ARG, BRA);
+  // para clubes el id es un slug, así que se muestra el nombre real.
+  const homeLabel = home ? (hasCountryCode(home.id) ? home.id.toUpperCase() : home.name) : entry.homeTeamId;
+  const awayLabel = away ? (hasCountryCode(away.id) ? away.id.toUpperCase() : away.name) : entry.awayTeamId;
 
   // El "FINAL" de CADA tarjeta se decide con el minuto de cierre de SU
   // partido, no con la fase del reloj compartido: si otro partido de la
@@ -254,8 +262,8 @@ function LiveGridCard({
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {home && <TeamFlag teamId={home.id} teamName={home.name} size={24} />}
-          <span className={teamClass(homeLeads)}>{home?.id.toUpperCase() ?? entry.homeTeamId}</span>
-          {fatigueEnabled && (
+          <span className={teamClass(homeLeads)}>{homeLabel}</span>
+          {showEnergy && (
             <span className="text-[10px] text-grass-soft tabular-nums flex-shrink-0">
               {Math.round(homeEnergy)}%
             </span>
@@ -269,12 +277,12 @@ function LiveGridCard({
           {score.homeScore} - {score.awayScore}
         </span>
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          {fatigueEnabled && (
+          {showEnergy && (
             <span className="text-[10px] text-grass-soft tabular-nums flex-shrink-0">
               {Math.round(awayEnergy)}%
             </span>
           )}
-          <span className={teamClass(awayLeads)}>{away?.id.toUpperCase() ?? entry.awayTeamId}</span>
+          <span className={teamClass(awayLeads)}>{awayLabel}</span>
           {away && <TeamFlag teamId={away.id} teamName={away.name} size={24} />}
         </div>
       </div>

@@ -21,6 +21,12 @@ export interface LiveMatchdayEntry {
   // "se sigue jugando" en pantalla.
   homeEnergy: number;
   awayEnergy: number;
+  /**
+   * Oculta el indicador de energía en la tarjeta aunque la fatiga esté activada
+   * en Ajustes. Los modos de ligas no modelan energía (todos juegan al 100%),
+   * así que mostrar "100%" en cada club sería ruido engañoso.
+   */
+  energyHidden?: boolean;
 }
 
 export interface LiveMatchdaySession {
