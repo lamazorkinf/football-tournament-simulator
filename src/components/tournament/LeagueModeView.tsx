@@ -12,17 +12,10 @@ import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { CrestManager } from './CrestManager';
 import { isLeagueComplete } from '../../core/formats/league';
+import { roundLabel } from '../../core/formats/rounds';
 import type { LeagueTournament, CupTournament } from '../../core/formats/modeTournament';
 import type { TwoLeggedTie } from '../../core/formats/cup';
 import type { Team } from '../../types';
-
-const ROUND_LABEL: Record<TwoLeggedTie['round'], string> = {
-  'round-of-32': '32avos',
-  'round-of-16': 'Octavos',
-  quarter: 'Cuartos',
-  semi: 'Semis',
-  final: 'Final',
-};
 
 function teamName(teams: Team[], id: string | null): string {
   if (!id) return '—';
@@ -277,7 +270,7 @@ function CupPanel({ cup }: { cup: CupTournament }) {
           <Card key={i}>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
-                <CardTitle>{ROUND_LABEL[round[0].round]}</CardTitle>
+                <CardTitle>{roundLabel(round[0].round)}</CardTitle>
                 {pending.length > 0 && (
                   <Button size="sm" onClick={() => playRound(round)} loading={busy} className="gap-1">
                     <Play className="w-3 h-3" /> Jugar ronda

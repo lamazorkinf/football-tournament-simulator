@@ -7,6 +7,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { History, Filter, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { matchHistoryService, type MatchHistoryEntry, type MatchCursor } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { stageLabel } from '../../core/formats/rounds';
 
 interface MatchHistoryProps {
   teams: Team[];
@@ -131,15 +132,6 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
-  };
-
-  const getStageLabel = (stage: string) => {
-    const labels = {
-      qualifier: 'Clasificatorias',
-      'world-cup-group': 'Mundial · Grupos',
-      'world-cup-knockout': 'Mundial · Playoffs',
-    };
-    return labels[stage as keyof typeof labels] || stage;
   };
 
   const getSkillChangeIcon = (change: number) => {
@@ -281,7 +273,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-arcade text-[10px] uppercase bg-black/40 text-gold border border-gold px-2 py-1">
-                          {getStageLabel(match.stage)}
+                          {stageLabel(match.stage)}
                         </span>
                         {match.groupName && (
                           <span className="font-arcade text-[10px] uppercase bg-black/40 text-grass-soft border border-grass px-2 py-1">
