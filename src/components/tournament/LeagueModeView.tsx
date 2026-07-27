@@ -6,6 +6,7 @@ import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
+import { CrestManager } from './CrestManager';
 import { isLeagueComplete } from '../../core/formats/league';
 import type { LeagueTournament, CupTournament } from '../../core/formats/modeTournament';
 import type { TwoLeggedTie } from '../../core/formats/cup';
@@ -50,40 +51,21 @@ export function LeagueModeView() {
   if (status === 'error') {
     return <Centered>No se pudo cargar el modo. Revisá la conexión.</Centered>;
   }
-  if (status === 'needs-seed') {
-    return (
-      <Centered>
-        <Shield className="w-12 h-12 text-gold mx-auto mb-4" />
-        <p className="font-arcade text-sm text-gold mb-3">{activeMode?.name} — sin equipos todavía</p>
-        <p className="text-sm text-grass-soft max-w-md">
-          Este modo todavía no tiene sus divisiones cargadas. En cuanto se siembren los clubes
-          (con su división y skill inicial), vas a poder iniciar la temporada {year} acá.
-        </p>
-      </Centered>
-    );
-  }
-
-  // status === 'ready'
-  if (tournaments.length === 0) {
-    return (
-      <Centered>
-        <Trophy className="w-12 h-12 text-gold mx-auto mb-4" />
-        <p className="font-arcade text-sm text-gold mb-4">Temporada {year} lista para arrancar</p>
-        <Button onClick={startSeason} loading={busy} className="gap-2">
-          <Play className="w-4 h-4" /> Iniciar temporada {year}
-        </Button>
-      </Centered>
-    );
-  }
 
   const leagues = tournaments.filter((t): t is LeagueTournament => t.format === 'league');
   const cup = tournaments.find((t): t is CupTournament => t.format === 'cup') ?? null;
-  const tabs: Array<{ key: string; label: string }> = [
-    ...leagues.map((l) => ({ key: `league-${l.division}`, label: `Liga ${l.division}` })),
-    ...(cup ? [{ key: 'cup', label: 'Copa' }] : []),
-    { key: 'season', label: 'Temporada' },
-  ];
+  const seasonReady = status === 'ready' && tournaments.length > 0;
 
+  // La pestaña Escudos está siempre disponible (aun sin temporada iniciada);
+  // las de la temporada aparecen cuando hay torneos en juego.
+  const seasonTabs: Array<{ key: string; label: string }> = seasonReady
+    ? [
+        ...leagues.map((l) => ({ key: `league-${l.division}`, label: `Liga ${l.division}` })),
+        ...(cup ? [{ key: 'cup', label: 'Copa' }] : []),
+        { key: 'season', label: 'Temporada' },
+      ]
+    : [{ key: 'main', label: 'Inicio' }];
+  const tabs = [...seasonTabs, { key: 'crests', label: 'Escudos' }];
   const activeTab = tabs.some((t) => t.key === tab) ? tab : tabs[0].key;
 
   return (
@@ -104,11 +86,35 @@ export function LeagueModeView() {
         ))}
       </div>
 
-      {leagues.map(
-        (l) => activeTab === `league-${l.division}` && <LeaguePanel key={l.id} league={l} />,
+      {activeTab === 'crests' && <CrestManager />}
+
+      {activeTab === 'main' && status === 'needs-seed' && (
+        <Centered>
+          <Shield className="w-12 h-12 text-gold mx-auto mb-4" />
+          <p className="font-arcade text-sm text-gold mb-3">{activeMode?.name} — sin equipos todavía</p>
+          <p className="text-sm text-grass-soft max-w-md">
+            Este modo todavía no tiene sus divisiones cargadas. En cuanto se siembren los clubes
+            (con su división y skill inicial), vas a poder iniciar la temporada {year} acá.
+          </p>
+        </Centered>
       )}
-      {cup && activeTab === 'cup' && <CupPanel cup={cup} />}
-      {activeTab === 'season' && <SeasonPanel leagues={leagues} />}
+
+      {activeTab === 'main' && status === 'ready' && (
+        <Centered>
+          <Trophy className="w-12 h-12 text-gold mx-auto mb-4" />
+          <p className="font-arcade text-sm text-gold mb-4">Temporada {year} lista para arrancar</p>
+          <Button onClick={startSeason} loading={busy} className="gap-2">
+            <Play className="w-4 h-4" /> Iniciar temporada {year}
+          </Button>
+        </Centered>
+      )}
+
+      {seasonReady &&
+        leagues.map(
+          (l) => activeTab === `league-${l.division}` && <LeaguePanel key={l.id} league={l} />,
+        )}
+      {seasonReady && cup && activeTab === 'cup' && <CupPanel cup={cup} />}
+      {seasonReady && activeTab === 'season' && <SeasonPanel leagues={leagues} />}
     </div>
   );
 }

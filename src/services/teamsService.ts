@@ -119,6 +119,7 @@ export const teamsService = {
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.region !== undefined) dbUpdates.region = updates.region;
     if (updates.skill !== undefined) dbUpdates.skill = updates.skill;
+    if (updates.flag !== undefined) dbUpdates.flag = updates.flag;
 
     const { data, error } = await (supabase
       .from('teams') as any)
