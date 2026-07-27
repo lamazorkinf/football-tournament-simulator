@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured, escapeOrValue } from '../lib/supabase';
 import type { Database } from '../types/database';
+import type { MatchHistoryStage } from '../core/formats/rounds';
 
 type MatchHistoryRow = Database['public']['Tables']['match_history']['Row'];
 type MatchHistoryInsert = Database['public']['Tables']['match_history']['Insert'];
@@ -10,7 +11,7 @@ export interface MatchHistoryEntry {
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
-  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup';
+  stage: MatchHistoryStage;
   groupName?: string;
   region?: string;
   tournamentId?: string;
@@ -31,7 +32,7 @@ export interface CreateMatchHistoryParams {
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
-  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup';
+  stage: MatchHistoryStage;
   groupName?: string;
   region?: string;
   tournamentId?: string;

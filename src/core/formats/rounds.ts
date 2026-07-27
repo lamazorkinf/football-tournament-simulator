@@ -123,6 +123,20 @@ export function roundLongLabel(round: RoundKey): string {
 }
 
 /**
+ * Las etapas que acepta `match_history` (CHECK de la migración 018). Estaba
+ * repetida a mano en cada firma que la necesitaba; acá está una sola vez.
+ */
+export type MatchHistoryStage =
+  | 'qualifier'
+  | 'world-cup-group'
+  | 'world-cup-knockout'
+  | 'continental'
+  | 'confed-group'
+  | 'confed-knockout'
+  | 'league'
+  | 'cup';
+
+/**
  * Rótulo de una etapa (el `stage` que se estampa en cada partido y viaja a
  * `match_history`). Cubre las 8 etapas permitidas por la migración 018 más las
  * genéricas de los formatos nuevos. Un `stage` desconocido se devuelve crudo,

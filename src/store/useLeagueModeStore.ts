@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import type { GameMode, Match, Team } from '../types';
+import { updateTeamSkill, getStageImportance } from '../core/engine';
 import {
-  simulateMatch,
-  calculateSkillChanges,
-  updateTeamSkill,
-  getStageImportance,
-  simulateExtraTimeGoals,
-  simulatePenalties,
-} from '../core/engine';
+  matchHistoryRow,
+  playOneMatch,
+  playTie,
+  tieHistoryRows,
+  type HistoryRow,
+} from '../core/matchPipeline';
 import { getEngineConfig } from './useConfigStore';
 import {
   createLeagueState,
@@ -130,21 +130,7 @@ function applySkillDeltas(deltas: Map<string, number>): Map<string, number> {
 async function persistMatches(
   modeId: string,
   tournamentId: string,
-  rows: Array<{
-    homeId: string;
-    awayId: string;
-    homeScore: number;
-    awayScore: number;
-    stage: 'league' | 'cup';
-    homeBefore: number;
-    awayBefore: number;
-    homeAfter: number;
-    awayAfter: number;
-    homeChange: number;
-    awayChange: number;
-    name: string;
-    wentToExtraTime?: boolean;
-  }>,
+  rows: HistoryRow[],
   newSkills: Map<string, number>,
 ): Promise<void> {
   if (!isSupabaseConfigured()) return;
@@ -177,32 +163,12 @@ async function persistMatches(
 }
 
 // ---------------------------------------------------------------------------
-// Simulación de un partido (liga): devuelve resultado + cambios de Elo
+// Simulación
 // ---------------------------------------------------------------------------
 
-interface PlayedMatch {
-  homeScore: number;
-  awayScore: number;
-  homeChange: number;
-  awayChange: number;
-}
-
-function playMatch(home: Team, away: Team, stage: 'league' | 'cup', rng?: () => number): PlayedMatch {
-  const config = getEngineConfig();
-  const importance = getStageImportance(stage, undefined, config);
-  const result = simulateMatch({
-    home: { skill: home.skill, energy: 100 },
-    away: { skill: away.skill, energy: 100 },
-    importance,
-    neutral: false, // hay localía: cada equipo juega de local su partido/su leg
-    rng,
-  });
-  return {
-    homeScore: result.homeScore,
-    awayScore: result.awayScore,
-    homeChange: result.homeSkillChange,
-    awayChange: result.awaySkillChange,
-  };
+/** Peso Elo de una etapa de este modo, con la configuración vigente. */
+function importanceOf(stage: 'league' | 'cup'): number {
+  return getStageImportance(stage, undefined, getEngineConfig());
 }
 
 // ---------------------------------------------------------------------------
@@ -437,26 +403,17 @@ async function simulateLeagueMatches(
       const home = teamById(m.homeTeamId);
       const away = teamById(m.awayTeamId);
       if (!home || !away) continue;
-      const r = playMatch(home, away, 'league', rng);
+      const r = playOneMatch(home, away, {
+        importance: importanceOf('league'),
+        neutral: false, // hay localía: cada equipo juega de local su partido
+        rng,
+      });
       m.homeScore = r.homeScore;
       m.awayScore = r.awayScore;
       m.isPlayed = true;
       deltas.set(home.id, (deltas.get(home.id) ?? 0) + r.homeChange);
       deltas.set(away.id, (deltas.get(away.id) ?? 0) + r.awayChange);
-      historyRows.push({
-        homeId: home.id,
-        awayId: away.id,
-        homeScore: r.homeScore,
-        awayScore: r.awayScore,
-        stage: 'league',
-        homeBefore: home.skill,
-        awayBefore: away.skill,
-        homeAfter: updateTeamSkill(home.skill, r.homeChange),
-        awayAfter: updateTeamSkill(away.skill, r.awayChange),
-        homeChange: r.homeChange,
-        awayChange: r.awayChange,
-        name: league.name,
-      });
+      historyRows.push(matchHistoryRow(home, away, r, { stage: 'league', name: league.name }));
     }
 
     const newState: LeagueState = {
@@ -495,71 +452,29 @@ function playTwoLeggedTie(
   deltas: Map<string, number>;
   historyRows: (cupName: string) => Parameters<typeof persistMatches>[2];
 } {
-  const config = getEngineConfig();
-  const importance = getStageImportance('cup', undefined, config);
+  const played = playTie(home, away, {
+    legs: 2,
+    importance: importanceOf('cup'),
+    neutral: false, // hay localía: cada equipo juega de local su leg
+    rng,
+  });
 
-  // Ida: home de local. Vuelta: away de local.
-  const leg1 = simulateMatch({ home: { skill: home.skill, energy: 100 }, away: { skill: away.skill, energy: 100 }, importance, neutral: false, rng });
-  const leg2 = simulateMatch({ home: { skill: away.skill, energy: 100 }, away: { skill: home.skill, energy: 100 }, importance, neutral: false, rng });
+  const [leg1Score, leg2Score] = played.legs;
+  const filledLeg1: Match = { ...tie.leg1!, homeScore: leg1Score.homeScore, awayScore: leg1Score.awayScore, isPlayed: true };
+  const filledLeg2: Match = { ...tie.leg2!, homeScore: leg2Score.homeScore, awayScore: leg2Score.awayScore, isPlayed: true };
 
-  let leg2Home = leg2.homeScore; // goles de away (local en la vuelta)
-  let leg2Away = leg2.awayScore; // goles de home (visitante en la vuelta)
-  let extraTime = false;
-  let penalties: { homeScore: number; awayScore: number } | undefined;
-
-  // Global desde la perspectiva de home (local de la ida).
-  let aggHome = leg1.homeScore + leg2Away;
-  let aggAway = leg1.awayScore + leg2Home;
-
-  if (aggHome === aggAway) {
-    extraTime = true;
-    // Prórroga en la vuelta: mismo contexto (away de local).
-    const et = simulateExtraTimeGoals({ home: { skill: away.skill, energy: 100 }, away: { skill: home.skill, energy: 100 }, importance, neutral: false, rng });
-    leg2Home += et.homeGoals;
-    leg2Away += et.awayGoals;
-    aggHome = leg1.homeScore + leg2Away;
-    aggAway = leg1.awayScore + leg2Home;
-    if (aggHome === aggAway) {
-      // Penales desde la perspectiva de home (tie.homeTeamId).
-      penalties = simulatePenalties(home.skill, away.skill, rng);
-    }
-  }
-
-  // Elo por leg, sobre el marcador final de cada uno (la ida a 90', la vuelta a
-  // 90'/120'). Los penales no mueven el Elo (igual que en el motor).
-  const leg1Changes = calculateSkillChanges(home.skill, away.skill, leg1.homeScore, leg1.awayScore, importance);
-  // En la vuelta el local es `away`: los cambios se calculan con away como "home".
-  const leg2Changes = calculateSkillChanges(away.skill, home.skill, leg2Home, leg2Away, importance);
-
-  const deltas = new Map<string, number>();
-  deltas.set(home.id, leg1Changes.homeChange + leg2Changes.awayChange);
-  deltas.set(away.id, leg1Changes.awayChange + leg2Changes.homeChange);
-
-  const filledLeg1: Match = { ...tie.leg1!, homeScore: leg1.homeScore, awayScore: leg1.awayScore, isPlayed: true };
-  const filledLeg2: Match = { ...tie.leg2!, homeScore: leg2Home, awayScore: leg2Away, isPlayed: true };
-
-  const resolvedTie = resolveTie({ ...tie, leg1: filledLeg1, leg2: filledLeg2, extraTime, penalties });
-
-  const homeAfter = updateTeamSkill(home.skill, deltas.get(home.id)!);
-  const awayAfter = updateTeamSkill(away.skill, deltas.get(away.id)!);
+  const resolvedTie = resolveTie({
+    ...tie,
+    leg1: filledLeg1,
+    leg2: filledLeg2,
+    extraTime: played.extraTime,
+    penalties: played.penalties,
+  });
 
   return {
     tie: resolvedTie,
-    deltas,
-    historyRows: (cupName: string) => [
-      {
-        homeId: home.id, awayId: away.id, homeScore: leg1.homeScore, awayScore: leg1.awayScore,
-        stage: 'cup', homeBefore: home.skill, awayBefore: away.skill,
-        homeAfter: updateTeamSkill(home.skill, leg1Changes.homeChange), awayAfter: updateTeamSkill(away.skill, leg1Changes.awayChange),
-        homeChange: leg1Changes.homeChange, awayChange: leg1Changes.awayChange, name: `${cupName} · Ida`,
-      },
-      {
-        homeId: away.id, awayId: home.id, homeScore: leg2Home, awayScore: leg2Away,
-        stage: 'cup', homeBefore: away.skill, awayBefore: home.skill,
-        homeAfter: awayAfter, awayAfter: homeAfter,
-        homeChange: leg2Changes.homeChange, awayChange: leg2Changes.awayChange, name: `${cupName} · Vuelta`,
-        wentToExtraTime: extraTime,
-      },
-    ],
+    deltas: played.deltas,
+    historyRows: (cupName: string) =>
+      tieHistoryRows(home, away, played, { stage: 'cup', name: cupName }),
   };
 }
