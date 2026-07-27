@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { CalendarState, Cycle, CyclePhase } from '../../types';
-import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable, getPhaseMatchdayCount, isCurrentMatchdayComplete, getNextCalendarState } from '../calendar';
+import { getPhaseMatches, getMatchdayMatches, getPlayableMatches, isMatchPlayable, getPhaseMatchdayCount, isCurrentMatchdayComplete, getNextCalendarState, phaseYear } from '../calendar';
 import {
   makeCycle,
   makeContinentalStage,
@@ -230,5 +230,22 @@ describe('getNextCalendarState — todos los bordes de fase', () => {
   it.each(boundaries)('desde %s salta a la fase siguiente', (from, expected) => {
     const cycle = makeCycle({ calendar: { phase: from, matchday: 1 } });
     expect(getNextCalendarState(cycle)).toEqual(expected);
+  });
+});
+
+describe('phaseYear — cada fase en su año', () => {
+  it('ancla el Mundial en el año del ciclo y las fases previas antes', () => {
+    // Mundial 2026: continental 2023, confed 2024, eliminatorias 2025, mundial 2026.
+    expect(phaseYear('continental', 2026)).toBe(2023);
+    expect(phaseYear('confed', 2026)).toBe(2024);
+    expect(phaseYear('wc-qualifiers', 2026)).toBe(2025);
+    expect(phaseYear('wc-groups', 2026)).toBe(2026);
+    expect(phaseYear('wc-knockout', 2026)).toBe(2026);
+    expect(phaseYear('completed', 2026)).toBe(2026);
+  });
+
+  it('funciona para otro ciclo (2030)', () => {
+    expect(phaseYear('continental', 2030)).toBe(2027);
+    expect(phaseYear('wc-groups', 2030)).toBe(2030);
   });
 });

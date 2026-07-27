@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Cycle, Team, KnockoutMatch, Region } from '../../types';
 import { CYCLE_REGIONS } from '../../core/cycle';
-import { isMatchPlayable } from '../../core/calendar';
+import { isMatchPlayable, phaseYear } from '../../core/calendar';
 import { continentalRoundLabel, isContinentalDrawn } from '../../utils/cycleProgress';
 import { REGION_LABELS } from '../../utils/regionLabels';
 import { useTournamentStore } from '../../store/useTournamentStore';
@@ -74,7 +74,7 @@ export function ContinentalView({ cycle, teams, onNavigate }: ContinentalViewPro
         <CardHeader>
           <div className="flex items-center gap-3">
             <Globe2 className="w-6 h-6 text-gold" />
-            <CardTitle>Torneos Continentales</CardTitle>
+            <CardTitle>Torneos Continentales {phaseYear('continental', cycle.year)}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>

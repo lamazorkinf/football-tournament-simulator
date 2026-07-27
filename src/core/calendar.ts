@@ -17,6 +17,26 @@ export const CYCLE_PHASE_ORDER: CyclePhase[] = [
   'completed',
 ];
 
+/**
+ * Años previos al Mundial en que se juega cada fase del ciclo. El Mundial es el
+ * año ancla (Y = `cycle.year`); las fases previas caen en años anteriores:
+ * Eliminatorias en Y-1, Confederaciones en Y-2, Continental en Y-3. Así el
+ * ciclo se organiza por año como en el calendario real de selecciones.
+ */
+const PHASE_YEAR_OFFSET: Record<CyclePhase, number> = {
+  continental: 3,
+  confed: 2,
+  'wc-qualifiers': 1,
+  'wc-groups': 0,
+  'wc-knockout': 0,
+  completed: 0,
+};
+
+/** Año en que se juega una fase, dado el año del Mundial (año ancla del ciclo). */
+export function phaseYear(phase: CyclePhase, worldCupYear: number): number {
+  return worldCupYear - PHASE_YEAR_OFFSET[phase];
+}
+
 function bracketMatches(b: ContinentalBracket): Match[] {
   return [
     ...b.roundOf64,

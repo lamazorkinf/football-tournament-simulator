@@ -22,7 +22,7 @@ describe('ConfederationsCupView', () => {
 
     render(<ConfederationsCupView cycle={cycle} teams={teams} />);
 
-    expect(screen.getByText('Copa Confederaciones')).toBeInTheDocument();
+    expect(screen.getByText(/Copa Confederaciones/)).toBeInTheDocument();
     const playButtons = screen.getAllByRole('button', { name: /jugar/i });
     // md1: 2 partidos jugables por grupo × 2 grupos = 4.
     expect(playButtons).toHaveLength(4);

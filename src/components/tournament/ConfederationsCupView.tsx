@@ -1,5 +1,5 @@
 import type { Cycle, Team, Match, KnockoutMatch, WorldCupGroup } from '../../types';
-import { isMatchPlayable } from '../../core/calendar';
+import { isMatchPlayable, phaseYear } from '../../core/calendar';
 import { isConfederationsDrawn } from '../../utils/cycleProgress';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -75,7 +75,7 @@ export function ConfederationsCupView({ cycle, teams, onNavigate }: Confederatio
         <CardHeader>
           <div className="flex items-center gap-3">
             <Award className="w-6 h-6 text-gold" />
-            <CardTitle>Copa Confederaciones</CardTitle>
+            <CardTitle>Copa Confederaciones {phaseYear('confed', cycle.year)}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
