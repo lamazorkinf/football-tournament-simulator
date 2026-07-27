@@ -385,9 +385,15 @@ const loadTournamentFromNormalizedSchema = async (
 
 export const normalizedTournamentService = {
   /**
-   * Save or update tournament in normalized schema
+   * Save or update tournament in normalized schema.
+   *
+   * `modeId` es OBLIGATORIO al crear: hasta la migración 018 sólo existía el
+   * modo selecciones y el INSERT se apoyaba en el DEFAULT 'selecciones' de la
+   * columna, así que un segundo modo `national-cycle` habría escrito sus ciclos
+   * dentro de selecciones. En el UPDATE no se toca `mode_id`: un torneo no
+   * cambia de modo, y reescribirlo con el modo activo lo movería de mundo.
    */
-  async saveTournament(tournament: Tournament): Promise<string | null> {
+  async saveTournament(tournament: Tournament, modeId: string): Promise<string | null> {
     if (!isSupabaseConfigured()) {
       console.log('Supabase not configured, tournament not saved to database');
       return null;
@@ -443,6 +449,7 @@ export const normalizedTournamentService = {
             id: tournament.id,
             name: tournament.name,
             year: tournament.year,
+            mode_id: modeId,
             status,
             is_qualifiers_complete: tournament.isQualifiersComplete,
             has_any_match_played: tournament.hasAnyMatchPlayed,

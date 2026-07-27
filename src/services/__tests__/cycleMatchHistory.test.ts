@@ -88,18 +88,22 @@ describe('backfillCycleMatchHistory — idempotencia', () => {
     vi.spyOn(matchHistoryService, 'getExistingCycleMatchIds').mockResolvedValue(new Set(['c-final']));
     const batchSpy = vi.spyOn(matchHistoryService, 'createMatchesBatch').mockResolvedValue([]);
 
-    const inserted = await backfillCycleMatchHistory(cycle, teams);
+    const inserted = await backfillCycleMatchHistory(cycle, teams, 'selecciones');
 
     expect(inserted).toBe(1);
     expect(batchSpy).toHaveBeenCalledTimes(1);
     const arg = batchSpy.mock.calls[0][0];
     expect(arg.map((p) => (p.metadata as any).cycleMatchId)).toEqual(['cf-g1']);
+    // El modo tiene que viajar al batch: sin esto las filas caían en el
+    // DEFAULT 'selecciones' de la columna y cualquier modo nuevo escribía
+    // su historial dentro de selecciones.
+    expect(batchSpy.mock.calls[0][1]).toBe('selecciones');
     vi.restoreAllMocks();
   });
 
   it('no-op sin Supabase', async () => {
     vi.spyOn(supa, 'isSupabaseConfigured').mockReturnValue(false);
-    const inserted = await backfillCycleMatchHistory(cycle, teams);
+    const inserted = await backfillCycleMatchHistory(cycle, teams, 'selecciones');
     expect(inserted).toBe(0);
     vi.restoreAllMocks();
   });

@@ -108,7 +108,11 @@ export function collectPlayedCycleMatches(cycle: Cycle, teams: Team[]): CreateMa
  * que todavía no estén (idempotente por metadata.cycleMatchId). No-op sin
  * Supabase. Devuelve cuántas filas insertó.
  */
-export async function backfillCycleMatchHistory(cycle: Cycle, teams: Team[]): Promise<number> {
+export async function backfillCycleMatchHistory(
+  cycle: Cycle,
+  teams: Team[],
+  modeId: string,
+): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
   const all = collectPlayedCycleMatches(cycle, teams);
   if (all.length === 0) return 0;
@@ -118,6 +122,6 @@ export async function backfillCycleMatchHistory(cycle: Cycle, teams: Team[]): Pr
     return cid != null && !existing.has(cid);
   });
   if (missing.length === 0) return 0;
-  await matchHistoryService.createMatchesBatch(missing);
+  await matchHistoryService.createMatchesBatch(missing, modeId);
   return missing.length;
 }

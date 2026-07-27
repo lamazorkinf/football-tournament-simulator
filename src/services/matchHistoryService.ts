@@ -329,8 +329,18 @@ export const matchHistoryService = {
     return ids;
   },
 
-  // Batch create multiple match history entries
-  async createMatchesBatch(matchesParams: CreateMatchHistoryParams[]): Promise<MatchHistoryEntry[]> {
+  /**
+   * Batch create multiple match history entries.
+   *
+   * `modeId` es el modo al que pertenecen todas las filas del batch; cada fila
+   * puede traer el suyo y en ese caso gana. Sin esto, el batch caía en el
+   * DEFAULT 'selecciones' de la columna y el historial de cualquier modo nuevo
+   * terminaba dentro de selecciones.
+   */
+  async createMatchesBatch(
+    matchesParams: CreateMatchHistoryParams[],
+    modeId?: string,
+  ): Promise<MatchHistoryEntry[]> {
     if (!isSupabaseConfigured()) {
       // Return mock entries if Supabase is not configured
       return matchesParams.map(params => ({
@@ -355,6 +365,7 @@ export const matchHistoryService = {
       away_skill_after: params.awaySkillAfter,
       home_skill_change: params.homeSkillChange,
       away_skill_change: params.awaySkillChange,
+      ...(params.modeId ?? modeId ? { mode_id: params.modeId ?? modeId } : {}),
       metadata: (params.metadata || {}) as any,
       went_to_extra_time: params.wentToExtraTime ?? false,
     }));
