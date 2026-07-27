@@ -27,16 +27,17 @@ const teamToDbInsert = (team: Team): TeamInsert => ({
 });
 
 export const teamsService = {
-  // Get all teams
-  async getAllTeams(): Promise<Team[]> {
+  // Get all teams. Con `modeId`, sólo los equipos de ese modo (aislamiento entre
+  // competiciones); sin él, todos (compat/legacy).
+  async getAllTeams(modeId?: string): Promise<Team[]> {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured');
     }
 
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*')
-      .order('name');
+    let query = supabase.from('teams').select('*');
+    if (modeId) query = query.eq('mode_id', modeId);
+
+    const { data, error } = await query.order('name');
 
     if (error) throw error;
     return data.map(dbTeamToTeam);

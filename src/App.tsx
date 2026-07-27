@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
+import { useModeStore } from './store/useModeStore';
 import { useLiveMatchStore } from './store/useLiveMatchStore';
 import { useLiveMatchdayStore } from './store/useLiveMatchdayStore';
 import { hydrateSettings } from './lib/hydrateSettings';
@@ -31,6 +32,7 @@ import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { ConnectionError } from './components/ui/ConnectionError';
 import { PixelBar } from './components/ui/PixelBar';
+import { ModeComingSoon } from './components/ui/ModeComingSoon';
 import { MobileActionProvider } from './hooks/useMobileAction';
 import { isContinentalDrawn, isConfederationsDrawn } from './utils/cycleProgress';
 import { Trophy } from 'lucide-react';
@@ -48,6 +50,8 @@ function App() {
   } = useTournamentStore();
 
   const { isCollapsed } = useSidebarCollapse();
+  const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
+  const activeModeName = useModeStore((s) => s.activeMode()?.name);
   const [currentView, setCurrentView] = useState<View>('wizard');
   const [isPauseOpen, setIsPauseOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
@@ -69,6 +73,13 @@ function App() {
   };
 
   // Load teams from database on mount
+  // Lista de modos (competiciones). Debe cargar antes que nada dependa del
+  // `kind` del modo activo; el id activo ya viene de localStorage, así que el
+  // filtrado por modo funciona aun antes de que resuelva esta llamada.
+  useEffect(() => {
+    useModeStore.getState().loadModes();
+  }, []);
+
   useEffect(() => {
     loadTeamsFromDatabase();
   }, [loadTeamsFromDatabase]);
@@ -124,7 +135,11 @@ function App() {
     );
   }
 
-  if (!currentTournament) {
+  // Sólo el modo selecciones bloquea hasta tener un torneo cargado. Los modos de
+  // ligas arrancan sin `currentTournament` (sus torneos son Etapa 2): ahí se cae
+  // a la pantalla principal con un placeholder, para no atrapar al usuario en un
+  // "Cargando…" sin salida (el selector de modo vive en el Sidebar).
+  if (!currentTournament && isNationalMode) {
     return (
       <>
         <Scanlines />
@@ -168,7 +183,7 @@ function App() {
       <Sidebar
         currentView={currentView}
         onViewChange={setCurrentView}
-        tournamentYear={currentTournament.year}
+        tournamentYear={currentTournament?.year ?? 0}
         lockedViews={lockedViews}
       />
 
@@ -179,17 +194,25 @@ function App() {
           <div className="px-4 py-2 flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="font-arcade text-xs text-white text-shadow-retro truncate">
-                {currentTournament.name}
+                {currentTournament?.name ?? 'Football Sim'}
               </h1>
             </div>
             <div className="flex-shrink-0">
-              <TournamentSelector />
+              {isNationalMode && <TournamentSelector />}
             </div>
           </div>
         </header>
 
         <main className="px-4 sm:px-6 lg:px-8 py-6">
-        {currentView === 'wizard' ? (
+        {!currentTournament ? (
+          // Modo de ligas sin torneo cargado todavía (Etapa 2). Ajustes es
+          // global y sigue accesible; el resto muestra el placeholder.
+          currentView === 'settings' ? (
+            <SettingsHub />
+          ) : (
+            <ModeComingSoon modeName={activeModeName} />
+          )
+        ) : currentView === 'wizard' ? (
           <TournamentWizard onNavigate={handleNavigate} />
         ) : currentView === 'matches' ? (
           <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />

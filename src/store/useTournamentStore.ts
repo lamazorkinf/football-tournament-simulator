@@ -48,6 +48,7 @@ import { performDraw, generateGroupMatches, initializeStandings } from '../utils
 import { isQualifiersDrawn, isContinentalDrawn, isConfederationsDrawn } from '../utils/cycleProgress';
 import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
+import { useModeStore } from './useModeStore';
 import { supabase } from '../lib/supabase';
 import { getEngineConfig } from './useConfigStore';
 import {
@@ -320,7 +321,8 @@ export const useTournamentStore = create<TournamentState>()(
         }
 
         try {
-          const dbTeams = await teamsService.getAllTeams();
+          const modeId = useModeStore.getState().activeModeId;
+          const dbTeams = await teamsService.getAllTeams(modeId);
           if (dbTeams && dbTeams.length > 0) {
             console.log(`Loaded ${dbTeams.length} teams from database`);
             const teamsWithTiers = updateTeamsTiers(dbTeams);
@@ -345,9 +347,25 @@ export const useTournamentStore = create<TournamentState>()(
 
           set({ initStatus: 'loading' });
 
+          // El ciclo mundialista (crear/cargar Cycle) sólo aplica a los modos
+          // de selecciones. En un modo de ligas (league-system) no hay Cycle:
+          // se deja el estado listo y sin torneo activo (los torneos de esos
+          // modos se manejan aparte, en su propia capa). Esto evita crear un
+          // "Mundial" fantasma al entrar a un modo de clubes.
+          const activeModeId = useModeStore.getState().activeModeId;
+          if (useModeStore.getState().activeModeKind() !== 'national-cycle') {
+            set({
+              tournaments: [],
+              currentTournamentId: null,
+              currentTournament: null,
+              initStatus: 'ready' as const,
+            });
+            return;
+          }
+
           try {
             // 1. Torneo activo: el más reciente por updated_at.
-            const latest = await adaptiveTournamentService.getLatestTournament();
+            const latest = await adaptiveTournamentService.getLatestTournament(activeModeId);
 
             // DB alcanzable pero vacía → primer arranque de la app.
             if (!latest) {
@@ -387,7 +405,7 @@ export const useTournamentStore = create<TournamentState>()(
           //    trae el más reciente (el activo). Este paso es best-effort: si
           //    falla, la app ya es usable con el torneo activo.
           try {
-            const summaries = await adaptiveTournamentService.getTournamentsList();
+            const summaries = await adaptiveTournamentService.getTournamentsList(activeModeId);
             const known = new Set(get().tournaments.map((t) => t.id));
             const missingIds = summaries.map((s) => s.id).filter((id) => !known.has(id));
 

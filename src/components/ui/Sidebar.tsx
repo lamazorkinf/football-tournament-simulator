@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import { Trophy, Globe2, BarChart3, Settings, History, CalendarDays, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight, Medal, Star, Route, Shield, Lock } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
+import { ModeSelector } from './ModeSelector';
+import { useModeStore } from '../../store/useModeStore';
 import { useSidebarCollapse } from '../../hooks/useSidebarCollapse';
 
 type View = 'wizard' | 'qualifiers' | 'worldcup' | 'stats' | 'settings' | 'history' | 'matches' | 'comparison' | 'tournaments' | 'champions' | 'continental' | 'confederations' | 'favorites';
@@ -47,6 +49,9 @@ const FOOTER_ITEM = { id: 'settings' as View, icon: Settings, label: 'Ajustes' }
 
 export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews }: SidebarProps) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
+  // El selector de torneos (por año del Mundial) sólo tiene sentido en el modo
+  // de selecciones; los modos de ligas manejan sus torneos por otra vía.
+  const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
 
   const renderItem = (item: { id: View; icon: LucideIcon; label: string }) => {
     const isActive = currentView === item.id;
@@ -115,8 +120,15 @@ export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews
           </button>
         </div>
 
-        {/* Tournament Selector */}
+        {/* Mode Selector (competición activa) */}
         {!isCollapsed && (
+          <div className="px-4 py-4 border-b-2 border-grass">
+            <ModeSelector />
+          </div>
+        )}
+
+        {/* Tournament Selector — sólo en modo selecciones */}
+        {!isCollapsed && isNationalMode && (
           <div className="px-4 py-4 border-b-2 border-grass">
             <TournamentSelector />
           </div>
