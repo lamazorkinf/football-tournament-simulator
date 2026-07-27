@@ -11,7 +11,8 @@ const dbTeamToTeam = (dbTeam: TeamRow): Team => ({
   id: dbTeam.id,
   name: dbTeam.name,
   flag: dbTeam.flag,
-  region: dbTeam.region,
+  region: dbTeam.region ?? undefined,
+  modeId: dbTeam.mode_id,
   skill: dbTeam.skill,
 });
 
@@ -20,7 +21,8 @@ const teamToDbInsert = (team: Team): TeamInsert => ({
   id: team.id,
   name: team.name,
   flag: team.flag,
-  region: team.region,
+  region: team.region ?? null,
+  ...(team.modeId ? { mode_id: team.modeId } : {}),
   skill: team.skill,
 });
 

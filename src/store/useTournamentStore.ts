@@ -2751,7 +2751,7 @@ export const useTournamentStore = create<TournamentState>()(
         }
 
         const byRegion: Record<Region, Team[]> = { Europe: [], America: [], Africa: [], Asia: [] };
-        for (const t of state.teams) byRegion[t.region].push(t);
+        for (const t of state.teams) if (t.region) byRegion[t.region].push(t);
         const updated = drawContinentalStage(cycle, byRegion);
         updateTournamentInState(set, get, updated);
         return true;

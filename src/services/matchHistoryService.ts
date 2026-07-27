@@ -10,7 +10,7 @@ export interface MatchHistoryEntry {
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
-  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout';
+  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup';
   groupName?: string;
   region?: string;
   tournamentId?: string;
@@ -31,7 +31,7 @@ export interface CreateMatchHistoryParams {
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
-  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout';
+  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup';
   groupName?: string;
   region?: string;
   tournamentId?: string;

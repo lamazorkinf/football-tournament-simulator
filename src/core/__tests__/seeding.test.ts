@@ -32,7 +32,7 @@ function buildSingleRegionTeams(): Team[] {
 
 function regionsOf(teamIds: string[], teams: Team[]): Region[] {
   const byId = new Map(teams.map((t) => [t.id, t]));
-  return teamIds.map((id) => byId.get(id)!.region);
+  return teamIds.map((id) => byId.get(id)!.region!);
 }
 
 describe('createSmartWorldCupDraw — invariantes', () => {

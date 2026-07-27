@@ -9,12 +9,109 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      modes: {
+        Row: {
+          id: string
+          name: string
+          kind: 'national-cycle' | 'league-system'
+          config: Json
+          current_year: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          kind: 'national-cycle' | 'league-system'
+          config?: Json
+          current_year?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          kind?: 'national-cycle' | 'league-system'
+          config?: Json
+          current_year?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      mode_tournaments: {
+        Row: {
+          id: string
+          mode_id: string
+          year: number
+          format: 'league' | 'cup'
+          name: string
+          status: 'in-progress' | 'completed'
+          division: string | null
+          state: Json
+          schema_version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          mode_id: string
+          year: number
+          format: 'league' | 'cup'
+          name: string
+          status?: 'in-progress' | 'completed'
+          division?: string | null
+          state?: Json
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          mode_id?: string
+          year?: number
+          format?: 'league' | 'cup'
+          name?: string
+          status?: 'in-progress' | 'completed'
+          division?: string | null
+          state?: Json
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      mode_season_state: {
+        Row: {
+          id: string
+          mode_id: string
+          year: number
+          division: string
+          team_ids: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          mode_id: string
+          year: number
+          division: string
+          team_ids?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          mode_id?: string
+          year?: number
+          division?: string
+          team_ids?: Json
+          created_at?: string
+        }
+      }
       teams: {
         Row: {
           id: string
           name: string
           flag: string
-          region: 'Europe' | 'America' | 'Africa' | 'Asia'
+          region: 'Europe' | 'America' | 'Africa' | 'Asia' | null
+          mode_id: string
           skill: number
           created_at: string
           updated_at: string
@@ -23,7 +120,8 @@ export interface Database {
           id: string
           name: string
           flag: string
-          region: 'Europe' | 'America' | 'Africa' | 'Asia'
+          region?: 'Europe' | 'America' | 'Africa' | 'Asia' | null
+          mode_id?: string
           skill: number
           created_at?: string
           updated_at?: string
@@ -32,7 +130,8 @@ export interface Database {
           id?: string
           name?: string
           flag?: string
-          region?: 'Europe' | 'America' | 'Africa' | 'Asia'
+          region?: 'Europe' | 'America' | 'Africa' | 'Asia' | null
+          mode_id?: string
           skill?: number
           created_at?: string
           updated_at?: string
@@ -45,10 +144,11 @@ export interface Database {
           away_team_id: string
           home_score: number
           away_score: number
-          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout'
+          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup'
           group_name: string | null
           region: string | null
           tournament_id: string | null
+          mode_id: string
           home_skill_before: number
           away_skill_before: number
           home_skill_after: number
@@ -65,10 +165,11 @@ export interface Database {
           away_team_id: string
           home_score: number
           away_score: number
-          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout'
+          stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup'
           group_name?: string | null
           region?: string | null
           tournament_id?: string | null
+          mode_id?: string
           home_skill_before: number
           away_skill_before: number
           home_skill_after: number
@@ -85,10 +186,11 @@ export interface Database {
           away_team_id?: string
           home_score?: number
           away_score?: number
-          stage?: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout'
+          stage?: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup'
           group_name?: string | null
           region?: string | null
           tournament_id?: string | null
+          mode_id?: string
           home_skill_before?: number
           away_skill_before?: number
           home_skill_after?: number
@@ -131,6 +233,7 @@ export interface Database {
           id: string
           name: string
           year: number
+          mode_id: string
           status: 'qualifiers' | 'world-cup' | 'completed'
           is_qualifiers_complete: boolean
           has_any_match_played: boolean
@@ -145,6 +248,7 @@ export interface Database {
           id: string
           name: string
           year: number
+          mode_id?: string
           status?: 'qualifiers' | 'world-cup' | 'completed'
           is_qualifiers_complete?: boolean
           has_any_match_played?: boolean
@@ -159,6 +263,7 @@ export interface Database {
           id?: string
           name?: string
           year?: number
+          mode_id?: string
           status?: 'qualifiers' | 'world-cup' | 'completed'
           is_qualifiers_complete?: boolean
           has_any_match_played?: boolean
