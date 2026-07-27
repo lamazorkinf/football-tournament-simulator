@@ -8,8 +8,8 @@ import { Play, RotateCcw, Zap, Sparkles } from 'lucide-react';
 import type { Team, WorldCupGroup } from '../../types';
 import { nanoid } from 'nanoid';
 import { initializeStandings } from '../../core/scheduler';
-import { WORLD_CUP_FIXTURE_TEMPLATE, type WorldCupFixtureLetter } from '../../constants/fixtureTemplate';
-import type { Match } from '../../types';
+import { generateGroupFixturesFromTemplate } from '../../core/formats/groupStage';
+import { type WorldCupFixtureLetter } from '../../constants/fixtureTemplate';
 
 // Custom hook to detect screen size
 function useMediaQuery(query: string): boolean {
@@ -195,39 +195,24 @@ export function DrawSimulator({ qualifiedTeams, onComplete, onCancel }: DrawSimu
   };
 
   const finalizeDraw = (sourceGroups: WorldCupGroup[]) => {
-    // Generate matches for each group
-    const finalGroups = sourceGroups.map((group) => {
-      const matches = generateWorldCupGroupMatches(group.teamIds, group.letterAssignments || {});
-      return {
-        ...group,
-        matches,
-        standings: initializeStandings(group.teamIds),
-      };
-    });
+    // Los partidos salen de la MISMA primitiva que el sorteo automático
+    // (core/formats/groupStage.ts). Antes esto tenía su propia copia de la
+    // plantilla y estampaba `stage: 'world-cup'`, que no es ninguna de las
+    // etapas que conoce el motor: un Mundial sorteado a mano jugaba sus
+    // partidos de grupo con peso Elo 1 (el default) en vez de `wcGroup`.
+    const finalGroups = sourceGroups.map((group) => ({
+      ...group,
+      matches: generateGroupFixturesFromTemplate(
+        group.letterAssignments || {},
+        'fifa-4',
+        'world-cup-group',
+        group.id
+      ),
+      standings: initializeStandings(group.teamIds),
+    }));
 
     setGroups(finalGroups);
     setIsComplete(true);
-  };
-
-  const generateWorldCupGroupMatches = (
-    _teamIds: string[],
-    letterAssignments: Record<string, WorldCupFixtureLetter>
-  ): Match[] => {
-    const letterToTeam: Record<WorldCupFixtureLetter, string> = {} as any;
-    Object.entries(letterAssignments).forEach(([teamId, letter]) => {
-      letterToTeam[letter] = teamId;
-    });
-
-    return WORLD_CUP_FIXTURE_TEMPLATE.map((fixture) => ({
-      id: nanoid(),
-      homeTeamId: letterToTeam[fixture.home],
-      awayTeamId: letterToTeam[fixture.away],
-      homeScore: null,
-      awayScore: null,
-      isPlayed: false,
-      stage: 'world-cup' as const,
-      matchday: fixture.matchday,
-    }));
   };
 
   const handleComplete = () => {

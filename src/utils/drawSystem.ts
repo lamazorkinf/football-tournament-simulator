@@ -1,145 +1,56 @@
 import type { Team, Group, Match } from '../types';
-import { FIXTURE_TEMPLATE, type FixtureLetter } from '../constants/fixtureTemplate';
-import { nanoid } from 'nanoid';
+import type { FixtureLetter } from '../constants/fixtureTemplate';
+import { drawPots, generateGroupFixturesFromTemplate } from '../core/formats/groupStage';
 
 /**
- * Shuffle array using Fisher-Yates algorithm
+ * Sorteo de las clasificatorias: grupos de 5 por región, un equipo por bombo.
+ *
+ * Desde la unificación de formatos esto es un ADAPTADOR sobre la primitiva de
+ * fase de grupos (core/formats/groupStage.ts). Lo único propio que queda acá es
+ * la forma del `Group` de las clasificatorias (id, nombre y región ya vienen
+ * armados por el llamador) y la plantilla que le corresponde: `fifa-5`, que
+ * reparte UN partido por fecha a lo largo de 20 fechas. Ese conteo de fechas es
+ * el que indexa todo el calendario del ciclo, así que la plantilla manda.
  */
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
+
+/**
+ * Reparte los equipos de una región en sus grupos.
+ *
+ * Sin diversidad regional (los equipos de un grupo de clasificatorias son todos
+ * de la misma confederación) y sin serpiente: el bombo N va a los grupos en
+ * orden. Una región cuyo número de equipos no es múltiplo de 5 deja el último
+ * bombo corto (p. ej. 54 equipos → 11 grupos, bombo E con 10 equipos); en ese
+ * caso el último grupo queda con menos equipos en vez de romper el sorteo.
+ */
+export function performDraw(groups: Group[], teams: Team[]): Group[] {
+  const byMerit = [...teams].sort((a, b) => b.skill - a.skill).map((t) => t.id);
+  const buckets = drawPots(byMerit, { groupCount: groups.length, groupSize: 5 }, { kind: 'pots' });
+
+  return groups.map((group, index) => ({
+    ...group,
+    teamIds: [...buckets[index].teamIds],
+    // groupSize 5 ⇒ la primitiva sólo emite letras A-E, que es FixtureLetter.
+    letterAssignments: buckets[index].potLetters as Record<string, FixtureLetter>,
+    isDrawComplete: true,
+  }));
 }
 
 /**
- * Divide teams into 5 pots based on skill rating
- * Pot 1 (A): Top seeds
- * Pot 2 (B): Second tier
- * Pot 3 (C): Third tier
- * Pot 4 (D): Fourth tier
- * Pot 5 (E): Fifth tier
- */
-export function divideIntoPots(teams: Team[], numGroups: number): {
-  potA: Team[];
-  potB: Team[];
-  potC: Team[];
-  potD: Team[];
-  potE: Team[];
-} {
-  // Sort teams by skill (highest first)
-  const sortedTeams = [...teams].sort((a, b) => b.skill - a.skill);
-
-  // Each pot should have exactly numGroups teams
-  const potA = sortedTeams.slice(0, numGroups); // Top seeds
-  const potB = sortedTeams.slice(numGroups, numGroups * 2);
-  const potC = sortedTeams.slice(numGroups * 2, numGroups * 3);
-  const potD = sortedTeams.slice(numGroups * 3, numGroups * 4);
-  const potE = sortedTeams.slice(numGroups * 4, numGroups * 5);
-
-  return { potA, potB, potC, potD, potE };
-}
-
-/**
- * Perform the draw: assign teams to groups and letters
- */
-export function performDraw(
-  groups: Group[],
-  teams: Team[]
-): Group[] {
-  const numGroups = groups.length;
-
-  // Divide teams into pots
-  const { potA, potB, potC, potD, potE } = divideIntoPots(teams, numGroups);
-
-  // Shuffle each pot
-  const shuffledA = shuffleArray(potA);
-  const shuffledB = shuffleArray(potB);
-  const shuffledC = shuffleArray(potC);
-  const shuffledD = shuffleArray(potD);
-  const shuffledE = shuffleArray(potE);
-
-  // Assign teams to groups.
-  //
-  // Una región cuyo número de equipos no es múltiplo de 5 deja el último bombo
-  // corto (p.ej. 54 equipos -> 11 grupos, bombo E con 10 equipos). En ese caso
-  // el último grupo queda con menos equipos en vez de romper el sorteo entero.
-  const potsByLetter: Array<[FixtureLetter, Team[]]> = [
-    ['A', shuffledA],
-    ['B', shuffledB],
-    ['C', shuffledC],
-    ['D', shuffledD],
-    ['E', shuffledE],
-  ];
-
-  return groups.map((group, index) => {
-    const letterAssignments: Record<string, FixtureLetter> = {};
-    const teamIds: string[] = [];
-
-    for (const [letter, pot] of potsByLetter) {
-      const team = pot[index];
-      if (!team) continue;
-      letterAssignments[team.id] = letter;
-      teamIds.push(team.id);
-    }
-
-    return {
-      ...group,
-      teamIds,
-      letterAssignments,
-      isDrawComplete: true,
-    };
-  });
-}
-
-/**
- * Generate matches for a group based on the fixture template and letter assignments
+ * Partidos de un grupo de clasificatorias, a partir de la plantilla FIFA de 5.
+ *
+ * Si el grupo tiene menos de 5 equipos, las letras sobrantes no tienen equipo y
+ * esos enfrentamientos se descartan: como la plantilla es el round-robin
+ * completo ida y vuelta, quitar una letra deja un round-robin válido.
  */
 export function generateGroupMatches(
-  _groupId: string,
-  letterAssignments: Record<string, FixtureLetter>
+  groupId: string,
+  letterAssignments: Record<string, FixtureLetter>,
 ): Match[] {
-  // Invert the mapping: letter -> teamId
-  const letterToTeam: Record<FixtureLetter, string> = {} as any;
-  Object.entries(letterAssignments).forEach(([teamId, letter]) => {
-    letterToTeam[letter] = teamId;
-  });
-
-  // Generate matches from template.
-  //
-  // Si el grupo tiene menos de 5 equipos (región que no es múltiplo de 5), las
-  // letras sobrantes no tienen equipo: esos enfrentamientos se descartan. Como
-  // la plantilla es el round-robin completo ida y vuelta, quitar una letra deja
-  // un round-robin válido entre los equipos restantes.
-  return FIXTURE_TEMPLATE.filter(
-    (fixture) => letterToTeam[fixture.home] && letterToTeam[fixture.away]
-  ).map((fixture) => ({
-    id: nanoid(),
-    homeTeamId: letterToTeam[fixture.home],
-    awayTeamId: letterToTeam[fixture.away],
-    homeScore: null,
-    awayScore: null,
-    isPlayed: false,
-    stage: 'qualifier' as const,
-    matchday: fixture.matchday, // Include matchday for global ordering
-  }));
+  return generateGroupFixturesFromTemplate(letterAssignments, 'fifa-5', 'qualifier', groupId);
 }
 
 /**
- * Initialize standings for all teams in a group
+ * La tabla inicial de un grupo. Vive en core/scheduler.ts —único motor de
+ * tablas del juego— y se reexporta acá porque éste era su hogar histórico.
  */
-export function initializeStandings(teamIds: string[]) {
-  return teamIds.map((teamId) => ({
-    teamId,
-    played: 0,
-    won: 0,
-    drawn: 0,
-    lost: 0,
-    goalsFor: 0,
-    goalsAgainst: 0,
-    goalDifference: 0,
-    points: 0,
-  }));
-}
+export { initializeStandings } from '../core/scheduler';

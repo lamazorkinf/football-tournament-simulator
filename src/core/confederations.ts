@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import { initializeStandings, sortStandings } from './scheduler';
-import { WORLD_CUP_FIXTURE_TEMPLATE } from '../constants/fixtureTemplate';
-import type { Match, Region, Team, WorldCupGroup, KnockoutMatch } from '../types';
+import { generateGroupFixturesFromTemplate } from './formats/groupStage';
+import type { Region, Team, WorldCupGroup, KnockoutMatch } from '../types';
 import {
   advanceBracket,
   createBracket,
@@ -64,42 +64,27 @@ function pickBalancedAssignment(
   return { groupA: best!.groupA, groupB: best!.groupB };
 }
 
-/** Partidos de un grupo confed a partir del template FIFA (letras A-D). */
-function generateConfedGroupMatches(
-  letterAssignments: Record<string, PotLetter>,
-): Match[] {
-  const letterToTeam = {} as Record<PotLetter, string>;
-  for (const [teamId, letter] of Object.entries(letterAssignments)) {
-    letterToTeam[letter] = teamId;
-  }
-  return WORLD_CUP_FIXTURE_TEMPLATE.map((f) => ({
-    id: nanoid(),
-    homeTeamId: letterToTeam[f.home],
-    awayTeamId: letterToTeam[f.away],
-    homeScore: null,
-    awayScore: null,
-    isPlayed: false,
-    stage: 'confed-group',
-    matchday: f.matchday,
-  }));
-}
-
-/** Construye un `WorldCupGroup` con letras por skill (más fuerte → 'A'). */
+/**
+ * Construye un `WorldCupGroup` con letras por skill (más fuerte → 'A') y sus
+ * partidos según la plantilla FIFA de 4 (6 partidos en 3 fechas), la misma que
+ * usa el Mundial.
+ */
 function buildGroup(
   name: string,
   teamIds: string[],
   skillOf: (id: string) => number,
 ): WorldCupGroup {
+  const id = nanoid();
   const sorted = [...teamIds].sort((a, b) => skillOf(b) - skillOf(a));
   const letterAssignments: Record<string, PotLetter> = {};
-  sorted.forEach((id, i) => {
-    letterAssignments[id] = POT_LETTERS[i];
+  sorted.forEach((teamId, i) => {
+    letterAssignments[teamId] = POT_LETTERS[i];
   });
   return {
-    id: nanoid(),
+    id,
     name,
     teamIds: sorted,
-    matches: generateConfedGroupMatches(letterAssignments),
+    matches: generateGroupFixturesFromTemplate(letterAssignments, 'fifa-4', 'confed-group', id),
     standings: initializeStandings(sorted),
     letterAssignments,
   };

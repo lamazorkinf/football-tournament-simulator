@@ -173,6 +173,63 @@ function groupFixtures(
 // Sorteo
 // ---------------------------------------------------------------------------
 
+/** Un grupo recién sorteado, antes de tener fixtures y tabla. */
+export interface GroupBucket {
+  teamIds: string[];
+  potLetters: Record<string, PotLetter>;
+}
+
+/**
+ * El reparto greedy puede quedarse sin opciones en los últimos grupos, porque
+ * los equipos que restan en el bombo ya chocan con todos ellos. Esta pasada
+ * corrige esos casos intercambiando equipos del MISMO bombo entre dos grupos:
+ * al intercambiar, cada grupo sigue teniendo exactamente un equipo por bombo.
+ */
+function repairRegionConflicts(
+  buckets: GroupBucket[],
+  letter: PotLetter,
+  regionOf: (teamId: string) => string | undefined,
+): void {
+  const withLetter = (b: GroupBucket): string | undefined =>
+    b.teamIds.find((id) => b.potLetters[id] === letter);
+
+  const clashes = (b: GroupBucket, teamId: string): boolean => {
+    const region = regionOf(teamId);
+    if (region === undefined) return false;
+    return b.teamIds.some((id) => id !== teamId && regionOf(id) === region);
+  };
+
+  /** ¿El grupo acepta a un equipo de `region` si `leaving` se va? */
+  const accepts = (b: GroupBucket, leaving: string, region: string | undefined): boolean =>
+    region === undefined || !b.teamIds.some((id) => id !== leaving && regionOf(id) === region);
+
+  const swap = (a: GroupBucket, aTeam: string, b: GroupBucket, bTeam: string): void => {
+    a.teamIds[a.teamIds.indexOf(aTeam)] = bTeam;
+    b.teamIds[b.teamIds.indexOf(bTeam)] = aTeam;
+    delete a.potLetters[aTeam];
+    delete b.potLetters[bTeam];
+    a.potLetters[bTeam] = letter;
+    b.potLetters[aTeam] = letter;
+  };
+
+  for (const groupA of buckets) {
+    const teamA = withLetter(groupA);
+    if (!teamA || !clashes(groupA, teamA)) continue;
+
+    for (const groupB of buckets) {
+      if (groupB === groupA) continue;
+      const teamB = withLetter(groupB);
+      if (!teamB) continue;
+
+      // El intercambio sólo sirve si deja a AMBOS grupos sin conflicto.
+      if (accepts(groupA, teamA, regionOf(teamB)) && accepts(groupB, teamB, regionOf(teamA))) {
+        swap(groupA, teamA, groupB, teamB);
+        break;
+      }
+    }
+  }
+}
+
 /**
  * Reparte `entrants` (en orden de mérito) en bombos y de ahí a los grupos.
  *
@@ -180,17 +237,22 @@ function groupFixtures(
  * porque la plantilla mapea una letra por equipo y dos equipos con la misma
  * letra dejarían a uno sin partidos. Por eso, cuando se pide diversidad
  * regional, se elige para cada grupo cuál de los equipos que quedan en el bombo
- * encaja mejor — nunca se mueve un equipo a otro grupo.
+ * encaja mejor — nunca se mueve un equipo a otro grupo — y después se corrigen
+ * los conflictos que queden intercambiando equipos del mismo bombo.
+ *
+ * Se exporta suelta porque los sorteos que ya existen (clasificatorias, Mundial)
+ * construyen sus propios `Group`/`WorldCupGroup` con ids y nombres propios: lo
+ * único que necesitan compartir es este algoritmo.
  */
-function drawByPots(
+export function drawPots(
   entrants: string[],
-  cfg: GroupStageConfig,
+  size: { groupCount: number; groupSize: number },
   seed: Extract<GroupSeedStrategy, { kind: 'pots' }>,
-): { teamIds: string[]; potLetters: Record<string, PotLetter> }[] {
-  const { groupCount, groupSize } = cfg;
-  const buckets = Array.from({ length: groupCount }, () => ({
-    teamIds: [] as string[],
-    potLetters: {} as Record<string, PotLetter>,
+): GroupBucket[] {
+  const { groupCount, groupSize } = size;
+  const buckets: GroupBucket[] = Array.from({ length: groupCount }, () => ({
+    teamIds: [],
+    potLetters: {},
   }));
 
   const regionOf = seed.regionOf ?? (() => undefined);
@@ -219,6 +281,8 @@ function drawByPots(
       buckets[bucketIndex].teamIds.push(teamId);
       buckets[bucketIndex].potLetters[teamId] = letter;
     }
+
+    if (seed.avoidSameRegion) repairRegionConflicts(buckets, letter, regionOf);
   }
 
   return buckets;
@@ -239,7 +303,7 @@ export function drawGroupStage(
             teamIds.map((id, i) => [id, POT_LETTERS[i] ?? POT_LETTERS[POT_LETTERS.length - 1]]),
           ) as Record<string, PotLetter>,
         }))
-      : drawByPots(entrants, cfg, seed);
+      : drawPots(entrants, cfg, seed);
 
   const groups: GroupState[] = buckets.map((bucket, i) => {
     const name = `Group ${groupLabel(i)}`;
