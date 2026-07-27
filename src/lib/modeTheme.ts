@@ -1,4 +1,5 @@
 import type { GameMode } from '../types';
+import { descriptorForMode } from '../modes/registry';
 
 /**
  * Clave de tema (paleta) del modo activo. Cada modo puede pintar la app con otra
@@ -7,12 +8,10 @@ import type { GameMode } from '../types';
  * `src/index.css` como overrides de las variables `--color-*` bajo
  * `:root[data-theme='<clave>']`.
  *
- * Prioridad: `mode.config.theme` (si el modo define uno) → default por `kind`
- * (los modos de ligas usan la paleta nocturna 'villamariense'; el resto, la
- * verde 'selecciones' por defecto).
+ * El tema es un campo del descriptor del modo, que ya resuelve la prioridad:
+ * `mode.config.theme` si está, si no el del descriptor built-in que le
+ * corresponde a su `kind`.
  */
 export function themeForMode(mode: GameMode | null): string {
-  const configured = mode?.config?.theme;
-  if (typeof configured === 'string' && configured) return configured;
-  return mode?.kind === 'league-system' ? 'villamariense' : 'selecciones';
+  return descriptorForMode(mode).theme;
 }
