@@ -1,5 +1,27 @@
-import { nanoid } from 'nanoid';
 import type { ContinentalBracket, KnockoutMatch, Region, Team } from '../types';
+import {
+  advanceBracket,
+  createBracket,
+  seedSlots as bracketSeedSlots,
+  standardPlan,
+  type Bracket,
+  type BracketPlan,
+  type BracketRound,
+} from './formats/bracket';
+import { knockoutMatchesToTies, tiesToKnockoutMatches } from './formats/knockoutCompat';
+
+/**
+ * Torneos continentales. Desde la unificación de formatos esto es un ADAPTADOR
+ * fino sobre la primitiva única de eliminación (core/formats/bracket.ts):
+ * conserva todas sus firmas para no tocar core/cycle.ts ni el store, pero la
+ * estructura del cuadro (siembra, byes, avance de ronda, 3er puesto) la resuelve
+ * la primitiva.
+ *
+ * El cuadro continental tiene dos particularidades que el plan describe como
+ * datos y no como código: los byes entran a R32 por RE-SIEMBRA
+ * (`byeJoin: 'reseed'`: byes + ganadores recolocados por seedSlots) y la primera
+ * ronda se sortea por bombos (el bombo alto de local contra el bajo barajado).
+ */
 
 /**
  * Byes directos a R32 en un torneo continental de `teamCount` equipos.
@@ -28,59 +50,21 @@ export function getContinentalRoundOf64Count(teamCount: number): number {
 }
 
 /**
- * Orden de siembra estándar de un cuadro de `size` slots (`size` potencia de 2).
- * `slots[k]` = índice de semilla (0-based) que va en el slot `k`. Emparejando
- * slots consecutivos (2m, 2m+1) y fusionando rondas por adyacencia, dos semillas
- * altas solo pueden reencontrarse en la final.
- * seedSlots(8) → [0,7,3,4,1,6,2,5].
+ * Orden de siembra estándar de un cuadro de `size` slots.
+ * Vive en core/formats/bracket.ts; se reexporta acá porque era el hogar
+ * histórico de esta función y varios tests la importan desde este módulo.
  */
-export function seedSlots(size: number): number[] {
-  if (size < 1 || (size & (size - 1)) !== 0) {
-    throw new Error(`seedSlots requiere una potencia de 2 ≥ 1, recibió ${size}`);
-  }
-  let slots = [0];
-  while (slots.length < size) {
-    const total = slots.length * 2 - 1;
-    const next: number[] = [];
-    for (const s of slots) {
-      next.push(s);
-      next.push(total - s);
-    }
-    slots = next;
-  }
-  return slots;
-}
+export const seedSlots = bracketSeedSlots;
 
-/** Baraja una copia del array (Fisher-Yates). No muta el original. */
-function shuffle<T>(items: readonly T[]): T[] {
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
+/** El plan del cuadro continental: 64 slots, 3er puesto, jornadas 1-6, byes por re-siembra. */
+const CONTINENTAL_PLAN: BracketPlan = standardPlan(64, {
+  thirdPlace: true,
+  firstMatchday: 1,
+  byeJoin: 'reseed',
+});
 
-function newKnockoutMatch(
-  homeTeamId: string,
-  awayTeamId: string,
-  round: KnockoutMatch['round'],
-  matchday: number,
-  position: number,
-): KnockoutMatch {
-  return {
-    id: nanoid(),
-    homeTeamId,
-    awayTeamId,
-    homeScore: null,
-    awayScore: null,
-    isPlayed: false,
-    stage: 'continental',
-    round,
-    matchday,
-    position,
-  };
-}
+/** Proyección a KnockoutMatch: el continental sí estampa jornada y posición. */
+const AS_KNOCKOUT = { includeMatchday: true, stage: 'continental' } as const;
 
 /**
  * Sorteo de un torneo continental. Los mejores `byeCount` por skill reciben bye
@@ -94,96 +78,106 @@ export function generateContinentalBracket(
   const sorted = [...teams].sort((a, b) => b.skill - a.skill);
   const byeCount = getContinentalByeCount(sorted.length);
 
-  const byeTeamIds = sorted.slice(0, byeCount).map((t) => t.id);
-  const r64Teams = sorted.slice(byeCount);
-  const w = r64Teams.length / 2; // entero: r64Teams.length siempre es par
-
-  const topPot = r64Teams.slice(0, w);
-  const bottomPot = shuffle(r64Teams.slice(w));
-
-  const roundOf64: KnockoutMatch[] = topPot.map((home, i) =>
-    newKnockoutMatch(home.id, bottomPot[i].id, 'round-of-64', 1, i),
-  );
+  const bracket = createBracket({
+    entrants: sorted.map((t) => t.id),
+    legs: 1,
+    neutral: true,
+    stage: 'continental',
+    idPrefix: `cont-${region}`,
+    plan: CONTINENTAL_PLAN,
+    seed: { kind: 'pots' },
+    byeCount,
+  });
 
   return {
     region,
-    roundOf64,
+    roundOf64: tiesToKnockoutMatches(bracket.rounds[0].ties, AS_KNOCKOUT),
     roundOf32: [],
     roundOf16: [],
     quarterFinals: [],
     semiFinals: [],
     final: null,
     thirdPlace: null,
+    byeTeamIds: bracket.byeTeamIds,
+  };
+}
+
+/**
+ * Rehidrata un cuadro de la primitiva a partir de una ronda ya jugada, para
+ * poder pedirle la siguiente. El estado del ciclo se guarda como arrays de
+ * KnockoutMatch (esquema normalizado), así que cada avance parte de ahí.
+ */
+function bracketFromRound(
+  ties: KnockoutMatch[],
+  roundIndex: number,
+  byeTeamIds: string[] = [],
+): Bracket {
+  // La ronda tiene que quedar en SU índice real dentro del plan: `advanceBracket`
+  // deduce cuál es la siguiente por posición, y también usa "estoy en la ronda 0"
+  // para saber si toca meter los byes. Las rondas previas se rellenan vacías —
+  // sólo se inspecciona la última.
+  const rounds: BracketRound[] = CONTINENTAL_PLAN.rounds.slice(0, roundIndex).map((r) => ({
+    round: r.round,
+    ties: [],
+  }));
+  rounds.push({
+    round: CONTINENTAL_PLAN.rounds[roundIndex].round,
+    ties: knockoutMatchesToTies(ties),
+  });
+
+  return {
+    id: 'cont',
+    plan: CONTINENTAL_PLAN,
+    legs: 1,
+    neutral: true,
+    stage: 'continental',
+    idPrefix: 'cont',
+    rounds,
+    thirdPlaceTie: null,
     byeTeamIds,
   };
+}
+
+/**
+ * Avanza una ronda del cuadro y devuelve la siguiente ya proyectada.
+ * `roundIndex` es la posición de la ronda de ENTRADA dentro del plan.
+ */
+function advanceFrom(
+  ties: KnockoutMatch[],
+  roundIndex: number,
+  byeTeamIds: string[] = [],
+): KnockoutMatch[] {
+  const advanced = advanceBracket(bracketFromRound(ties, roundIndex, byeTeamIds));
+  const next = advanced.rounds[roundIndex + 1];
+  return next ? tiesToKnockoutMatches(next.ties, AS_KNOCKOUT) : [];
 }
 
 /**
  * Forma la R32 a partir de los byes (semillas altas) y los ganadores de R64.
  * Ocupantes = byes ++ ganadores (32 en total); se colocan por `seedSlots(32)` y
  * se emparejan slots consecutivos. Si no hay exactamente 32 ocupantes con id
- * (p.ej. faltan `winnerId`), devuelve `[]` sin generar (igual que knockout.ts).
+ * (p.ej. faltan `winnerId`), devuelve `[]` sin generar.
  */
 export function generateContinentalRoundOf32(bracket: ContinentalBracket): KnockoutMatch[] {
-  const winners = [...bracket.roundOf64]
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-    .map((m) => m.winnerId)
-    .filter((id): id is string => Boolean(id));
-
-  const occupants = [...bracket.byeTeamIds, ...winners];
-  if (occupants.length !== 32) {
-    console.warn(
-      `⚠️ generateContinentalRoundOf32: se esperaban 32 ocupantes, hay ${occupants.length}. No se genera R32.`,
-    );
-    return [];
-  }
-
-  const slots = seedSlots(32); // slots[k] = índice de semilla en el slot k
-  const placed = slots.map((seedIdx) => occupants[seedIdx]);
-
-  const matches: KnockoutMatch[] = [];
-  for (let m = 0; m < 16; m++) {
-    matches.push(newKnockoutMatch(placed[2 * m], placed[2 * m + 1], 'round-of-32', 2, m));
-  }
-  return matches;
-}
-
-/**
- * Avanza una ronda emparejando ganadores adyacentes: `next[j]` = ganador de
- * `prev` en posición `2j` vs ganador en `2j+1`. Solo genera un partido si AMBOS
- * ganadores están definidos; si falta alguno, se omite (ronda incompleta ⇒ []).
- */
-function advanceContinentalRound(
-  prev: KnockoutMatch[],
-  round: KnockoutMatch['round'],
-  matchday: number,
-): KnockoutMatch[] {
-  const sorted = [...prev].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-  const matches: KnockoutMatch[] = [];
-  for (let j = 0; 2 * j + 1 < sorted.length; j++) {
-    const a = sorted[2 * j];
-    const b = sorted[2 * j + 1];
-    if (a?.winnerId && b?.winnerId) {
-      matches.push(newKnockoutMatch(a.winnerId, b.winnerId, round, matchday, j));
-    }
-  }
-  return matches;
+  const resolved = bracket.roundOf64.filter((m) => m.winnerId);
+  if (resolved.length !== bracket.roundOf64.length) return [];
+  return advanceFrom(bracket.roundOf64, 0, bracket.byeTeamIds);
 }
 
 export function generateContinentalRoundOf16(roundOf32: KnockoutMatch[]): KnockoutMatch[] {
-  return advanceContinentalRound(roundOf32, 'round-of-16', 3);
+  return advanceFrom(roundOf32, 1);
 }
 
 export function generateContinentalQuarterFinals(roundOf16: KnockoutMatch[]): KnockoutMatch[] {
-  return advanceContinentalRound(roundOf16, 'quarter', 4);
+  return advanceFrom(roundOf16, 2);
 }
 
 export function generateContinentalSemiFinals(quarterFinals: KnockoutMatch[]): KnockoutMatch[] {
-  return advanceContinentalRound(quarterFinals, 'semi', 5);
+  return advanceFrom(quarterFinals, 3);
 }
 
 export function generateContinentalFinal(semiFinals: KnockoutMatch[]): KnockoutMatch | null {
-  return advanceContinentalRound(semiFinals, 'final', 6)[0] ?? null;
+  return advanceFrom(semiFinals, 4)[0] ?? null;
 }
 
 /**
@@ -192,9 +186,8 @@ export function generateContinentalFinal(semiFinals: KnockoutMatch[]): KnockoutM
  * falta algún perdedor (semis no jugadas).
  */
 export function generateContinentalThirdPlace(semiFinals: KnockoutMatch[]): KnockoutMatch | null {
-  const sorted = [...semiFinals].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-  if (sorted.length < 2) return null;
-  const [a, b] = sorted;
-  if (!a?.loserId || !b?.loserId) return null;
-  return newKnockoutMatch(a.loserId, b.loserId, 'third-place', 6, 0);
+  const advanced = advanceBracket(bracketFromRound(semiFinals, 4));
+  return advanced.thirdPlaceTie
+    ? tiesToKnockoutMatches([advanced.thirdPlaceTie], AS_KNOCKOUT)[0]
+    : null;
 }

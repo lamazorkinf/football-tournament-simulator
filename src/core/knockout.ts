@@ -1,6 +1,73 @@
-import { nanoid } from 'nanoid';
 import type { KnockoutMatch, KnockoutBracket, WorldCupGroup, Team } from '../types';
 import { sortStandings } from './scheduler';
+import {
+  advanceBracket,
+  createBracket,
+  planWithSources,
+  type Bracket,
+  type BracketPlan,
+  type BracketRound,
+} from './formats/bracket';
+import { knockoutMatchesToTies, tiesToKnockoutMatches } from './formats/knockoutCompat';
+
+/**
+ * Cuadro del Mundial. Desde la unificación de formatos esto es un ADAPTADOR
+ * sobre la primitiva única de eliminación (core/formats/bracket.ts): conserva
+ * todas sus firmas para no tocar core/cycle.ts ni el store.
+ *
+ * Lo que hace especial a este cuadro —y la razón por la que la primitiva
+ * necesita planes de cruce explícitos— es que sus rondas NO son adyacencia.
+ * Cada posición `i` de R32 y la `i+8` salen de los MISMOS dos grupos (p. ej.
+ * p0 = A1 vs B2 y p8 = B1 vs A2), así que no pueden emparejarse entre sí: sería
+ * una revancha de grupo en octavos. El plan las manda a mitades opuestas del
+ * cuadro y, combinado con los cruces de cuartos, dos equipos del mismo grupo
+ * sólo pueden reencontrarse en la final.
+ *
+ * Además `position` se persiste en matches_new: renumerar corrompería los
+ * torneos en curso al cargarlos.
+ */
+
+/**
+ * El plan del Mundial. Los emparejamientos salen tal cual de la implementación
+ * previa; están acá como DATO, que es lo que permite que el resto del cuadro sea
+ * la misma primitiva que usan el continental y la copa.
+ *
+ * - R16: {A,B} vs {C,D} y su mitad opuesta, etc.
+ * - Cuartos: (0,4) (2,6) (1,5) (3,7).
+ * - Semis: (0,1) (2,3).
+ *
+ * Sin `firstMatchday`: los partidos de knockout del Mundial no llevan `matchday`
+ * estampado (a diferencia de continental y confed). Estampárselo haría que
+ * `getPhaseMatchdayCount(cycle, 'wc-knockout')` deje de dar 0 y el cuadro
+ * quedaría bloqueado por calendario.
+ */
+const WORLD_CUP_PLAN: BracketPlan = planWithSources(
+  32,
+  {
+    1: [[0, 1], [8, 9], [2, 3], [10, 11], [4, 5], [12, 13], [6, 7], [14, 15]],
+    2: [[0, 4], [2, 6], [1, 5], [3, 7]],
+    3: [[0, 1], [2, 3]],
+  },
+  { thirdPlace: true },
+);
+
+/**
+ * Orden de slots de R32: 1º de grupo contra 2º de OTRO grupo.
+ * A1-B2, C1-D2, … y después B1-A2, D1-C2, …
+ */
+const R32_SLOT_ORDER: Array<[number, 'winner' | 'runnerUp']> = [
+  [0, 'winner'], [1, 'runnerUp'], [2, 'winner'], [3, 'runnerUp'],
+  [4, 'winner'], [5, 'runnerUp'], [6, 'winner'], [7, 'runnerUp'],
+  [8, 'winner'], [9, 'runnerUp'], [10, 'winner'], [11, 'runnerUp'],
+  [12, 'winner'], [13, 'runnerUp'], [14, 'winner'], [15, 'runnerUp'],
+  [1, 'winner'], [0, 'runnerUp'], [3, 'winner'], [2, 'runnerUp'],
+  [5, 'winner'], [4, 'runnerUp'], [7, 'winner'], [6, 'runnerUp'],
+  [9, 'winner'], [8, 'runnerUp'], [11, 'winner'], [10, 'runnerUp'],
+  [13, 'winner'], [12, 'runnerUp'], [15, 'winner'], [14, 'runnerUp'],
+];
+
+/** El Mundial no estampa jornada; sí posición, salvo donde nunca la tuvo. */
+const AS_KNOCKOUT = { stage: 'world-cup-knockout' } as const;
 
 /**
  * Generates the Round of 32 bracket from World Cup group results (16 groups)
@@ -9,8 +76,6 @@ import { sortStandings } from './scheduler';
  * - Teams from same group can't meet until later rounds
  */
 export function generateRoundOf32(groups: WorldCupGroup[], teams?: Team[]): KnockoutMatch[] {
-  const matches: KnockoutMatch[] = [];
-
   // El cuadro está construido sobre 16 grupos exactos; con menos, los accesos
   // por índice de abajo darían undefined y romperían la generación.
   if (groups.length !== 16) {
@@ -23,54 +88,56 @@ export function generateRoundOf32(groups: WorldCupGroup[], teams?: Team[]): Knoc
   // Sort groups A-P (16 groups)
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name));
 
-  // Get top 2 from each group
   const groupResults = sortedGroups.map((group) => {
     const sorted = sortStandings(group.standings, teams, group.matches);
-    return {
-      groupName: group.name,
-      winner: sorted[0]?.teamId,
-      runnerUp: sorted[1]?.teamId,
-    };
+    return { winner: sorted[0]?.teamId, runnerUp: sorted[1]?.teamId };
   });
 
-  // FIFA standard bracket pairings for 16 groups
-  // Pattern: A1 vs B2, C1 vs D2, etc.
-  const pairings = [
-    { home: groupResults[0].winner, away: groupResults[1].runnerUp, position: 0 },   // A1 vs B2
-    { home: groupResults[2].winner, away: groupResults[3].runnerUp, position: 1 },   // C1 vs D2
-    { home: groupResults[4].winner, away: groupResults[5].runnerUp, position: 2 },   // E1 vs F2
-    { home: groupResults[6].winner, away: groupResults[7].runnerUp, position: 3 },   // G1 vs H2
-    { home: groupResults[8].winner, away: groupResults[9].runnerUp, position: 4 },   // I1 vs J2
-    { home: groupResults[10].winner, away: groupResults[11].runnerUp, position: 5 }, // K1 vs L2
-    { home: groupResults[12].winner, away: groupResults[13].runnerUp, position: 6 }, // M1 vs N2
-    { home: groupResults[14].winner, away: groupResults[15].runnerUp, position: 7 }, // O1 vs P2
-    { home: groupResults[1].winner, away: groupResults[0].runnerUp, position: 8 },   // B1 vs A2
-    { home: groupResults[3].winner, away: groupResults[2].runnerUp, position: 9 },   // D1 vs C2
-    { home: groupResults[5].winner, away: groupResults[4].runnerUp, position: 10 },  // F1 vs E2
-    { home: groupResults[7].winner, away: groupResults[6].runnerUp, position: 11 },  // H1 vs G2
-    { home: groupResults[9].winner, away: groupResults[8].runnerUp, position: 12 },  // J1 vs I2
-    { home: groupResults[11].winner, away: groupResults[10].runnerUp, position: 13 },// L1 vs K2
-    { home: groupResults[13].winner, away: groupResults[12].runnerUp, position: 14 },// N1 vs M2
-    { home: groupResults[15].winner, away: groupResults[14].runnerUp, position: 15 },// P1 vs O2
-  ];
+  const slots = R32_SLOT_ORDER.map(([groupIndex, place]) => groupResults[groupIndex][place]);
+  // Si falta algún clasificado no se arma el cuadro, igual que antes (los pares
+  // incompletos simplemente no generaban partido).
+  if (slots.some((id) => !id)) return [];
 
-  pairings.forEach((pairing) => {
-    if (pairing.home && pairing.away) {
-      matches.push({
-        id: nanoid(),
-        homeTeamId: pairing.home,
-        awayTeamId: pairing.away,
-        homeScore: null,
-        awayScore: null,
-        isPlayed: false,
-        stage: 'world-cup-knockout',
-        round: 'round-of-32',
-        position: pairing.position,
-      });
-    }
+  const bracket = createBracket({
+    entrants: slots as string[],
+    legs: 1,
+    neutral: true,
+    stage: 'world-cup-knockout',
+    idPrefix: 'wc',
+    plan: WORLD_CUP_PLAN,
+    seed: { kind: 'explicit' },
   });
 
-  return matches;
+  return tiesToKnockoutMatches(bracket.rounds[0].ties, AS_KNOCKOUT);
+}
+
+/** Rehidrata el cuadro con la ronda dada en SU índice real del plan. */
+function bracketFromRound(ties: KnockoutMatch[], roundIndex: number): Bracket {
+  const rounds: BracketRound[] = WORLD_CUP_PLAN.rounds.slice(0, roundIndex).map((r) => ({
+    round: r.round,
+    ties: [],
+  }));
+  rounds.push({
+    round: WORLD_CUP_PLAN.rounds[roundIndex].round,
+    ties: knockoutMatchesToTies(ties),
+  });
+  return {
+    id: 'wc',
+    plan: WORLD_CUP_PLAN,
+    legs: 1,
+    neutral: true,
+    stage: 'world-cup-knockout',
+    idPrefix: 'wc',
+    rounds,
+    thirdPlaceTie: null,
+    byeTeamIds: [],
+  };
+}
+
+function advanceFrom(ties: KnockoutMatch[], roundIndex: number): KnockoutMatch[] {
+  const advanced = advanceBracket(bracketFromRound(ties, roundIndex));
+  const next = advanced.rounds[roundIndex + 1];
+  return next ? tiesToKnockoutMatches(next.ties, AS_KNOCKOUT) : [];
 }
 
 /**
@@ -78,163 +145,44 @@ export function generateRoundOf32(groups: WorldCupGroup[], teams?: Team[]): Knoc
  * Dos equipos del mismo grupo no pueden cruzarse antes de la final.
  */
 export function generateRoundOf16(roundOf32: KnockoutMatch[]): KnockoutMatch[] {
-  const matches: KnockoutMatch[] = [];
-
-  // R32 has 16 matches (positions 0-15), R16 will have 8 matches.
-  //
-  // Cada posición de R32 consume un par de grupos: la posición i y la i+8 salen
-  // de los MISMOS dos grupos (p.ej. p0 = A1 vs B2 y p8 = B1 vs A2). Por eso no
-  // pueden emparejarse entre sí: sería una revancha de grupo en Octavos.
-  //
-  // El emparejamiento correcto combina pares de grupos disjuntos y, además,
-  // manda i e i+8 a mitades opuestas del cuadro (posiciones de distinta
-  // paridad), porque generateQuarterFinals cruza (0,4),(2,6),(1,5),(3,7) y
-  // generateSemiFinals cruza (0,1),(2,3). Así, dos equipos del mismo grupo solo
-  // pueden reencontrarse en la final.
-  const pairings = [
-    { match1: 0, match2: 1, position: 0 },   // {A,B} vs {C,D}
-    { match1: 8, match2: 9, position: 1 },   // {A,B} vs {C,D} — mitad opuesta
-    { match1: 2, match2: 3, position: 2 },   // {E,F} vs {G,H}
-    { match1: 10, match2: 11, position: 3 }, // {E,F} vs {G,H} — mitad opuesta
-    { match1: 4, match2: 5, position: 4 },   // {I,J} vs {K,L}
-    { match1: 12, match2: 13, position: 5 }, // {I,J} vs {K,L} — mitad opuesta
-    { match1: 6, match2: 7, position: 6 },   // {M,N} vs {O,P}
-    { match1: 14, match2: 15, position: 7 }, // {M,N} vs {O,P} — mitad opuesta
-  ];
-
-  pairings.forEach((pairing) => {
-    const match1 = roundOf32.find((m) => m.position === pairing.match1);
-    const match2 = roundOf32.find((m) => m.position === pairing.match2);
-
-    if (match1?.winnerId && match2?.winnerId) {
-      matches.push({
-        id: nanoid(),
-        homeTeamId: match1.winnerId,
-        awayTeamId: match2.winnerId,
-        homeScore: null,
-        awayScore: null,
-        isPlayed: false,
-        stage: 'world-cup-knockout',
-        round: 'round-of-16',
-        position: pairing.position,
-      });
-    }
-  });
-
-  return matches;
+  return advanceFrom(roundOf32, 0);
 }
 
 /**
  * Generates quarter-final matches from Round of 16 results
  */
 export function generateQuarterFinals(roundOf16: KnockoutMatch[]): KnockoutMatch[] {
-  const matches: KnockoutMatch[] = [];
-
-  // Standard bracket progression
-  const pairings = [
-    { match1: 0, match2: 4, position: 0 }, // Winner M1 vs Winner M5
-    { match1: 2, match2: 6, position: 1 }, // Winner M3 vs Winner M7
-    { match1: 1, match2: 5, position: 2 }, // Winner M2 vs Winner M6
-    { match1: 3, match2: 7, position: 3 }, // Winner M4 vs Winner M8
-  ];
-
-  pairings.forEach((pairing) => {
-    const match1 = roundOf16.find((m) => m.position === pairing.match1);
-    const match2 = roundOf16.find((m) => m.position === pairing.match2);
-
-    if (match1?.winnerId && match2?.winnerId) {
-      matches.push({
-        id: nanoid(),
-        homeTeamId: match1.winnerId,
-        awayTeamId: match2.winnerId,
-        homeScore: null,
-        awayScore: null,
-        isPlayed: false,
-        stage: 'world-cup-knockout',
-        round: 'quarter',
-        position: pairing.position,
-      });
-    }
-  });
-
-  return matches;
+  return advanceFrom(roundOf16, 1);
 }
 
 /**
  * Generates semi-final matches from quarter-final results
  */
 export function generateSemiFinals(quarterFinals: KnockoutMatch[]): KnockoutMatch[] {
-  const matches: KnockoutMatch[] = [];
-
-  const pairings = [
-    { match1: 0, match2: 1, position: 0 }, // Winner QF1 vs Winner QF2
-    { match1: 2, match2: 3, position: 1 }, // Winner QF3 vs Winner QF4
-  ];
-
-  pairings.forEach((pairing) => {
-    const match1 = quarterFinals.find((m) => m.position === pairing.match1);
-    const match2 = quarterFinals.find((m) => m.position === pairing.match2);
-
-    if (match1?.winnerId && match2?.winnerId) {
-      matches.push({
-        id: nanoid(),
-        homeTeamId: match1.winnerId,
-        awayTeamId: match2.winnerId,
-        homeScore: null,
-        awayScore: null,
-        isPlayed: false,
-        stage: 'world-cup-knockout',
-        round: 'semi',
-        position: pairing.position,
-      });
-    }
-  });
-
-  return matches;
+  return advanceFrom(quarterFinals, 2);
 }
 
 /**
- * Generates the third-place match from semi-final losers
+ * Generates the third-place match from semi-final losers.
+ * Sin `position`: la implementación previa no se la estampaba y ese dato se
+ * persiste, así que omitirla mantiene idénticos los torneos ya guardados.
  */
 export function generateThirdPlaceMatch(semiFinals: KnockoutMatch[]): KnockoutMatch | null {
-  const losers = semiFinals.filter((m) => m.loserId).map((m) => m.loserId!);
-
-  if (losers.length === 2) {
-    return {
-      id: nanoid(),
-      homeTeamId: losers[0],
-      awayTeamId: losers[1],
-      homeScore: null,
-      awayScore: null,
-      isPlayed: false,
-      stage: 'world-cup-knockout',
-      round: 'third-place',
-    };
-  }
-
-  return null;
+  const advanced = advanceBracket(bracketFromRound(semiFinals, 3));
+  return advanced.thirdPlaceTie
+    ? tiesToKnockoutMatches([advanced.thirdPlaceTie], { ...AS_KNOCKOUT, includePosition: false })[0]
+    : null;
 }
 
 /**
- * Generates the final match from semi-final winners
+ * Generates the final match from semi-final winners.
+ * Sin `position`, por el mismo motivo que el 3er puesto.
  */
 export function generateFinal(semiFinals: KnockoutMatch[]): KnockoutMatch | null {
-  const winners = semiFinals.filter((m) => m.winnerId).map((m) => m.winnerId!);
-
-  if (winners.length === 2) {
-    return {
-      id: nanoid(),
-      homeTeamId: winners[0],
-      awayTeamId: winners[1],
-      homeScore: null,
-      awayScore: null,
-      isPlayed: false,
-      stage: 'world-cup-knockout',
-      round: 'final',
-    };
-  }
-
-  return null;
+  const advanced = advanceBracket(bracketFromRound(semiFinals, 3));
+  const finalRound = advanced.rounds[4];
+  if (!finalRound || finalRound.ties.length === 0) return null;
+  return tiesToKnockoutMatches(finalRound.ties, { ...AS_KNOCKOUT, includePosition: false })[0];
 }
 
 /**
@@ -264,4 +212,3 @@ export function areGroupsComplete(groups: WorldCupGroup[]): boolean {
 export function isRoundComplete(matches: KnockoutMatch[]): boolean {
   return matches.length > 0 && matches.every((match) => match.isPlayed && match.winnerId);
 }
-
