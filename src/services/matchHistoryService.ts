@@ -41,6 +41,8 @@ export interface CreateMatchHistoryParams {
   awaySkillAfter: number;
   homeSkillChange: number;
   awaySkillChange: number;
+  /** Modo (competición) del partido. Ausente → 'selecciones' por default en la DB. */
+  modeId?: string;
   metadata?: Record<string, unknown>;
   /** El partido se definió en el alargue. Sólo aplica a eliminación directa. */
   wentToExtraTime?: boolean;
@@ -148,6 +150,7 @@ export const matchHistoryService = {
       away_skill_after: params.awaySkillAfter,
       home_skill_change: params.homeSkillChange,
       away_skill_change: params.awaySkillChange,
+      ...(params.modeId ? { mode_id: params.modeId } : {}),
       metadata: (params.metadata || {}) as any,
       went_to_extra_time: params.wentToExtraTime ?? false,
     };
