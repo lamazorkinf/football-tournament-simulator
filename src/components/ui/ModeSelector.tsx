@@ -3,6 +3,7 @@ import { ChevronDown, Check, Globe2, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useLeagueModeStore } from '../../store/useLeagueModeStore';
 import type { ModeKind } from '../../types';
 
 function kindIcon(kind: ModeKind) {
@@ -35,10 +36,27 @@ export function ModeSelector() {
     setIsOpen(false);
     if (id === activeModeId) return;
     selectMode(id);
-    // Recargar el mundo del nuevo modo. getState() para no atarse a renders.
+
     const store = useTournamentStore.getState();
-    await store.loadTeamsFromDatabase();
-    await store.initializeTournament();
+    const isNational = useModeStore.getState().activeModeKind() === 'national-cycle';
+    // Resetear el store de la liga siempre (evita arrastrar datos del modo previo).
+    useLeagueModeStore.getState().reset();
+
+    if (isNational) {
+      await store.loadTeamsFromDatabase();
+      await store.initializeTournament();
+    } else {
+      // Modo de ligas: no hay Cycle. Limpiar el estado del Mundial de una (así la
+      // vista cambia al toque) y cargar el plantel del modo; la temporada la
+      // carga LeagueModeView. No se pasa por initializeTournament, que es del ciclo.
+      useTournamentStore.setState({
+        currentTournament: null,
+        currentTournamentId: null,
+        tournaments: [],
+        initStatus: 'ready',
+      });
+      await store.loadTeamsFromDatabase();
+    }
   };
 
   const ActiveIcon = activeMode ? kindIcon(activeMode.kind) : Globe2;

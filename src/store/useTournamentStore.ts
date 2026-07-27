@@ -49,6 +49,7 @@ import { isQualifiersDrawn, isContinentalDrawn, isConfederationsDrawn } from '..
 import { useProgressStore } from './useProgressStore';
 import { useToastStore } from './useToastStore';
 import { useModeStore } from './useModeStore';
+import { SELECCIONES_MODE_ID } from '../constants/modes';
 import { supabase } from '../lib/supabase';
 import { getEngineConfig } from './useConfigStore';
 import {
@@ -347,13 +348,30 @@ export const useTournamentStore = create<TournamentState>()(
 
           set({ initStatus: 'loading' });
 
+          // Los modos deben estar cargados ANTES de decidir el tipo: si no, el
+          // kind cae al default 'national-cycle' y un modo de ligas se trataría
+          // como Mundial (incluso creando un "Mundial fantasma"). loadModes es
+          // idempotente y barato.
+          if (!useModeStore.getState().isLoaded) {
+            try {
+              await useModeStore.getState().loadModes();
+            } catch (error) {
+              console.error('No se pudieron cargar los modos:', error);
+            }
+          }
+
           // El ciclo mundialista (crear/cargar Cycle) sólo aplica a los modos
           // de selecciones. En un modo de ligas (league-system) no hay Cycle:
           // se deja el estado listo y sin torneo activo (los torneos de esos
-          // modos se manejan aparte, en su propia capa). Esto evita crear un
-          // "Mundial" fantasma al entrar a un modo de clubes.
-          const activeModeId = useModeStore.getState().activeModeId;
-          if (useModeStore.getState().activeModeKind() !== 'national-cycle') {
+          // modos se manejan aparte, en su propia capa).
+          // Si los modos NO cargaron (fallo de red), sólo 'selecciones' se trata
+          // como national: así un modo de ligas nunca crea un "Mundial fantasma".
+          const modeState = useModeStore.getState();
+          const activeModeId = modeState.activeModeId;
+          const isNational = modeState.isLoaded
+            ? modeState.activeModeKind() === 'national-cycle'
+            : activeModeId === SELECCIONES_MODE_ID;
+          if (!isNational) {
             set({
               tournaments: [],
               currentTournamentId: null,
