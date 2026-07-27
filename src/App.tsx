@@ -32,7 +32,7 @@ import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { ConnectionError } from './components/ui/ConnectionError';
 import { PixelBar } from './components/ui/PixelBar';
-import { ModeComingSoon } from './components/ui/ModeComingSoon';
+import { LeagueModeView } from './components/tournament/LeagueModeView';
 import { MobileActionProvider } from './hooks/useMobileAction';
 import { isContinentalDrawn, isConfederationsDrawn } from './utils/cycleProgress';
 import { Trophy } from 'lucide-react';
@@ -51,7 +51,6 @@ function App() {
 
   const { isCollapsed } = useSidebarCollapse();
   const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
-  const activeModeName = useModeStore((s) => s.activeMode()?.name);
   const [currentView, setCurrentView] = useState<View>('wizard');
   const [isPauseOpen, setIsPauseOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
@@ -205,12 +204,18 @@ function App() {
 
         <main className="px-4 sm:px-6 lg:px-8 py-6">
         {!currentTournament ? (
-          // Modo de ligas sin torneo cargado todavía (Etapa 2). Ajustes es
-          // global y sigue accesible; el resto muestra el placeholder.
+          // Modo de ligas: sus vistas propias (liga, copa, temporada). Ajustes,
+          // historial, comparación y favoritos son mode-agnósticos y siguen a mano.
           currentView === 'settings' ? (
             <SettingsHub />
+          ) : currentView === 'history' ? (
+            <MatchHistory teams={teams} />
+          ) : currentView === 'comparison' ? (
+            <TeamComparison />
+          ) : currentView === 'favorites' ? (
+            <FavoritesView />
           ) : (
-            <ModeComingSoon modeName={activeModeName} />
+            <LeagueModeView />
           )
         ) : currentView === 'wizard' ? (
           <TournamentWizard onNavigate={handleNavigate} />
