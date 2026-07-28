@@ -3,8 +3,9 @@ import {
   FULL_ENERGY,
   matchHistoryRow,
   playOneMatch,
-  playTie,
-  tieHistoryRows,
+  playTieLeg,
+  tieLegName,
+  type LegScore,
   type PipelineTeam,
 } from '../matchPipeline';
 import {
@@ -36,11 +37,31 @@ const AWAY: PipelineTeam = { id: 'A', skill: 74 };
 
 const CTX = { importance: 1.4, neutral: false } as const;
 
-describe('playTie — cruce a ida y vuelta', () => {
+/**
+ * Juega un cruce a ida y vuelta partido a partido, que es como lo juega el
+ * store: dos llamadas, la segunda con el marcador de la primera. El mismo `rng`
+ * viaja a las dos para poder compararlo contra una referencia.
+ */
+function playBothLegs(rng: () => number, o: { decisive?: boolean } = {}) {
+  const first = playTieLeg(HOME, AWAY, { ...CTX, legs: 2, legIndex: 0, rng, ...o });
+  const previous: LegScore[] = [{ homeScore: first.homeScore, awayScore: first.awayScore }];
+  const second = playTieLeg(HOME, AWAY, {
+    ...CTX,
+    legs: 2,
+    legIndex: 1,
+    previous,
+    rng,
+    ...o,
+  });
+  return { first, second };
+}
+
+describe('playTieLeg — cruce a ida y vuelta, partido a partido', () => {
   /**
-   * El test importante de esta etapa: la implementación que vivía dentro del
-   * store del modo de ligas, escrita a mano acá contra el motor. Si el pipeline
-   * consume el rng en otro orden o calcula el Elo distinto, esto se rompe.
+   * El test importante: la implementación que vivía dentro del store del modo
+   * de ligas —que jugaba los dos partidos de una—, escrita a mano acá contra el
+   * motor. Jugarlos por separado no puede cambiar ni el consumo del rng ni el
+   * Elo: si cambia, esto se rompe.
    */
   function reference(rngSeed: number) {
     const rng = seededRng(rngSeed);
@@ -84,44 +105,63 @@ describe('playTie — cruce a ida y vuelta', () => {
 
   it('reproduce la implementación de referencia con el mismo rng', () => {
     for (const seed of [1, 7, 42, 123, 999]) {
-      const got = playTie(HOME, AWAY, { ...CTX, legs: 2, rng: seededRng(seed) });
+      const { first, second } = playBothLegs(seededRng(seed));
       const want = reference(seed);
 
-      expect(got.legs).toEqual(want.legs);
-      expect(got.legChanges).toEqual(want.legChanges);
-      expect(got.extraTime).toBe(want.extraTime);
-      expect(got.deltas.get('H')).toBe(want.deltas.H);
-      expect(got.deltas.get('A')).toBe(want.deltas.A);
+      expect([
+        { homeScore: first.homeScore, awayScore: first.awayScore },
+        { homeScore: second.homeScore, awayScore: second.awayScore },
+      ]).toEqual(want.legs);
+      expect({ homeChange: first.homeChange, awayChange: first.awayChange }).toEqual(
+        want.legChanges[0],
+      );
+      expect({ homeChange: second.homeChange, awayChange: second.awayChange }).toEqual(
+        want.legChanges[1],
+      );
+      expect(Boolean(second.extraTime)).toBe(want.extraTime);
+      // El delta de cada equipo es la suma de sus dos partidos: en la vuelta H
+      // es visitante, así que le toca `awayChange`.
+      expect(first.homeChange + second.awayChange).toBe(want.deltas.H);
+      expect(first.awayChange + second.homeChange).toBe(want.deltas.A);
+    }
+  });
+
+  it('la ida no define nada: nunca hay prórroga ni penales en el primer partido', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const first = playTieLeg(HOME, AWAY, { ...CTX, legs: 2, legIndex: 0, rng: seededRng(seed) });
+      expect(first.extraTime).toBeUndefined();
+      expect(first.penalties).toBeUndefined();
+      // Y el global parcial es el marcador de la ida.
+      expect(first.aggregate).toEqual({ home: first.homeScore, away: first.awayScore });
     }
   });
 
   it('el global es sin gol de visitante, desde la perspectiva del local de la ida', () => {
-    const t = playTie(HOME, AWAY, { ...CTX, legs: 2, rng: seededRng(5) });
-    const [l1, l2] = t.legs;
+    const { first, second } = playBothLegs(seededRng(5));
     // El local de la vuelta es AWAY: sus goles suman del lado `away` del global.
-    expect(t.aggregate).toEqual({
-      home: l1.homeScore + l2.awayScore,
-      away: l1.awayScore + l2.homeScore,
+    expect(second.aggregate).toEqual({
+      home: first.homeScore + second.awayScore,
+      away: first.awayScore + second.homeScore,
     });
   });
 
   it('si hay ganador en el global, no hay prórroga ni penales', () => {
     for (const seed of [3, 11, 21, 55, 88, 404]) {
-      const t = playTie(HOME, AWAY, { ...CTX, legs: 2, rng: seededRng(seed) });
-      if (t.aggregate.home !== t.aggregate.away) {
-        expect(t.extraTime).toBe(false);
-        expect(t.penalties).toBeUndefined();
+      const { second } = playBothLegs(seededRng(seed));
+      if (second.aggregate.home !== second.aggregate.away) {
+        expect(second.extraTime).toBeUndefined();
+        expect(second.penalties).toBeUndefined();
       }
     }
   });
 
   it('penales sólo si la prórroga tampoco desempata', () => {
     for (const seed of [2, 4, 6, 8, 10, 12, 14, 16]) {
-      const t = playTie(HOME, AWAY, { ...CTX, legs: 2, rng: seededRng(seed) });
-      if (t.penalties) {
-        expect(t.extraTime).toBe(true);
-        expect(t.aggregate.home).toBe(t.aggregate.away);
-        expect(t.penalties.homeScore).not.toBe(t.penalties.awayScore);
+      const { second } = playBothLegs(seededRng(seed));
+      if (second.penalties) {
+        expect(second.extraTime).toBeDefined();
+        expect(second.aggregate.home).toBe(second.aggregate.away);
+        expect(second.penalties.homeScore).not.toBe(second.penalties.awayScore);
       }
     }
   });
@@ -129,18 +169,18 @@ describe('playTie — cruce a ida y vuelta', () => {
   it('sin `decisive` un cruce puede quedar empatado', () => {
     let anyDraw = false;
     for (let seed = 0; seed < 60; seed++) {
-      const t = playTie(HOME, AWAY, { ...CTX, legs: 2, decisive: false, rng: seededRng(seed) });
-      expect(t.extraTime).toBe(false);
-      expect(t.penalties).toBeUndefined();
-      if (t.aggregate.home === t.aggregate.away) anyDraw = true;
+      const { second } = playBothLegs(seededRng(seed), { decisive: false });
+      expect(second.extraTime).toBeUndefined();
+      expect(second.penalties).toBeUndefined();
+      if (second.aggregate.home === second.aggregate.away) anyDraw = true;
     }
     expect(anyDraw).toBe(true);
   });
 });
 
-describe('playTie — cruce a partido único', () => {
+describe('playTieLeg — cruce a partido único', () => {
   it('equivale a simulateMatchWithPenalties', () => {
-    const got = playTie(HOME, AWAY, { ...CTX, legs: 1, rng: seededRng(31) });
+    const got = playTieLeg(HOME, AWAY, { ...CTX, legs: 1, legIndex: 0, rng: seededRng(31) });
     const want = simulateMatchWithPenalties({
       home: { skill: HOME.skill, energy: 100 },
       away: { skill: AWAY.skill, energy: 100 },
@@ -149,15 +189,18 @@ describe('playTie — cruce a partido único', () => {
       rng: seededRng(31),
     });
 
-    expect(got.legs).toEqual([{ homeScore: want.homeScore, awayScore: want.awayScore }]);
+    expect({ homeScore: got.homeScore, awayScore: got.awayScore }).toEqual({
+      homeScore: want.homeScore,
+      awayScore: want.awayScore,
+    });
     expect(got.aggregate).toEqual({ home: want.homeScore, away: want.awayScore });
-    expect(got.deltas.get('H')).toBe(want.homeSkillChange);
-    expect(got.deltas.get('A')).toBe(want.awaySkillChange);
+    expect(got.homeChange).toBe(want.homeSkillChange);
+    expect(got.awayChange).toBe(want.awaySkillChange);
   });
 
   it('un partido decisivo nunca termina empatado', () => {
     for (let seed = 0; seed < 40; seed++) {
-      const t = playTie(HOME, AWAY, { ...CTX, legs: 1, rng: seededRng(seed) });
+      const t = playTieLeg(HOME, AWAY, { ...CTX, legs: 1, legIndex: 0, rng: seededRng(seed) });
       const winnerByScore = t.aggregate.home !== t.aggregate.away;
       expect(winnerByScore || !!t.penalties).toBe(true);
     }
@@ -197,37 +240,39 @@ describe('playOneMatch — energía', () => {
 });
 
 describe('filas de historial', () => {
-  it('un cruce da una fila por partido, con la localía real de cada uno', () => {
-    const played = playTie(HOME, AWAY, { ...CTX, legs: 2, rng: seededRng(64) });
-    const rows = tieHistoryRows(HOME, AWAY, played, { stage: 'cup', name: 'Copa 2026' });
+  it('cada partido del cruce da su fila, con la localía real y su rótulo', () => {
+    const rng = seededRng(64);
+    const { first, second } = playBothLegs(rng);
 
-    expect(rows).toHaveLength(2);
-    expect(rows[0].homeId).toBe('H');
-    expect(rows[0].awayId).toBe('A');
-    expect(rows[1].homeId).toBe('A'); // la vuelta se juega en cancha de AWAY
-    expect(rows[1].awayId).toBe('H');
-    expect(rows.map((r) => r.name)).toEqual(['Copa 2026 · Ida', 'Copa 2026 · Vuelta']);
-    expect(rows.every((r) => r.stage === 'cup')).toBe(true);
+    const ida = matchHistoryRow(HOME, AWAY, first, {
+      stage: 'cup',
+      name: tieLegName('Copa 2026', 2, 0),
+    });
+    // En la vuelta el local es AWAY.
+    const vuelta = matchHistoryRow(AWAY, HOME, second, {
+      stage: 'cup',
+      name: tieLegName('Copa 2026', 2, 1),
+    });
+
+    expect(ida.homeId).toBe('H');
+    expect(ida.awayId).toBe('A');
+    expect(vuelta.homeId).toBe('A'); // la vuelta se juega en cancha de AWAY
+    expect(vuelta.awayId).toBe('H');
+    expect([ida.name, vuelta.name]).toEqual(['Copa 2026 · Ida', 'Copa 2026 · Vuelta']);
+    expect([ida.stage, vuelta.stage]).toEqual(['cup', 'cup']);
   });
 
-  it('el skill final del cruce queda en la fila de la vuelta', () => {
-    const played = playTie(HOME, AWAY, { ...CTX, legs: 2, rng: seededRng(64) });
-    const rows = tieHistoryRows(HOME, AWAY, played, { stage: 'cup', name: 'Copa' });
-
-    // En la vuelta el local es AWAY, así que `homeAfter` es el skill final de AWAY.
-    expect(rows[1].homeAfter).toBe(updateTeamSkill(AWAY.skill, played.deltas.get('A')!));
-    expect(rows[1].awayAfter).toBe(updateTeamSkill(HOME.skill, played.deltas.get('H')!));
-    // `before` es siempre el skill con el que llegaron al cruce.
-    expect(rows[0].homeBefore).toBe(HOME.skill);
-    expect(rows[1].homeBefore).toBe(AWAY.skill);
+  it('un cruce a partido único usa el nombre de la competición tal cual', () => {
+    expect(tieLegName('Copa 2026', 1, 0)).toBe('Copa 2026');
   });
 
-  it('`wentToExtraTime` va sólo en el último partido, y sólo si lo hubo', () => {
+  it('`wentToExtraTime` va sólo en el partido que se fue al alargue', () => {
     for (const seed of [64, 65, 66, 67, 68, 69]) {
-      const played = playTie(HOME, AWAY, { ...CTX, legs: 2, rng: seededRng(seed) });
-      const rows = tieHistoryRows(HOME, AWAY, played, { stage: 'cup', name: 'Copa' });
-      expect(rows[0].wentToExtraTime).toBeUndefined();
-      expect(rows[1].wentToExtraTime).toBe(played.extraTime ? true : undefined);
+      const { first, second } = playBothLegs(seededRng(seed));
+      const ida = matchHistoryRow(HOME, AWAY, first, { stage: 'cup', name: 'Copa' });
+      const vuelta = matchHistoryRow(AWAY, HOME, second, { stage: 'cup', name: 'Copa' });
+      expect(ida.wentToExtraTime).toBeUndefined();
+      expect(vuelta.wentToExtraTime).toBe(second.extraTime ? true : undefined);
     }
   });
 

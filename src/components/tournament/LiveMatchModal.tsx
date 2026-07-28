@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveMatchStore } from '../../store/useLiveMatchStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { buildMatchTimeline, hashSeed, type LiveTimeline } from '../../core/liveMatch';
 import { useLiveMatchPlayback, type LiveSpeed } from '../../hooks/useLiveMatchPlayback';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -62,6 +63,15 @@ export function LiveMatchModal() {
           break;
         case 'confederations':
           outcome = await simulateConfederationsMatch(activeMatch.matchId);
+          break;
+        case 'season':
+          // Los modos de temporada tienen su propio store; el partido puede ser
+          // de liga, de grupos o un partido de un cruce (la ida o la vuelta).
+          outcome = activeMatch.tournamentId
+            ? await useSeasonModeStore
+                .getState()
+                .simulateMatch(activeMatch.tournamentId, activeMatch.matchId)
+            : null;
           break;
       }
       // Si mientras la simulación estaba en vuelo se cerró/abrió otro partido,

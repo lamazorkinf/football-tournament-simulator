@@ -4,10 +4,11 @@ import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { ScoreBug } from '../ui/ScoreBug';
 import { showMatchResultToast } from '../ui/MatchResultToast';
+import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
 import { MatchDetailModal } from './MatchDetailModal';
-import { WatchLiveButton } from './WatchLiveButton';
-import { ArrowLeft, Play, Info } from 'lucide-react';
+import { ArrowLeft, Info } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useCycleJornada } from '../../hooks/useCycleJornada';
 import { useState } from 'react';
 
 interface GroupViewProps {
@@ -18,6 +19,8 @@ interface GroupViewProps {
 
 export function GroupView({ group, teams, onBack }: GroupViewProps) {
   const { simulateMatch } = useTournamentStore();
+  const cycle = useTournamentStore((s) => s.currentTournament);
+  const jornadaSim = useCycleJornada(cycle, teams);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
 
   const getTeam = (teamId: string) => {
@@ -125,7 +128,17 @@ export function GroupView({ group, teams, onBack }: GroupViewProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Partidos</CardTitle>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <CardTitle>Partidos</CardTitle>
+            <JornadaSimActions
+              jornadaLabel={jornadaSim.title}
+              onSimulate={jornadaSim.simulate}
+              onSimulateLive={jornadaSim.simulateLive}
+              disabled={!jornadaSim.canSimulate}
+              busy={jornadaSim.isBusy}
+              hint="se juega entera, en todos los grupos."
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -197,27 +210,15 @@ function MatchCard({ match, getTeam, groupId, onSimulate, onViewDetails }: Match
             <span className="hidden sm:inline">Detalles</span>
           </Button>
         ) : (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSimulate();
+          <MatchSimActions
+            onSimulate={onSimulate}
+            live={{
+              matchId: match.id,
+              homeTeamId: match.homeTeamId,
+              awayTeamId: match.awayTeamId,
+              kind: 'qualifier',
+              groupId,
             }}
-            className="gap-1 sm:gap-2"
-          >
-            <Play className="w-3 h-3" />
-            <span className="hidden sm:inline">Jugar</span>
-          </Button>
-        )}
-        {!match.isPlayed && (
-          <WatchLiveButton
-            matchId={match.id}
-            homeTeamId={match.homeTeamId}
-            awayTeamId={match.awayTeamId}
-            kind="qualifier"
-            groupId={groupId}
-            className="w-full"
           />
         )}
       </div>

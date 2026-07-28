@@ -1,5 +1,5 @@
 import type { Match } from '../../types';
-import { ROUND_ORDER, nextRoundKey, roundKeyForTieCount, type RoundKey } from './rounds';
+import { ROUND_ORDER, nextRoundKey, roundKeyForTieCount, roundLabel, type RoundKey } from './rounds';
 
 /**
  * FORMATO ELIMINACIÓN — la primitiva única de cuadros del juego.
@@ -559,6 +559,87 @@ export function bracketMatches(bracket: Bracket): Match[] {
   return bracket.thirdPlaceTie
     ? [...fromRounds, ...bracket.thirdPlaceTie.matches]
     : fromRounds;
+}
+
+/** Todos los cruces del cuadro, incluido el del 3er puesto. */
+export function bracketTies(bracket: Bracket): Tie[] {
+  const fromRounds = bracket.rounds.flatMap((r) => r.ties);
+  return bracket.thirdPlaceTie ? [...fromRounds, bracket.thirdPlaceTie] : fromRounds;
+}
+
+/** Posición de un partido dentro de su cruce (0 = ida). -1 si no pertenece. */
+export function legIndexOf(tie: Tie, matchId: string): number {
+  return tie.matches.findIndex((m) => m.id === matchId);
+}
+
+/**
+ * ¿Se puede jugar ya este partido del cruce? La vuelta necesita el global de la
+ * ida para saber si hay que ir a la prórroga, así que no se puede jugar antes.
+ */
+export function isLegPlayable(tie: Tie, matchId: string): boolean {
+  const i = legIndexOf(tie, matchId);
+  if (i < 0 || tie.matches[i].isPlayed) return false;
+  if (!tie.homeTeamId || !tie.awayTeamId) return false;
+  return tie.matches.slice(0, i).every((m) => m.isPlayed);
+}
+
+/**
+ * Una jornada de un cuadro: los partidos de la MISMA ronda y el mismo número de
+ * partido (todas las idas, después todas las vueltas). Es la unidad que juega
+ * el botón "Simular jornada", el mismo concepto que una fecha de liga.
+ */
+export interface BracketJornada {
+  round: RoundKey;
+  /** 0 = ida, 1 = vuelta. */
+  leg: number;
+  /** Partidos por cruce en esta ronda (1 o 2). */
+  legs: number;
+  label: string;
+  /** Los partidos pendientes de la jornada, listos para jugarse. */
+  matches: Match[];
+}
+
+/**
+ * Jornada en curso del cuadro: la primera ronda con partidos pendientes, en su
+ * primer partido sin jugar. El 3er puesto viaja con la final —se juegan juntos,
+ * como en el ciclo mundialista—, así que comparten jornada.
+ */
+export function currentBracketJornada(bracket: Bracket): BracketJornada | null {
+  for (const round of bracket.rounds) {
+    const ties =
+      round.round === 'final' && bracket.thirdPlaceTie
+        ? [...round.ties, bracket.thirdPlaceTie]
+        : round.ties;
+    const playable = ties.filter((t) => t.homeTeamId && t.awayTeamId && !t.winnerId);
+    if (playable.length === 0) continue;
+
+    // El leg de la jornada es el más atrasado: si un cruce todavía debe la ida,
+    // la jornada es de idas (las vueltas de los demás esperan su turno).
+    const leg = Math.min(
+      ...playable.map((t) => {
+        const i = t.matches.findIndex((m) => !m.isPlayed);
+        return i < 0 ? Number.POSITIVE_INFINITY : i;
+      }),
+    );
+    if (!Number.isFinite(leg)) continue;
+
+    const matches = playable
+      .map((t) => t.matches[leg])
+      .filter((m): m is Match => Boolean(m) && !m.isPlayed);
+    if (matches.length === 0) continue;
+
+    const legs = playable[0].matches.length;
+    const includesThirdPlace = playable.some((t) => t.round === 'third-place');
+    const base = includesThirdPlace ? `${roundLabel('final')} y 3er puesto` : roundLabel(round.round);
+    return {
+      round: round.round,
+      leg,
+      legs,
+      label: legs === 2 ? `${base} · ${leg === 0 ? 'Ida' : 'Vuelta'}` : base,
+      matches,
+    };
+  }
+  return null;
 }
 
 /** Busca un cruce por el id de uno de sus partidos. */

@@ -1,12 +1,17 @@
 import { create } from 'zustand';
 
-/** Tipo de partido (coincide con MatchStage del colector del Match Center). */
+/**
+ * Tipo de partido: las etapas del ciclo mundialista (coinciden con el
+ * MatchStage del colector del Match Center) más `season`, que cubre cualquier
+ * partido de un modo de temporada (liga, grupos o cuadro).
+ */
 export type LiveMatchKind =
   | 'qualifier'
   | 'world-cup'
   | 'knockout'
   | 'continental'
-  | 'confederations';
+  | 'confederations'
+  | 'season';
 
 /** Lo que necesita el modal para simular y reproducir un partido. */
 export interface LiveMatchDescriptor {
@@ -15,6 +20,7 @@ export interface LiveMatchDescriptor {
   awayTeamId: string;
   kind: LiveMatchKind;
   groupId?: string; // requerido para kind 'qualifier' | 'world-cup'
+  tournamentId?: string; // requerido para kind 'season'
 }
 
 interface LiveMatchState {

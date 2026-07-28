@@ -9,8 +9,10 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
+import { JornadaSimActions } from '../ui/SimActions';
 import { Tabs } from '../ui/Tabs';
 import { ViewHeader } from '../ui/ViewHeader';
+import { useCycleJornada } from '../../hooks/useCycleJornada';
 
 type WorldCupTab = 'groups' | 'playoffs';
 
@@ -20,6 +22,7 @@ interface WorldCupViewEnhancedProps {
 
 export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps = {}) {
   const { currentTournament, teams, advanceToKnockout, regenerateKnockoutStage, simulateMatch } = useTournamentStore();
+  const jornadaSim = useCycleJornada(currentTournament, teams);
   const [activeTab, setActiveTab] = useState<WorldCupTab>('groups');
   const [confirmRegenKnockout, setConfirmRegenKnockout] = useState(false);
 
@@ -180,6 +183,18 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
                 </div>
               </div>
             </div>
+
+            {/* Acciones de jornada (mientras queden partidos de grupos) */}
+            {!groupsComplete && (
+              <JornadaSimActions
+                jornadaLabel={jornadaSim.title}
+                onSimulate={jornadaSim.simulate}
+                onSimulateLive={jornadaSim.simulateLive}
+                disabled={!jornadaSim.canSimulate}
+                busy={jornadaSim.isBusy}
+                hint="se juega entera, en los ocho grupos."
+              />
+            )}
 
             {/* Advance to Knockout Button */}
             {groupsComplete && !knockoutStarted && (

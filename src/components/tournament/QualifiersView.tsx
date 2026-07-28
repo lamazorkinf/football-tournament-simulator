@@ -11,7 +11,9 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
 import { ViewHeader } from '../ui/ViewHeader';
+import { JornadaSimActions } from '../ui/SimActions';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { useCycleJornada } from '../../hooks/useCycleJornada';
 
 interface QualifiersViewProps {
   initialRegion?: string;
@@ -21,6 +23,7 @@ interface QualifiersViewProps {
 
 export function QualifiersView({ initialRegion, initialGroupId, onNavigate }: QualifiersViewProps = {}) {
   const { teams, currentTournament, simulateMatch } = useTournamentStore();
+  const jornadaSim = useCycleJornada(currentTournament, teams);
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>(
     (initialRegion as Region) || 'all'
   );
@@ -142,6 +145,18 @@ export function QualifiersView({ initialRegion, initialGroupId, onNavigate }: Qu
             </Button>
           }
         />
+
+        {/* Acciones de jornada */}
+        <div className="px-6 py-4 border-t-4 border-grass">
+          <JornadaSimActions
+            jornadaLabel={jornadaSim.title}
+            onSimulate={jornadaSim.simulate}
+            onSimulateLive={jornadaSim.simulateLive}
+            disabled={!jornadaSim.canSimulate}
+            busy={jornadaSim.isBusy}
+            hint="se juega entera, en las cuatro regiones, sin importar el filtro."
+          />
+        </div>
 
         {/* Region Filter */}
         <div className="px-6 py-4">

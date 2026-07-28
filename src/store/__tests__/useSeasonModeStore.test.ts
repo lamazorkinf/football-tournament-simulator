@@ -9,7 +9,7 @@ import { modesService } from '../../services/modesService';
 import type { Team } from '../../types';
 import type { EliminacionTournament, LigaTournament } from '../../core/formats/modeTournament';
 import { isLeagueComplete } from '../../core/formats/league';
-import { isRoundResolved } from '../../core/formats/bracket';
+import { currentModeJornada } from '../../core/formats/modeJornada';
 import { VILLAMARIENSE_DESCRIPTOR } from '../../modes/registry';
 import type { ModeDescriptor } from '../../modes/types';
 
@@ -157,35 +157,75 @@ describe('useSeasonModeStore — la temporada villamariense, dirigida por el des
     expect(skillAfter).not.toBe(skillBefore); // el rating se movió
   });
 
-  it('juega la copa hasta coronar un campeón', async () => {
+  it('juega la copa jornada por jornada hasta coronar un campeón', async () => {
     const rng = seededRng(77);
     await useSeasonModeStore.getState().startSeason();
     const cupId = useSeasonModeStore.getState().tournaments.find((t) => t.format === 'eliminacion')!.id;
-
-    // Resolver ronda por ronda hasta que haya campeón (o tope de seguridad).
-    for (let guard = 0; guard < 40; guard++) {
-      const cup = useSeasonModeStore
+    const cupRun = () =>
+      useSeasonModeStore
         .getState()
         .tournaments.find((t): t is EliminacionTournament => t.format === 'eliminacion')!;
-      if (cup.state.championId) break;
-      const round = cup.state.rounds[cup.state.rounds.length - 1];
-      if (isRoundResolved(round.ties)) continue;
-      for (const tie of round.ties) {
-        if (!tie.winnerId) await useSeasonModeStore.getState().simulateTie(cupId, tie.id, rng);
-      }
+
+    // Cada jornada es una tanda de idas o de vueltas, nunca las dos juntas: una
+    // ronda de la copa villamariense se juega en exactamente dos jornadas.
+    const jornadas: string[] = [];
+    for (let guard = 0; guard < 40; guard++) {
+      const jornada = currentModeJornada(cupRun());
+      if (!jornada) break;
+      jornadas.push(jornada.label);
+      // Todos los partidos de la jornada son del mismo cruce-leg y ninguno se
+      // jugó todavía.
+      expect(jornada.matches.every((m) => !m.isPlayed)).toBe(true);
+      await useSeasonModeStore.getState().simulateJornada(cupId, rng);
     }
 
-    const cup = useSeasonModeStore
-      .getState()
-      .tournaments.find((t): t is EliminacionTournament => t.format === 'eliminacion')!;
+    const cup = cupRun();
     expect(cup.state.championId).toBeDefined();
     expect(cup.state.runnerUpId).toBeDefined();
     expect(cup.status).toBe('completed');
     // 5 rondas: R32, R16, QF, SF, final.
     expect(cup.state.rounds).toHaveLength(5);
     expect(cup.state.rounds[4].ties).toHaveLength(1);
-    // Ida y vuelta: cada cruce se jugó a dos partidos.
+    // Ida y vuelta: cada cruce se jugó a dos partidos, en dos jornadas.
     expect(cup.state.rounds[0].ties.every((t) => t.matches.length === 2)).toBe(true);
+    expect(jornadas).toEqual([
+      '16avos · Ida',
+      '16avos · Vuelta',
+      'Octavos · Ida',
+      'Octavos · Vuelta',
+      'Cuartos · Ida',
+      'Cuartos · Vuelta',
+      'Semis · Ida',
+      'Semis · Vuelta',
+      'Final · Ida',
+      'Final · Vuelta',
+    ]);
+  });
+
+  it('la vuelta de un cruce no se puede jugar antes que la ida', async () => {
+    const rng = seededRng(31);
+    await useSeasonModeStore.getState().startSeason();
+    const cupId = useSeasonModeStore.getState().tournaments.find((t) => t.format === 'eliminacion')!.id;
+    const firstTie = () =>
+      useSeasonModeStore
+        .getState()
+        .tournaments.find((t): t is EliminacionTournament => t.format === 'eliminacion')!
+        .state.rounds[0].ties[0];
+
+    const [ida, vuelta] = firstTie().matches;
+    // Saltear la ida no hace nada: el global de la vuelta depende de ella.
+    expect(await useSeasonModeStore.getState().simulateMatch(cupId, vuelta.id, rng)).toBeNull();
+    expect(firstTie().matches[1].isPlayed).toBe(false);
+
+    const playedIda = await useSeasonModeStore.getState().simulateMatch(cupId, ida.id, rng);
+    expect(playedIda).not.toBeNull();
+    expect(firstTie().matches[0].isPlayed).toBe(true);
+    // Con la ida jugada el cruce sigue abierto: lo define la vuelta.
+    expect(firstTie().winnerId).toBeUndefined();
+
+    const playedVuelta = await useSeasonModeStore.getState().simulateMatch(cupId, vuelta.id, rng);
+    expect(playedVuelta).not.toBeNull();
+    expect(firstTie().winnerId).toBeDefined();
   });
 
   it('closeSeason aplica ascensos/descensos y avanza el año', async () => {
