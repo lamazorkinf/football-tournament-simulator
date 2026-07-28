@@ -42,8 +42,11 @@ function teamName(teams: Team[], id: string | null): string {
 export function SeasonModeView() {
   const activeModeId = useModeStore((s) => s.activeModeId);
   const activeMode = useModeStore((s) => s.activeMode());
-  const { status, year, descriptor, tournaments, busy, startSeason, setActiveTab } =
+  const { status, year, currentYear, descriptor, tournaments, busy, startSeason, setActiveTab } =
     useSeasonModeStore();
+  // Sólo el año en curso se juega. Los viejos se miran: el store no deja
+  // simular, iniciar ni cerrar desde ahí, y acá no se ofrecen los botones.
+  const isCurrentSeason = year !== null && year === currentYear;
   // Misma derivación que usa la sidebar: en desktop navega ella, acá la barra de
   // pestañas queda para mobile y las dos no se pueden desincronizar.
   const nav = useModeNav('league');
@@ -75,6 +78,12 @@ export function SeasonModeView() {
 
   return (
     <div className="space-y-6">
+      {!isCurrentSeason && (
+        <p className="px-4 py-2 border-2 border-line bg-grass-dark font-arcade text-[9px] text-grass-soft uppercase">
+          Temporada {year} · cerrada — sólo lectura
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2 lg:hidden">
         {tabs.map((t) => (
           <button
@@ -104,13 +113,22 @@ export function SeasonModeView() {
         </Centered>
       )}
 
-      {activeTab === 'main' && status === 'ready' && (
+      {activeTab === 'main' && status === 'ready' && isCurrentSeason && (
         <Centered>
           <Trophy className="w-12 h-12 text-gold mx-auto mb-4" />
           <p className="font-arcade text-sm text-gold mb-4">Temporada {year} lista para arrancar</p>
           <Button onClick={startSeason} loading={busy} className="gap-2">
             <Play className="w-4 h-4" /> Iniciar temporada {year}
           </Button>
+        </Centered>
+      )}
+
+      {activeTab === 'main' && status === 'ready' && !isCurrentSeason && (
+        <Centered>
+          <Trophy className="w-12 h-12 text-grass-soft mx-auto mb-4" />
+          <p className="font-arcade text-sm text-grass-soft">
+            La temporada {year} nunca se jugó
+          </p>
         </Centered>
       )}
 
@@ -454,12 +472,15 @@ function TieRow({ tie, teams, busy, onPlay }: { tie: Tie; teams: Team[]; busy: b
 
 function SeasonPanel({ leagues }: { leagues: LigaTournament[] }) {
   const teams = useTournamentStore((s) => s.teams);
-  const { year, busy, closeSeason, descriptor } = useSeasonModeStore();
+  const { year, currentYear, busy, closeSeason, descriptor } = useSeasonModeStore();
 
   const promotionCount = descriptor.promotion?.count ?? 0;
   const expected = descriptor.divisions.length;
   const allComplete =
     expected > 0 && leagues.length === expected && leagues.every((l) => isLeagueComplete(l.state));
+  // Una temporada vieja ya aplicó sus ascensos: volver a cerrarla mandaría el
+  // modo para atrás. Se muestran las tablas, no el botón.
+  const isCurrentSeason = year !== null && year === currentYear;
 
   return (
     <div className="space-y-6">
@@ -468,17 +489,26 @@ function SeasonPanel({ leagues }: { leagues: LigaTournament[] }) {
           <CardTitle>Temporada {year}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-grass-soft mb-4">
-            Al cerrar la temporada, los {promotionCount} mejores de cada división ascienden y los{' '}
-            {promotionCount} peores descienden, y arranca la temporada{' '}
-            {year !== null ? year + 1 : ''}.
-          </p>
-          <Button onClick={closeSeason} loading={busy} disabled={!allComplete} className="gap-2">
-            <Hammer className="w-4 h-4" /> Cerrar temporada y aplicar ascensos/descensos
-          </Button>
-          {!allComplete && (
-            <p className="text-[10px] text-grass-soft mt-2 uppercase font-arcade">
-              Requiere todas las ligas completas
+          {isCurrentSeason ? (
+            <>
+              <p className="text-sm text-grass-soft mb-4">
+                Al cerrar la temporada, los {promotionCount} mejores de cada división ascienden y los{' '}
+                {promotionCount} peores descienden, y arranca la temporada{' '}
+                {year !== null ? year + 1 : ''}.
+              </p>
+              <Button onClick={closeSeason} loading={busy} disabled={!allComplete} className="gap-2">
+                <Hammer className="w-4 h-4" /> Cerrar temporada y aplicar ascensos/descensos
+              </Button>
+              {!allComplete && (
+                <p className="text-[10px] text-grass-soft mt-2 uppercase font-arcade">
+                  Requiere todas las ligas completas
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-grass-soft">
+              Temporada cerrada: sus ascensos y descensos ya se aplicaron. La que se está
+              jugando es la {currentYear}.
             </p>
           )}
         </CardContent>

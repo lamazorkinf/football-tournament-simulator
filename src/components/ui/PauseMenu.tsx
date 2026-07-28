@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { TournamentSelector } from './TournamentSelector';
+import { PeriodSelector } from './PeriodSelector';
 import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { useModeNav } from '../../hooks/useModeNav';
 import { navIcon } from './navIcons';
@@ -47,11 +47,9 @@ export function PauseMenu({ isOpen, onClose, currentView, onViewChange }: PauseM
     >
       <h2 className="font-arcade text-lg text-gold text-shadow-retro text-center mb-6">⏸ PAUSA</h2>
 
-      {nav.engine === 'national-cycle' && (
-        <div className="mb-6">
-          <TournamentSelector />
-        </div>
-      )}
+      <div className="mb-6">
+        <PeriodSelector />
+      </div>
 
       <nav className="flex-1 overflow-y-auto space-y-2">
         {nav.overflow.map((item) => {

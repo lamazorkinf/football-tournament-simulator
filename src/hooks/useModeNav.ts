@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
-import { useModeStore } from '../store/useModeStore';
 import { useSeasonModeStore } from '../store/useSeasonModeStore';
 import { useTournamentStore } from '../store/useTournamentStore';
-import { descriptorForMode } from '../modes/registry';
+import { useModeDescriptor } from './useModeDescriptor';
 import { deriveModeNav, type ModeNav } from '../modes/nav';
 import { lockedViewsForCycle } from '../modes/seleccionesAdapter';
 import type { View } from '../types/view';
@@ -15,13 +14,12 @@ import type { View } from '../types/view';
  * por tipo de modo — si hace falta saberlo, se pregunta por `nav.engine`.
  */
 export function useModeNav(currentView: View): ModeNav {
-  const activeMode = useModeStore((s) => s.activeMode());
   const seasonStatus = useSeasonModeStore((s) => s.status);
   const seasonTournaments = useSeasonModeStore((s) => s.tournaments);
   const requestedTab = useSeasonModeStore((s) => s.activeTab);
   const cycle = useTournamentStore((s) => s.currentTournament);
 
-  const descriptor = useMemo(() => descriptorForMode(activeMode), [activeMode]);
+  const descriptor = useModeDescriptor();
 
   return useMemo(() => {
     const isSeason = descriptor.engine === 'season';

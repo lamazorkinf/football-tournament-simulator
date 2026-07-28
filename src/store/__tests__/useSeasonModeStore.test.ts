@@ -30,6 +30,7 @@ vi.mock('../../services/modeSeasonService', () => ({
   modeSeasonService: {
     getSeason: vi.fn(async () => null),
     saveDivision: vi.fn(async () => {}),
+    listYears: vi.fn(async () => []),
   },
 }));
 vi.mock('../../services/modesService', () => ({
@@ -67,6 +68,9 @@ function seedStore(descriptor: ModeDescriptor, divisions: Record<string, string[
     modeId: 'liga',
     descriptor,
     year: 2026,
+    // El año que se mira es el que corre: es lo que habilita jugar y cerrar.
+    currentYear: 2026,
+    availableYears: [2026],
     divisions,
     previousDivisions: null,
     tournaments: [],
@@ -312,5 +316,83 @@ describe('useSeasonModeStore — escalera de tres divisiones', () => {
     expect(nextB.filter((id) => id.startsWith('A'))).toHaveLength(2);
     expect(nextB.filter((id) => id.startsWith('C'))).toHaveLength(2);
     expect(nextB.filter((id) => id.startsWith('B'))).toHaveLength(12);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Elegir temporada
+// ---------------------------------------------------------------------------
+
+describe('useSeasonModeStore — elegir temporada', () => {
+  beforeEach(() => {
+    vi.mocked(modeTournamentService.create).mockClear();
+    vi.mocked(modeSeasonService.saveDivision).mockClear();
+    vi.mocked(modesService.updateMode).mockClear();
+    vi.mocked(modeSeasonService.getSeason).mockResolvedValue({ divisions: { A: DIV_A, B: DIV_B } });
+    vi.mocked(modeSeasonService.listYears).mockResolvedValue([2028, 2027, 2026]);
+    vi.mocked(modeTournamentService.listByMode).mockResolvedValue([]);
+
+    useTournamentStore.setState({ teams: makeTeams() });
+    useSeasonModeStore.getState().reset();
+  });
+
+  const MODE = {
+    id: 'liga',
+    name: 'Liga',
+    kind: 'league-system' as const,
+    config: {},
+    currentYear: 2028,
+  };
+
+  it('al entrar se mira el año en curso y se listan las temporadas', async () => {
+    await useSeasonModeStore.getState().loadForMode(MODE);
+
+    const s = useSeasonModeStore.getState();
+    expect(s.year).toBe(2028);
+    expect(s.currentYear).toBe(2028);
+    expect(s.availableYears).toEqual([2028, 2027, 2026]);
+  });
+
+  it('el año en curso entra en la lista aunque todavía no esté sembrado', async () => {
+    vi.mocked(modeSeasonService.listYears).mockResolvedValue([2027, 2026]);
+
+    await useSeasonModeStore.getState().loadForMode(MODE);
+
+    expect(useSeasonModeStore.getState().availableYears).toEqual([2028, 2027, 2026]);
+  });
+
+  it('selectYear cambia el año mirado sin mover el que corre', async () => {
+    await useSeasonModeStore.getState().loadForMode(MODE);
+    await useSeasonModeStore.getState().selectYear(2026);
+
+    const s = useSeasonModeStore.getState();
+    expect(s.year).toBe(2026);
+    expect(s.currentYear).toBe(2028);
+    expect(s.status).toBe('ready');
+    expect(modeTournamentService.listByMode).toHaveBeenCalledWith('liga', 2026, expect.any(Function));
+  });
+
+  it('una temporada vieja no se puede iniciar ni cerrar', async () => {
+    await useSeasonModeStore.getState().loadForMode(MODE);
+    await useSeasonModeStore.getState().selectYear(2026);
+
+    await useSeasonModeStore.getState().startSeason();
+    expect(modeTournamentService.create).not.toHaveBeenCalled();
+    expect(useSeasonModeStore.getState().tournaments).toEqual([]);
+
+    await useSeasonModeStore.getState().closeSeason();
+    expect(modeSeasonService.saveDivision).not.toHaveBeenCalled();
+    expect(modesService.updateMode).not.toHaveBeenCalled();
+    // Y el año en curso del modo no se movió.
+    expect(useSeasonModeStore.getState().currentYear).toBe(2028);
+  });
+
+  it('volver al año en curso lo deja jugable otra vez', async () => {
+    await useSeasonModeStore.getState().loadForMode(MODE);
+    await useSeasonModeStore.getState().selectYear(2026);
+    await useSeasonModeStore.getState().selectYear(2028);
+
+    await useSeasonModeStore.getState().startSeason();
+    expect(useSeasonModeStore.getState().tournaments.length).toBeGreaterThan(0);
   });
 });

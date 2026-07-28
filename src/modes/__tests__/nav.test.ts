@@ -114,22 +114,33 @@ describe('deriveModeNav — modo de temporada', () => {
     expect(seasonNav('league', 'no-existe').tab).toBe('league-A');
   });
 
-  it('la barra mobile sigue siendo INICIO / VERSUS / FAVS / DIARIO', () => {
-    const primary = seasonNav().primary;
-    expect(primary.map((i) => i.shortLabel)).toEqual(['INICIO', 'VERSUS', 'FAVS', 'DIARIO']);
-    expect(primary.map((i) => i.target.view)).toEqual([
-      'league', 'comparison', 'favorites', 'history',
+  // La barra tiene 4 slots y `pickPrimary` los llena con raíz + Datos + Archivo.
+  // Al declarar Campeones en el mismo orden que selecciones (antes que Historial),
+  // REYES entra a la barra y DIARIO pasa al menú de pausa. Invertir el orden en
+  // `archiveTabs` es lo único que hace falta para volver atrás.
+  it('la barra mobile es INICIO / VERSUS / FAVS / REYES', () => {
+    const nav = seasonNav();
+    expect(nav.primary.map((i) => i.shortLabel)).toEqual(['INICIO', 'VERSUS', 'FAVS', 'REYES']);
+    expect(nav.primary.map((i) => i.target.view)).toEqual([
+      'league', 'comparison', 'favorites', 'champions',
     ]);
+    expect(nav.overflow.map((i) => i.target.view)).toContain('history');
+  });
+
+  it('Campeones vive en Archivo, igual que en selecciones', () => {
+    const archive = seasonNav().sections.find((s) => s.title === 'Archivo');
+    expect(archive?.items.map((i) => i.target.view)).toEqual(['champions', 'history']);
   });
 
   it('sólo alcanza las vistas que declara el modo', () => {
     const nav = seasonNav();
     expect([...nav.allowed].sort()).toEqual(
-      ['comparison', 'favorites', 'history', 'league', 'settings'].sort(),
+      ['champions', 'comparison', 'favorites', 'history', 'league', 'settings'].sort(),
     );
     // Una vista del ciclo no aplica: se encarrila a la raíz del modo.
     expect(seasonNav('worldcup').view).toBe('league');
     expect(seasonNav('history').view).toBe('history');
+    expect(seasonNav('champions').view).toBe('champions');
   });
 });
 

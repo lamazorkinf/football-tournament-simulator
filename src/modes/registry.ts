@@ -169,9 +169,11 @@ export const VILLAMARIENSE_DESCRIPTOR: ModeDescriptor = {
   competitions: VILLAMARIENSE_COMPETITIONS,
   theme: 'villamariense',
   extraTabs: ['season', 'crests'],
-  // Datos que funcionan sin un ciclo de selecciones cargado.
+  // `stats` todavía no: su panel "actual" se calcula del documento del ciclo
+  // (qualifiers/worldCup) y no tiene equivalente de temporada. El resto de las
+  // vistas son mode-agnósticas y se declaran igual que en selecciones.
   dataTabs: ['comparison', 'favorites'],
-  archiveTabs: ['history'],
+  archiveTabs: ['champions', 'history'],
   engine: 'season',
 };
 
@@ -218,6 +220,12 @@ export function competitionById(
   return descriptor.competitions.find((c) => c.id === id);
 }
 
+/** ¿Esta competición se nutre de esa división? `null` = la que no usa divisiones. */
+function feedsFromDivision(competition: Competition, division: string | null): boolean {
+  if (division === null) return competition.entrants.from !== 'division';
+  return competition.entrants.from === 'division' && competition.entrants.division === division;
+}
+
 /**
  * A qué competición del descriptor corresponde una fila vieja de
  * `mode_tournaments`, de las que se guardaron antes de que existiera la columna
@@ -232,9 +240,26 @@ export function competitionForLegacyRow(
   format: CompetitionFormat,
   division: string | null,
 ): Competition | undefined {
-  return descriptor.competitions.find((c) => {
-    if (c.format !== format) return false;
-    if (division === null) return c.entrants.from !== 'division';
-    return c.entrants.from === 'division' && c.entrants.division === division;
-  });
+  return descriptor.competitions.find(
+    (c) => c.format === format && feedsFromDivision(c, division),
+  );
+}
+
+/**
+ * La competición de un modo de temporada que corresponde a una división.
+ *
+ * `champions_history` no devuelve el `competition_id` de la fila: para las filas
+ * de temporada mete la división del torneo en la columna `region` (ver
+ * `021_mode_scoped_history.sql`). Con eso solo alcanza para nombrar el torneo,
+ * porque la división es lo que distingue a una liga de otra, y la copa es la que
+ * no tiene.
+ *
+ * Límite conocido: un modo con dos competiciones sin división no se desambigua
+ * por acá. El día que exista, la RPC tiene que emitir `competition_id`.
+ */
+export function competitionForDivision(
+  descriptor: ModeDescriptor,
+  division: string | null,
+): Competition | undefined {
+  return descriptor.competitions.find((c) => feedsFromDivision(c, division));
 }

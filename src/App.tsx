@@ -22,7 +22,7 @@ import { FavoritesView } from './components/favorites/FavoritesView';
 import { LiveMatchModal } from './components/tournament/LiveMatchModal';
 import { LiveMatchdayOverlay } from './components/tournament/LiveMatchdayOverlay';
 import { Sidebar } from './components/ui/Sidebar';
-import { TournamentSelector } from './components/ui/TournamentSelector';
+import { PeriodSelector } from './components/ui/PeriodSelector';
 import { ProgressModal } from './components/ui/ProgressModal';
 import { Scanlines } from './components/ui/Scanlines';
 import { ToastContainer } from './components/ui/ToastContainer';
@@ -234,7 +234,7 @@ function App() {
               </h1>
             </div>
             <div className="flex-shrink-0">
-              {nav.engine === 'national-cycle' && <TournamentSelector />}
+              <PeriodSelector />
             </div>
           </div>
         </header>
