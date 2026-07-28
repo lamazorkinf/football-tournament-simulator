@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { useModeStore } from '../../store/useModeStore';
+import { useModeDescriptor } from '../../hooks/useModeDescriptor';
+import { competitionForDivision } from '../../modes/registry';
 import {
   championsService,
   summarizeChampions,
@@ -35,6 +38,7 @@ interface ChampionsHistoryProps {
 export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
   // Los campeones son del modo activo: cada modo tiene su palmarés.
   const modeId = useModeStore((s) => s.activeModeId) ?? undefined;
+  const descriptor = useModeDescriptor();
   const [tab, setTab] = useState<Tab>('palmares');
   const [history, setHistory] = useState<ChampionHistoryRow[]>([]);
   const [palmares, setPalmares] = useState<PalmaresRow[]>([]);
@@ -82,9 +86,22 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
     setTab('timeline');
   };
 
-  const handleOpenTournament = async (tournamentId: string, kind: CompetitionKind) => {
-    await selectTournament(tournamentId);
-    onNavigate(VIEW_FOR_KIND[kind]);
+  /**
+   * Ir al torneo de una fila. Los ids de un modo de temporada son de
+   * `mode_tournaments`, no de `tournaments_new`: pedirle a `selectTournament`
+   * que los cargue no encuentra nada. Se navega a la vista raíz del modo y, si
+   * el año es el que está corriendo, se abre la pestaña de esa competición.
+   */
+  const handleOpenTournament = async (row: ChampionHistoryRow) => {
+    if (row.kind === 'season') {
+      const season = useSeasonModeStore.getState();
+      const competition = competitionForDivision(descriptor, row.region || null);
+      if (competition && season.year === row.year) season.setActiveTab(competition.id);
+      onNavigate(VIEW_FOR_KIND.season);
+      return;
+    }
+    await selectTournament(row.tournamentId);
+    onNavigate(VIEW_FOR_KIND[row.kind]);
   };
 
   if (loading) {
@@ -150,7 +167,7 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
           <p className="text-sm text-grass-soft">
             {summary.totalTitles} {summary.totalTitles === 1 ? 'título' : 'títulos'} ·{' '}
             {summary.years} {summary.years === 1 ? 'año' : 'años'} · {summary.teams}{' '}
-            {summary.teams === 1 ? 'selección' : 'selecciones'}
+            {summary.teams === 1 ? 'equipo' : 'equipos'}
           </p>
         </CardContent>
       </Card>
@@ -175,6 +192,7 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
               teamFilter={teamFilter}
               onClearTeamFilter={() => setTeamFilter(null)}
               onOpenTournament={handleOpenTournament}
+              descriptor={descriptor}
             />
           )}
         </CardContent>

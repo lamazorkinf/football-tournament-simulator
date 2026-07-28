@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { PalmaresRow } from '../../services/championsService';
 import type { Region, Team } from '../../types';
 import { TeamFlag } from '../ui/TeamFlag';
@@ -6,6 +6,18 @@ import { useTeamProfile } from '../../hooks/useTeamProfile';
 import { REGION_LABELS } from '../../utils/regionLabels';
 import { Trophy, Medal, Award } from 'lucide-react';
 
+
+/**
+ * Las columnas de desglose por competición. Se muestran sólo las que tienen
+ * algún título en las filas: un modo de temporada no tiene Mundial ni copas
+ * continentales, y el ciclo mundialista no tiene títulos de temporada.
+ */
+const BREAKDOWN: { key: keyof PalmaresRow; label: string }[] = [
+  { key: 'wcTitles', label: 'MUN' },
+  { key: 'continentalTitles', label: 'CON' },
+  { key: 'confedTitles', label: 'CCF' },
+  { key: 'seasonTitles', label: 'TEMP' },
+];
 
 interface ChampionsPalmaresProps {
   rows: PalmaresRow[];
@@ -16,6 +28,21 @@ export function ChampionsPalmares({ rows, onSelectTeam }: ChampionsPalmaresProps
   const [regionFilter, setRegionFilter] = useState<Region | 'all'>('all');
   const { openTeamProfile } = useTeamProfile();
 
+  // Sólo las regiones presentes. Los clubes de un modo de temporada no tienen
+  // región: ofrecer las cuatro del ciclo escondía la tabla entera con un clic.
+  const regions = useMemo(
+    () =>
+      (Object.keys(REGION_LABELS) as Region[]).filter((region) =>
+        rows.some((r) => r.region === region),
+      ),
+    [rows],
+  );
+
+  const columns = useMemo(
+    () => BREAKDOWN.filter((c) => rows.some((r) => Number(r[c.key]) > 0)),
+    [rows],
+  );
+
   const visible = regionFilter === 'all'
     ? rows
     : rows.filter((r) => r.region === regionFilter);
@@ -23,24 +50,26 @@ export function ChampionsPalmares({ rows, onSelectTeam }: ChampionsPalmaresProps
   return (
     <div className="space-y-4">
       {/* Filtro por región */}
-      <div className="flex flex-wrap gap-2">
-        <FilterChip active={regionFilter === 'all'} onClick={() => setRegionFilter('all')}>
-          Todas
-        </FilterChip>
-        {(Object.keys(REGION_LABELS) as Region[]).map((region) => (
-          <FilterChip
-            key={region}
-            active={regionFilter === region}
-            onClick={() => setRegionFilter(region)}
-          >
-            {REGION_LABELS[region]}
+      {regions.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          <FilterChip active={regionFilter === 'all'} onClick={() => setRegionFilter('all')}>
+            Todas
           </FilterChip>
-        ))}
-      </div>
+          {regions.map((region) => (
+            <FilterChip
+              key={region}
+              active={regionFilter === region}
+              onClick={() => setRegionFilter(region)}
+            >
+              {REGION_LABELS[region]}
+            </FilterChip>
+          ))}
+        </div>
+      )}
 
       {visible.length === 0 ? (
         <p className="text-center py-8 text-grass-soft text-sm">
-          Sin campeones para esta región.
+          {regionFilter === 'all' ? 'Sin campeones todavía.' : 'Sin campeones para esta región.'}
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -58,9 +87,11 @@ export function ChampionsPalmares({ rows, onSelectTeam }: ChampionsPalmaresProps
                 <th className="py-3 px-2 font-arcade text-[10px] text-gold uppercase" title="Terceros puestos">
                   <Award className="w-4 h-4 text-grass-soft inline" />
                 </th>
-                <th className="py-3 px-2 font-arcade text-[9px] text-grass-soft uppercase">MUN</th>
-                <th className="py-3 px-2 font-arcade text-[9px] text-grass-soft uppercase">CON</th>
-                <th className="py-3 px-2 font-arcade text-[9px] text-grass-soft uppercase">CCF</th>
+                {columns.map((c) => (
+                  <th key={c.key} className="py-3 px-2 font-arcade text-[9px] text-grass-soft uppercase">
+                    {c.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-grass">
@@ -103,9 +134,14 @@ export function ChampionsPalmares({ rows, onSelectTeam }: ChampionsPalmaresProps
                     <td className="py-3 px-2 text-center font-terminal text-led tabular-nums text-lg">{row.titles}</td>
                     <td className="py-3 px-2 text-center font-terminal text-grass-soft tabular-nums">{row.runnerUps}</td>
                     <td className="py-3 px-2 text-center font-terminal text-grass-soft tabular-nums">{row.thirds}</td>
-                    <td className="py-3 px-2 text-center font-terminal text-grass-soft tabular-nums">{row.wcTitles}</td>
-                    <td className="py-3 px-2 text-center font-terminal text-grass-soft tabular-nums">{row.continentalTitles}</td>
-                    <td className="py-3 px-2 text-center font-terminal text-grass-soft tabular-nums">{row.confedTitles}</td>
+                    {columns.map((c) => (
+                      <td
+                        key={c.key}
+                        className="py-3 px-2 text-center font-terminal text-grass-soft tabular-nums"
+                      >
+                        {row[c.key]}
+                      </td>
+                    ))}
                   </tr>
                 );
               })}

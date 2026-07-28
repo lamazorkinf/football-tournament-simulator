@@ -7,6 +7,8 @@ import {
   type TimelineFilters,
 } from '../../services/championsService';
 import type { Region, Team } from '../../types';
+import type { ModeDescriptor } from '../../modes/types';
+import { competitionForDivision } from '../../modes/registry';
 import { TeamFlag } from '../ui/TeamFlag';
 import { useTeamProfile } from '../../hooks/useTeamProfile';
 import { REGION_LABELS } from '../../utils/regionLabels';
@@ -20,9 +22,29 @@ const KIND_LABELS: Record<CompetitionKind, string> = {
   season: 'Temporada',
 };
 
-function competitionLabel(row: ChampionHistoryRow): string {
+/** Los chips se ofrecen en este orden, pero sólo los que aparecen en las filas. */
+const KIND_ORDER: CompetitionKind[] = ['world-cup', 'continental', 'confederations', 'season'];
+
+const CHIP_LABELS: Record<CompetitionKind, string> = {
+  ...KIND_LABELS,
+  confederations: 'Confed.',
+};
+
+/**
+ * Cómo se llama el torneo de una fila.
+ *
+ * En el ciclo mundialista el `kind` alcanza (salvo los continentales, que se
+ * desdoblan por región). En un modo de temporada todas las filas son `season`,
+ * así que el nombre sale del descriptor: la columna `region` trae la división
+ * del torneo y con eso se resuelve la competición ("Liga A", "Copa", …).
+ */
+function competitionLabel(row: ChampionHistoryRow, descriptor?: ModeDescriptor): string {
   if (row.kind === 'continental' && row.region) {
     return `Continental · ${REGION_LABELS[row.region as Region] ?? row.region}`;
+  }
+  if (row.kind === 'season' && descriptor) {
+    const competition = competitionForDivision(descriptor, row.region || null);
+    if (competition) return competition.name;
   }
   return KIND_LABELS[row.kind];
 }
@@ -42,7 +64,9 @@ interface ChampionsTimelineProps {
   rows: ChampionHistoryRow[];
   teamFilter: string | null;
   onClearTeamFilter: () => void;
-  onOpenTournament: (tournamentId: string, kind: CompetitionKind) => void;
+  onOpenTournament: (row: ChampionHistoryRow) => void;
+  /** Descriptor del modo activo, para nombrar los torneos de temporada. */
+  descriptor?: ModeDescriptor;
 }
 
 export function ChampionsTimeline({
@@ -50,6 +74,7 @@ export function ChampionsTimeline({
   teamFilter,
   onClearTeamFilter,
   onOpenTournament,
+  descriptor,
 }: ChampionsTimelineProps) {
   const [kind, setKind] = useState<CompetitionKind | 'all'>('all');
   const [region, setRegion] = useState<Region | null>(null);
@@ -58,6 +83,21 @@ export function ChampionsTimeline({
   const years = useMemo(() => rows.map((r) => r.year), [rows]);
   const minYear = years.length ? Math.min(...years) : null;
   const maxYear = years.length ? Math.max(...years) : null;
+
+  // Los chips salen de las filas y no de una lista escrita a mano: en un modo de
+  // temporada, tres filtros del ciclo mundialista no filtrarían nada. Con un solo
+  // tipo presente no hay nada que elegir, así que la fila entera se esconde.
+  const kinds = useMemo(
+    () => KIND_ORDER.filter((k) => rows.some((r) => r.kind === k)),
+    [rows],
+  );
+  const regions = useMemo(
+    () =>
+      (Object.keys(REGION_LABELS) as Region[]).filter((r) =>
+        rows.some((row) => row.kind === 'continental' && row.region === r),
+      ),
+    [rows],
+  );
 
   const filters: TimelineFilters = {
     kind,
@@ -71,23 +111,27 @@ export function ChampionsTimeline({
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <FilterChip active={kind === 'all'} onClick={() => setKind('all')}>Todas</FilterChip>
-        <FilterChip active={kind === 'world-cup'} onClick={() => setKind('world-cup')}>Mundial</FilterChip>
-        <FilterChip active={kind === 'continental'} onClick={() => setKind('continental')}>Continental</FilterChip>
-        <FilterChip active={kind === 'confederations'} onClick={() => setKind('confederations')}>Confed.</FilterChip>
-        {kind === 'continental' && (
-          <>
-            <span className="text-grass-soft text-xs px-1">·</span>
-            <FilterChip active={region === null} onClick={() => setRegion(null)}>Todas</FilterChip>
-            {(Object.keys(REGION_LABELS) as Region[]).map((r) => (
-              <FilterChip key={r} active={region === r} onClick={() => setRegion(r)}>
-                {REGION_LABELS[r]}
-              </FilterChip>
-            ))}
-          </>
-        )}
-      </div>
+      {kinds.length > 1 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <FilterChip active={kind === 'all'} onClick={() => setKind('all')}>Todas</FilterChip>
+          {kinds.map((k) => (
+            <FilterChip key={k} active={kind === k} onClick={() => setKind(k)}>
+              {CHIP_LABELS[k]}
+            </FilterChip>
+          ))}
+          {kind === 'continental' && regions.length > 1 && (
+            <>
+              <span className="text-grass-soft text-xs px-1">·</span>
+              <FilterChip active={region === null} onClick={() => setRegion(null)}>Todas</FilterChip>
+              {regions.map((r) => (
+                <FilterChip key={r} active={region === r} onClick={() => setRegion(r)}>
+                  {REGION_LABELS[r]}
+                </FilterChip>
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Chip de filtro por equipo (cross-tab desde Palmarés) */}
       {teamFilter && (
@@ -116,8 +160,9 @@ export function ChampionsTimeline({
             <TimelineRow
               key={`${row.tournamentId}-${row.kind}-${row.region ?? ''}`}
               row={row}
+              label={competitionLabel(row, descriptor)}
               onOpenProfile={openTeamProfile}
-              onOpenTournament={() => onOpenTournament(row.tournamentId, row.kind)}
+              onOpenTournament={() => onOpenTournament(row)}
             />
           ))}
         </div>
@@ -128,10 +173,12 @@ export function ChampionsTimeline({
 
 function TimelineRow({
   row,
+  label,
   onOpenProfile,
   onOpenTournament,
 }: {
   row: ChampionHistoryRow;
+  label: string;
   onOpenProfile: (team: Team) => void;
   onOpenTournament: () => void;
 }) {
@@ -150,7 +197,7 @@ function TimelineRow({
       <div className="flex items-center gap-3 sm:w-56 shrink-0">
         <span className="font-terminal text-led tabular-nums text-lg">{row.year}</span>
         <span className="font-arcade text-[9px] text-white uppercase leading-tight">
-          {competitionLabel(row)}
+          {label}
         </span>
       </div>
 
