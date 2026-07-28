@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useModeStore } from '../../store/useModeStore';
 import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ScoreBug } from '../ui/ScoreBug';
@@ -14,6 +15,9 @@ interface MatchHistoryProps {
 }
 
 export function MatchHistory({ teams }: MatchHistoryProps) {
+  // El historial es alcanzable desde cualquier modo, así que TIENE que filtrar
+  // por el activo: si no, la Liga Villamariense muestra partidos del Mundial.
+  const modeId = useModeStore((s) => s.activeModeId) ?? undefined;
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<MatchCursor | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -54,10 +58,10 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         return [newMatch, ...prev];
       });
       loadStatistics();
-    });
+    }, modeId);
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, modeId]);
 
   const loadFirstPage = async (epoch: { cancelled: boolean }) => {
     try {
@@ -66,6 +70,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
       const page = await matchHistoryService.getMatchesPage({
         pageSize: PAGE_SIZE,
         stage: filter === 'all' ? undefined : filter,
+        modeId,
       });
       if (epoch.cancelled) return;
       setMatches(page.matches);
@@ -92,6 +97,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         cursor: nextCursor,
         pageSize: PAGE_SIZE,
         stage: filter === 'all' ? undefined : filter,
+        modeId,
       });
       if (epoch.cancelled) return;
       setMatches((prev) => [...prev, ...page.matches]);
@@ -112,7 +118,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
 
   const loadStatistics = async () => {
     try {
-      const stats = await matchHistoryService.getMatchStatistics();
+      const stats = await matchHistoryService.getMatchStatistics(modeId);
       setStatistics(stats);
     } catch (error) {
       console.error('Error loading statistics:', error);

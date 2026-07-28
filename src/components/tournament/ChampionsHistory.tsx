@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { useTournamentStore } from '../../store/useTournamentStore';
+import { useModeStore } from '../../store/useModeStore';
 import {
   championsService,
   summarizeChampions,
@@ -23,6 +24,8 @@ const VIEW_FOR_KIND: Record<CompetitionKind, string> = {
   'world-cup': 'worldcup',
   continental: 'continental',
   confederations: 'confederations',
+  // Los torneos de un modo de temporada viven todos bajo su vista raíz.
+  season: 'league',
 };
 
 interface ChampionsHistoryProps {
@@ -30,6 +33,8 @@ interface ChampionsHistoryProps {
 }
 
 export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
+  // Los campeones son del modo activo: cada modo tiene su palmarés.
+  const modeId = useModeStore((s) => s.activeModeId) ?? undefined;
   const [tab, setTab] = useState<Tab>('palmares');
   const [history, setHistory] = useState<ChampionHistoryRow[]>([]);
   const [palmares, setPalmares] = useState<PalmaresRow[]>([]);
@@ -44,7 +49,8 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
     return () => {
       signal.cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modeId]);
 
   const load = async (signal: { cancelled: boolean }) => {
     if (!isSupabaseConfigured()) {
@@ -55,8 +61,8 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
     setError(false);
     try {
       const [hist, palm] = await Promise.all([
-        championsService.getChampionsHistory(),
-        championsService.getPalmares(),
+        championsService.getChampionsHistory(modeId),
+        championsService.getPalmares(modeId),
       ]);
       if (signal.cancelled) return;
       setHistory(hist);

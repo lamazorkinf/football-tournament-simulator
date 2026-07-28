@@ -147,7 +147,7 @@ describe('championsService.getPalmares', () => {
         data: [{
           team_id: 'bra', team_name: 'Brasil', region: 'America',
           titles: '4', runner_ups: '1', thirds: '0',
-          wc_titles: '2', continental_titles: '2', confed_titles: '0',
+          wc_titles: '2', continental_titles: '2', confed_titles: '0', season_titles: '0',
         }],
         error: null,
       } as never);
@@ -156,11 +156,25 @@ describe('championsService.getPalmares', () => {
     expect(res[0]).toEqual({
       teamId: 'bra', teamName: 'Brasil', region: 'America',
       titles: 4, runnerUps: 1, thirds: 0,
-      wcTitles: 2, continentalTitles: 2, confedTitles: 0,
+      wcTitles: 2, continentalTitles: 2, confedTitles: 0, seasonTitles: 0,
     });
   });
   it('sin Supabase ⇒ []', async () => {
     vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(false);
     expect(await championsService.getPalmares()).toEqual([]);
+  });
+
+  it('reenvía el modo a los dos RPCs: cada modo tiene su palmarés', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    const rpc = vi.spyOn(supaLib.supabase as unknown as { rpc: (...a: unknown[]) => unknown }, 'rpc')
+      .mockResolvedValue({ data: [], error: null } as never);
+
+    await championsService.getChampionsHistory('liga');
+    await championsService.getPalmares('liga');
+
+    expect(rpc.mock.calls).toEqual([
+      ['champions_history', { p_mode_id: 'liga' }],
+      ['champions_palmares', { p_mode_id: 'liga' }],
+    ]);
   });
 });

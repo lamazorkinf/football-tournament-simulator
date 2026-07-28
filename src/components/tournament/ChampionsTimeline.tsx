@@ -17,6 +17,7 @@ const KIND_LABELS: Record<CompetitionKind, string> = {
   'world-cup': 'Mundial',
   continental: 'Continental',
   confederations: 'Copa Confederaciones',
+  season: 'Temporada',
 };
 
 function competitionLabel(row: ChampionHistoryRow): string {

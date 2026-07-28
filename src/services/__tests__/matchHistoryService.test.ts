@@ -99,6 +99,7 @@ describe('getMatchesPage', () => {
       p_cursor_id: null,
       p_page_size: 2,
       p_stage: 'qualifier',
+      p_mode_id: null,
     });
     expect(res.matches.map((m) => m.id)).toEqual(['a', 'b']);
     expect(res.nextCursor).toEqual({ playedAt: '2026-01-01T00:00:00Z', id: 'b' });
@@ -143,7 +144,40 @@ describe('getMatchesPage', () => {
       p_cursor_id: 'b',
       p_page_size: 10,
       p_stage: null,
+      p_mode_id: null,
     });
+  });
+
+  it('reenvía el modo activo al RPC: el historial es por modo', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    const rpc = vi.spyOn(supaLib.supabase as unknown as { rpc: (...a: unknown[]) => unknown }, 'rpc')
+      .mockResolvedValue({ data: [], error: null } as never);
+
+    await matchHistoryService.getMatchesPage({ pageSize: 30, modeId: 'villamariense' });
+
+    expect(rpc).toHaveBeenCalledWith('get_matches_page', {
+      p_cursor_played_at: null,
+      p_cursor_id: null,
+      p_page_size: 30,
+      p_stage: null,
+      p_mode_id: 'villamariense',
+    });
+  });
+
+  it('las agregaciones también van por modo', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    const rpc = vi.spyOn(supaLib.supabase as unknown as { rpc: (...a: unknown[]) => unknown }, 'rpc')
+      .mockResolvedValue({ data: [], error: null } as never);
+
+    await matchHistoryService.getMatchStatistics('liga');
+    await matchHistoryService.getTeamStats('liga');
+    await matchHistoryService.getRegionStats('liga');
+
+    expect(rpc.mock.calls).toEqual([
+      ['get_match_statistics', { p_mode_id: 'liga' }],
+      ['get_team_stats', { p_mode_id: 'liga' }],
+      ['get_region_stats', { p_mode_id: 'liga' }],
+    ]);
   });
 });
 
