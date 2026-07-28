@@ -1,5 +1,5 @@
 import type { GameMode, ModeKind } from '../types';
-import type { Competition, ModeDescriptor } from './types';
+import type { Competition, CompetitionFormat, ModeDescriptor } from './types';
 import { parseModeConfig } from './schema';
 
 /**
@@ -213,4 +213,25 @@ export function competitionById(
   id: string,
 ): Competition | undefined {
   return descriptor.competitions.find((c) => c.id === id);
+}
+
+/**
+ * A qué competición del descriptor corresponde una fila vieja de
+ * `mode_tournaments`, de las que se guardaron antes de que existiera la columna
+ * `competition_id`.
+ *
+ * La regla es la que hace única a la fila: su formato canónico y, si la fila
+ * tiene división, que la competición se nutra de esa misma división. Sirve para
+ * cualquier modo de temporada, no sólo para el villamariense.
+ */
+export function competitionForLegacyRow(
+  descriptor: ModeDescriptor,
+  format: CompetitionFormat,
+  division: string | null,
+): Competition | undefined {
+  return descriptor.competitions.find((c) => {
+    if (c.format !== format) return false;
+    if (division === null) return c.entrants.from !== 'division';
+    return c.entrants.from === 'division' && c.entrants.division === division;
+  });
 }

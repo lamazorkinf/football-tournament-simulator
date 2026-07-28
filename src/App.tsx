@@ -32,7 +32,7 @@ import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { ConnectionError } from './components/ui/ConnectionError';
 import { PixelBar } from './components/ui/PixelBar';
-import { LeagueModeView } from './components/tournament/LeagueModeView';
+import { SeasonModeView } from './components/tournament/SeasonModeView';
 import { MobileActionProvider } from './hooks/useMobileAction';
 import { isContinentalDrawn, isConfederationsDrawn } from './utils/cycleProgress';
 import { themeForMode } from './lib/modeTheme';
@@ -235,7 +235,7 @@ function App() {
           ) : currentView === 'favorites' ? (
             <FavoritesView />
           ) : (
-            <LeagueModeView />
+            <SeasonModeView />
           )
         ) : currentView === 'wizard' ? (
           <TournamentWizard onNavigate={handleNavigate} />

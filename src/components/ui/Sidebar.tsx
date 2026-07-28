@@ -1,9 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
-import { Trophy, Globe2, BarChart3, Settings, History, CalendarDays, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight, Medal, Star, Route, Shield, Lock, Home, Image } from 'lucide-react';
+import { Trophy, Globe2, BarChart3, Settings, History, CalendarDays, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight, Medal, Star, Route, Shield, Lock } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
 import { ModeSelector } from './ModeSelector';
 import { useModeStore } from '../../store/useModeStore';
-import { useLeagueModeStore, deriveLeagueTabs, resolveLeagueTab } from '../../store/useLeagueModeStore';
+import { useSeasonModeStore, deriveSeasonTabs, resolveSeasonTab, type SeasonTab } from '../../store/useSeasonModeStore';
+import { navIcon } from './navIcons';
 import { useSidebarCollapse } from '../../hooks/useSidebarCollapse';
 import type { View } from '../../types/view';
 
@@ -62,26 +63,18 @@ const LEAGUE_DATA_SECTION: NavSection = {
 
 const FOOTER_ITEM: NavItem = { id: 'settings', icon: Settings, label: 'Ajustes' };
 
-/** Icono para cada pestaña de un modo de ligas (deriveLeagueTabs). */
-function leagueTabIcon(key: string): LucideIcon {
-  if (key === 'crests') return Image;
-  if (key === 'cup') return Trophy;
-  if (key === 'season') return CalendarDays;
-  if (key.startsWith('league-')) return Shield;
-  return Home; // 'main'
-}
-
 export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews }: SidebarProps) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
   const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
   const activeMode = useModeStore((s) => s.activeMode());
 
-  // Estado del modo de ligas (para el header y la navegación de la liga).
-  const leagueYear = useLeagueModeStore((s) => s.year);
-  const leagueStatus = useLeagueModeStore((s) => s.status);
-  const leagueTournaments = useLeagueModeStore((s) => s.tournaments);
-  const leagueActiveTab = useLeagueModeStore((s) => s.activeTab);
-  const setLeagueTab = useLeagueModeStore((s) => s.setActiveTab);
+  // Estado del modo de temporada (para el header y su navegación).
+  const leagueYear = useSeasonModeStore((s) => s.year);
+  const seasonDescriptor = useSeasonModeStore((s) => s.descriptor);
+  const leagueStatus = useSeasonModeStore((s) => s.status);
+  const leagueTournaments = useSeasonModeStore((s) => s.tournaments);
+  const leagueActiveTab = useSeasonModeStore((s) => s.activeTab);
+  const setLeagueTab = useSeasonModeStore((s) => s.setActiveTab);
 
   const renderButton = (
     { icon: Icon, label }: { icon: LucideIcon; label: string },
@@ -120,13 +113,14 @@ export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews
       onClick: () => onViewChange(item.id),
     }, item.id);
 
-  // Navegación de la liga: cada pestaña vive en useLeagueModeStore.activeTab; la
-  // vista de contenido es 'league'. Activo = estás en 'league' y es esa pestaña.
-  const leagueTabs = deriveLeagueTabs(leagueStatus, leagueTournaments);
-  const resolvedLeagueTab = resolveLeagueTab(leagueTabs, leagueActiveTab);
-  const renderLeagueTabItem = (t: { key: string; label: string }) =>
+  // Navegación del modo de temporada: cada pestaña vive en
+  // useSeasonModeStore.activeTab y la vista de contenido es 'league'. Las
+  // pestañas y sus iconos salen del descriptor del modo.
+  const leagueTabs = deriveSeasonTabs(seasonDescriptor, leagueStatus, leagueTournaments);
+  const resolvedLeagueTab = resolveSeasonTab(leagueTabs, leagueActiveTab);
+  const renderLeagueTabItem = (t: SeasonTab) =>
     renderButton(
-      { icon: leagueTabIcon(t.key), label: t.label },
+      { icon: navIcon(t.icon), label: t.label },
       {
         active: currentView === 'league' && resolvedLeagueTab === t.key,
         onClick: () => {

@@ -3,11 +3,10 @@ import { sortStandings } from './scheduler';
 import {
   advanceBracket,
   createBracket,
-  planWithSources,
   type Bracket,
-  type BracketPlan,
   type BracketRound,
 } from './formats/bracket';
+import { R32_SLOT_ORDER, WORLD_CUP_PLAN } from './formats/fifaPlan';
 import { knockoutMatchesToTies, tiesToKnockoutMatches } from './formats/knockoutCompat';
 
 /**
@@ -26,45 +25,6 @@ import { knockoutMatchesToTies, tiesToKnockoutMatches } from './formats/knockout
  * Además `position` se persiste en matches_new: renumerar corrompería los
  * torneos en curso al cargarlos.
  */
-
-/**
- * El plan del Mundial. Los emparejamientos salen tal cual de la implementación
- * previa; están acá como DATO, que es lo que permite que el resto del cuadro sea
- * la misma primitiva que usan el continental y la copa.
- *
- * - R16: {A,B} vs {C,D} y su mitad opuesta, etc.
- * - Cuartos: (0,4) (2,6) (1,5) (3,7).
- * - Semis: (0,1) (2,3).
- *
- * Sin `firstMatchday`: los partidos de knockout del Mundial no llevan `matchday`
- * estampado (a diferencia de continental y confed). Estampárselo haría que
- * `getPhaseMatchdayCount(cycle, 'wc-knockout')` deje de dar 0 y el cuadro
- * quedaría bloqueado por calendario.
- */
-const WORLD_CUP_PLAN: BracketPlan = planWithSources(
-  32,
-  {
-    1: [[0, 1], [8, 9], [2, 3], [10, 11], [4, 5], [12, 13], [6, 7], [14, 15]],
-    2: [[0, 4], [2, 6], [1, 5], [3, 7]],
-    3: [[0, 1], [2, 3]],
-  },
-  { thirdPlace: true },
-);
-
-/**
- * Orden de slots de R32: 1º de grupo contra 2º de OTRO grupo.
- * A1-B2, C1-D2, … y después B1-A2, D1-C2, …
- */
-const R32_SLOT_ORDER: Array<[number, 'winner' | 'runnerUp']> = [
-  [0, 'winner'], [1, 'runnerUp'], [2, 'winner'], [3, 'runnerUp'],
-  [4, 'winner'], [5, 'runnerUp'], [6, 'winner'], [7, 'runnerUp'],
-  [8, 'winner'], [9, 'runnerUp'], [10, 'winner'], [11, 'runnerUp'],
-  [12, 'winner'], [13, 'runnerUp'], [14, 'winner'], [15, 'runnerUp'],
-  [1, 'winner'], [0, 'runnerUp'], [3, 'winner'], [2, 'runnerUp'],
-  [5, 'winner'], [4, 'runnerUp'], [7, 'winner'], [6, 'runnerUp'],
-  [9, 'winner'], [8, 'runnerUp'], [11, 'winner'], [10, 'runnerUp'],
-  [13, 'winner'], [12, 'runnerUp'], [15, 'winner'], [14, 'runnerUp'],
-];
 
 /** El Mundial no estampa jornada; sí posición, salvo donde nunca la tuvo. */
 const AS_KNOCKOUT = { stage: 'world-cup-knockout' } as const;

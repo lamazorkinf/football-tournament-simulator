@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Trophy, Play, Hammer, ChevronRight, Shield } from 'lucide-react';
-import { useLeagueModeStore, deriveLeagueTabs, resolveLeagueTab } from '../../store/useLeagueModeStore';
+import { useSeasonModeStore, deriveSeasonTabs, resolveSeasonTab } from '../../store/useSeasonModeStore';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
@@ -13,9 +13,16 @@ import { StandingsTable } from '../ui/StandingsTable';
 import { CrestManager } from './CrestManager';
 import { isLeagueComplete } from '../../core/formats/league';
 import { roundLabel } from '../../core/formats/rounds';
-import type { LeagueTournament, CupTournament } from '../../core/formats/modeTournament';
-import type { TwoLeggedTie } from '../../core/formats/cup';
-import type { Team } from '../../types';
+import { tieAggregate, type Bracket, type Tie } from '../../core/formats/bracket';
+import type {
+  GruposEliminacionTournament,
+  LigaTournament,
+  ModeTournament,
+  EliminacionTournament,
+} from '../../core/formats/modeTournament';
+import { descriptorForMode } from '../../modes/registry';
+import type { Competition } from '../../modes/types';
+import type { Match, Team } from '../../types';
 
 function teamName(teams: Team[], id: string | null): string {
   if (!id) return '—';
@@ -23,19 +30,32 @@ function teamName(teams: Team[], id: string | null): string {
 }
 
 /**
- * Vista de un modo de ligas (league-system): dos ligas por división, una copa a
- * doble partido y el panel de temporada con ascensos/descensos. Todo del año en
- * curso. La simulación y persistencia viven en useLeagueModeStore.
+ * Vista de un modo de temporada: sus competiciones del año en curso más el
+ * panel de temporada con ascensos/descensos.
+ *
+ * Hay exactamente TRES paneles, uno por formato canónico. Antes había un panel
+ * por competición de la Liga Villamariense; ahora cada competición se renderiza
+ * según su `format`, así que un modo nuevo no agrega componentes. La simulación
+ * y la persistencia viven en useSeasonModeStore.
  */
-export function LeagueModeView() {
+export function SeasonModeView() {
   const activeModeId = useModeStore((s) => s.activeModeId);
   const activeMode = useModeStore((s) => s.activeMode());
-  const { status, year, tournaments, busy, startSeason, activeTab: requestedTab, setActiveTab } = useLeagueModeStore();
+  const {
+    status,
+    year,
+    descriptor,
+    tournaments,
+    busy,
+    startSeason,
+    activeTab: requestedTab,
+    setActiveTab,
+  } = useSeasonModeStore();
 
   // (Re)cargar la temporada cada vez que cambia el modo activo.
   useEffect(() => {
-    if (activeMode && activeMode.kind === 'league-system') {
-      useLeagueModeStore.getState().loadForMode(activeMode);
+    if (activeMode && descriptorForMode(activeMode).engine === 'season') {
+      useSeasonModeStore.getState().loadForMode(activeMode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModeId]);
@@ -47,14 +67,17 @@ export function LeagueModeView() {
     return <Centered>No se pudo cargar el modo. Revisá la conexión.</Centered>;
   }
 
-  const leagues = tournaments.filter((t): t is LeagueTournament => t.format === 'league');
-  const cup = tournaments.find((t): t is CupTournament => t.format === 'cup') ?? null;
   const seasonReady = status === 'ready' && tournaments.length > 0;
+  const leagues = tournaments.filter((t): t is LigaTournament => t.format === 'liga');
 
-  // Navegación compartida con la sidebar (deriveLeagueTabs). En desktop la
+  // Navegación compartida con la sidebar (deriveSeasonTabs). En desktop la
   // sidebar es la que navega; acá la barra de pestañas queda para mobile.
-  const tabs = deriveLeagueTabs(status, tournaments);
-  const activeTab = resolveLeagueTab(tabs, requestedTab);
+  const tabs = deriveSeasonTabs(descriptor, status, tournaments);
+  const activeTab = resolveSeasonTab(tabs, requestedTab);
+  const activeRun = tournaments.find((t) => t.competitionId === activeTab) ?? null;
+  const activeCompetition = activeRun
+    ? descriptor.competitions.find((c) => c.id === activeRun.competitionId)
+    : undefined;
 
   return (
     <div className="space-y-6">
@@ -97,11 +120,9 @@ export function LeagueModeView() {
         </Centered>
       )}
 
-      {seasonReady &&
-        leagues.map(
-          (l) => activeTab === `league-${l.division}` && <LeaguePanel key={l.id} league={l} />,
-        )}
-      {seasonReady && cup && activeTab === 'cup' && <CupPanel cup={cup} />}
+      {seasonReady && activeRun && activeCompetition && (
+        <CompetitionPanel run={activeRun} competition={activeCompetition} />
+      )}
       {seasonReady && activeTab === 'season' && <SeasonPanel leagues={leagues} />}
     </div>
   );
@@ -115,35 +136,56 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Un torneo se dibuja según su formato. Tres formatos, tres paneles. */
+function CompetitionPanel({
+  run,
+  competition,
+}: {
+  run: ModeTournament;
+  competition: Competition;
+}) {
+  if (run.format === 'liga') {
+    return <LigaPanel run={run} competition={competition} />;
+  }
+  if (run.format === 'eliminacion') {
+    return <EliminacionPanel run={run} />;
+  }
+  return <GruposEliminacionPanel run={run} />;
+}
+
+// ---------------------------------------------------------------------------
+// Formato 1: liga
 // ---------------------------------------------------------------------------
 
-function LeaguePanel({ league }: { league: LeagueTournament }) {
+function LigaPanel({ run, competition }: { run: LigaTournament; competition: Competition }) {
   const teams = useTournamentStore((s) => s.teams);
-  const busy = useLeagueModeStore((s) => s.busy);
+  const busy = useSeasonModeStore((s) => s.busy);
   const favoriteTeamIds = useFavoritesStore((s) => s.favoriteTeamIds);
   const openLiveSession = useLiveMatchdayStore((s) => s.openSession);
 
+  const highlightTop = competition.format === 'liga' ? competition.highlightTop : undefined;
+
   const nextMatchday = useMemo(() => {
-    const unplayed = league.state.matches.filter((m) => !m.isPlayed);
+    const unplayed = run.state.matches.filter((m) => !m.isPlayed);
     if (unplayed.length === 0) return null;
     return Math.min(...unplayed.map((m) => m.matchday ?? 0));
-  }, [league.state.matches]);
+  }, [run.state.matches]);
 
   const totalMatchdays = useMemo(
-    () => Math.max(0, ...league.state.matches.map((m) => m.matchday ?? 0)),
-    [league.state.matches],
+    () => Math.max(0, ...run.state.matches.map((m) => m.matchday ?? 0)),
+    [run.state.matches],
   );
 
-  const currentFixtures = league.state.matches.filter((m) => m.matchday === nextMatchday);
+  const currentFixtures = run.state.matches.filter((m) => m.matchday === nextMatchday);
 
   // Juega una fecha y la reproduce en vivo (mismo overlay que el Mundial):
   // commit-then-replay. La fecha se simula/persiste en el store; después se
   // arma el timeline minuto a minuto desde el marcador final (seed = matchId).
   const playFechaLive = async (md: number) => {
-    await useLeagueModeStore.getState().simulateLeagueMatchday(league.id, md);
-    const updated = useLeagueModeStore
+    await useSeasonModeStore.getState().simulateMatchday(run.id, md);
+    const updated = useSeasonModeStore
       .getState()
-      .tournaments.find((t) => t.id === league.id) as LeagueTournament | undefined;
+      .tournaments.find((t) => t.id === run.id) as LigaTournament | undefined;
     if (!updated) return;
     const played = updated.state.matches.filter(
       (m) => m.matchday === md && m.isPlayed && m.homeScore != null && m.awayScore != null,
@@ -151,7 +193,7 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
     if (played.length === 0) return;
 
     const favs = new Set(favoriteTeamIds);
-    const title = `Liga ${league.division} · Fecha ${md}`;
+    const title = `${competition.name} · Fecha ${md}`;
     const entries: LiveMatchdayEntry[] = played.map((m) => ({
       matchId: m.id,
       homeTeamId: m.homeTeamId,
@@ -161,7 +203,7 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
       isFavorite: favs.has(m.homeTeamId) || favs.has(m.awayTeamId),
       homeEnergy: 100,
       awayEnergy: 100,
-      energyHidden: true, // la liga no modela energía
+      energyHidden: true, // los modos de temporada no modelan energía
     }));
     const allResults: MatchResult[] = played.map((m) => ({
       homeTeam: teamName(teams, m.homeTeamId),
@@ -178,7 +220,7 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
 
   const playAll = async () => {
     for (let md = 1; md <= totalMatchdays; md++) {
-      await useLeagueModeStore.getState().simulateLeagueMatchday(league.id, md);
+      await useSeasonModeStore.getState().simulateMatchday(run.id, md);
     }
   };
 
@@ -187,7 +229,7 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <CardTitle>Liga {league.division} · {league.name.match(/\d{4}/)?.[0]}</CardTitle>
+            <CardTitle>{run.name}</CardTitle>
             <div className="flex gap-2">
               {nextMatchday !== null ? (
                 <>
@@ -205,10 +247,17 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
           </div>
         </CardHeader>
         <CardContent>
-          <StandingsTable standings={league.state.standings} teams={teams} matches={league.state.matches} highlightQualified={3} />
-          <p className="text-[10px] text-grass-soft mt-2 uppercase font-arcade">
-            Verde: zona de ascenso (3 primeros)
-          </p>
+          <StandingsTable
+            standings={run.state.standings}
+            teams={teams}
+            matches={run.state.matches}
+            highlightQualified={highlightTop}
+          />
+          {highlightTop !== undefined && (
+            <p className="text-[10px] text-grass-soft mt-2 uppercase font-arcade">
+              Verde: zona de ascenso ({highlightTop} primeros)
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -218,15 +267,7 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
             <CardTitle>Próxima fecha ({nextMatchday})</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
-              {currentFixtures.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="flex-1 text-right truncate">{teamName(teams, m.homeTeamId)}</span>
-                  <span className="px-3 font-terminal text-grass-soft">vs</span>
-                  <span className="flex-1 truncate">{teamName(teams, m.awayTeamId)}</span>
-                </li>
-              ))}
-            </ul>
+            <FixtureList matches={currentFixtures} teams={teams} />
           </CardContent>
         </Card>
       )}
@@ -234,45 +275,134 @@ function LeaguePanel({ league }: { league: LeagueTournament }) {
   );
 }
 
+function FixtureList({ matches, teams }: { matches: Match[]; teams: Team[] }) {
+  return (
+    <ul className="space-y-2">
+      {matches.map((m) => (
+        <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
+          <span className="flex-1 text-right truncate">{teamName(teams, m.homeTeamId)}</span>
+          <span className="px-3 font-terminal text-grass-soft">vs</span>
+          <span className="flex-1 truncate">{teamName(teams, m.awayTeamId)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Formato 2: grupos + eliminación
 // ---------------------------------------------------------------------------
 
-function CupPanel({ cup }: { cup: CupTournament }) {
+function GruposEliminacionPanel({ run }: { run: GruposEliminacionTournament }) {
   const teams = useTournamentStore((s) => s.teams);
-  const busy = useLeagueModeStore((s) => s.busy);
-  const { simulateCupTie } = useLeagueModeStore();
+  const busy = useSeasonModeStore((s) => s.busy);
 
-  const playRound = async (roundTies: TwoLeggedTie[]) => {
-    for (const tie of roundTies) {
-      if (!tie.winnerId) await useLeagueModeStore.getState().simulateCupTie(cup.id, tie.id);
-    }
-  };
+  const nextMatchday = useMemo(() => {
+    const unplayed = run.state.groups.groups.flatMap((g) => g.matches).filter((m) => !m.isPlayed);
+    if (unplayed.length === 0) return null;
+    return Math.min(...unplayed.map((m) => m.matchday ?? 0));
+  }, [run.state.groups]);
 
   return (
     <div className="space-y-6">
-      {cup.state.championId && (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle>{run.name}</CardTitle>
+            {nextMatchday !== null && (
+              <Button
+                size="sm"
+                loading={busy}
+                className="gap-1"
+                onClick={() => useSeasonModeStore.getState().simulateMatchday(run.id, nextMatchday)}
+              >
+                <Play className="w-3 h-3" /> Jugar fecha {nextMatchday}
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {run.state.groups.groups.map((group) => (
+          <Card key={group.id}>
+            <CardHeader>
+              <CardTitle>{group.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StandingsTable
+                standings={group.standings}
+                teams={teams}
+                matches={group.matches}
+                highlightQualified={run.state.groups.config.qualifiersPerGroup}
+              />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {run.state.bracket && <BracketRounds bracket={run.state.bracket} tournamentId={run.id} />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Formato 3: eliminación
+// ---------------------------------------------------------------------------
+
+function EliminacionPanel({ run }: { run: EliminacionTournament }) {
+  const teams = useTournamentStore((s) => s.teams);
+
+  return (
+    <div className="space-y-6">
+      {run.state.championId && (
         <Card>
           <CardContent>
             <div className="text-center py-4">
               <Trophy className="w-10 h-10 text-gold mx-auto mb-2" />
-              <p className="font-arcade text-sm text-gold">Campeón de Copa</p>
-              <p className="text-lg text-white mt-1">{teamName(teams, cup.state.championId)}</p>
+              <p className="font-arcade text-sm text-gold">Campeón · {run.name}</p>
+              <p className="text-lg text-white mt-1">{teamName(teams, run.state.championId)}</p>
               <p className="text-xs text-grass-soft mt-1">
-                Subcampeón: {teamName(teams, cup.state.runnerUpId ?? null)}
+                Subcampeón: {teamName(teams, run.state.runnerUpId ?? null)}
               </p>
             </div>
           </CardContent>
         </Card>
       )}
+      <BracketRounds bracket={run.state} tournamentId={run.id} />
+    </div>
+  );
+}
 
-      {cup.state.rounds.map((round, i) => {
-        const pending = round.filter((t) => !t.winnerId && t.homeTeamId && t.awayTeamId);
+/** Las rondas de un cuadro, con su botón de jugar. Sirve para los formatos 2 y 3. */
+function BracketRounds({ bracket, tournamentId }: { bracket: Bracket; tournamentId: string }) {
+  const teams = useTournamentStore((s) => s.teams);
+  const busy = useSeasonModeStore((s) => s.busy);
+
+  const playRound = async (ties: Tie[]) => {
+    for (const tie of ties) {
+      if (!tie.winnerId) await useSeasonModeStore.getState().simulateTie(tournamentId, tie.id);
+    }
+  };
+
+  const rounds = [
+    ...bracket.rounds,
+    ...(bracket.thirdPlaceTie
+      ? [{ round: bracket.thirdPlaceTie.round, ties: [bracket.thirdPlaceTie] }]
+      : []),
+  ];
+
+  return (
+    <>
+      {rounds.map((round, i) => {
+        const pending = round.ties.filter((t) => !t.winnerId && t.homeTeamId && t.awayTeamId);
         return (
-          <Card key={i}>
+          <Card key={`${round.round}-${i}`}>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
-                <CardTitle>{roundLabel(round[0].round)}</CardTitle>
+                <CardTitle>{roundLabel(round.round)}</CardTitle>
                 {pending.length > 0 && (
-                  <Button size="sm" onClick={() => playRound(round)} loading={busy} className="gap-1">
+                  <Button size="sm" onClick={() => playRound(round.ties)} loading={busy} className="gap-1">
                     <Play className="w-3 h-3" /> Jugar ronda
                   </Button>
                 )}
@@ -280,22 +410,26 @@ function CupPanel({ cup }: { cup: CupTournament }) {
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                {round.map((tie) => (
-                  <TieRow key={tie.id} tie={tie} teams={teams} busy={busy} onPlay={() => simulateCupTie(cup.id, tie.id)} />
+                {round.ties.map((tie) => (
+                  <TieRow
+                    key={tie.id}
+                    tie={tie}
+                    teams={teams}
+                    busy={busy}
+                    onPlay={() => useSeasonModeStore.getState().simulateTie(tournamentId, tie.id)}
+                  />
                 ))}
               </ul>
             </CardContent>
           </Card>
         );
       })}
-    </div>
+    </>
   );
 }
 
-function TieRow({ tie, teams, busy, onPlay }: { tie: TwoLeggedTie; teams: Team[]; busy: boolean; onPlay: () => void }) {
-  const played = tie.leg1?.isPlayed && tie.leg2?.isPlayed;
-  const aggHome = played ? tie.leg1!.homeScore! + tie.leg2!.awayScore! : null;
-  const aggAway = played ? tie.leg1!.awayScore! + tie.leg2!.homeScore! : null;
+function TieRow({ tie, teams, busy, onPlay }: { tie: Tie; teams: Team[]; busy: boolean; onPlay: () => void }) {
+  const agg = tieAggregate(tie);
 
   return (
     <li className="flex items-center gap-2 text-sm border-b border-line/40 pb-2">
@@ -303,7 +437,7 @@ function TieRow({ tie, teams, busy, onPlay }: { tie: TwoLeggedTie; teams: Team[]
         {teamName(teams, tie.homeTeamId)}
       </span>
       <span className="px-2 font-terminal tabular-nums text-grass-soft min-w-[3rem] text-center">
-        {played ? `${aggHome}–${aggAway}` : 'vs'}
+        {agg ? `${agg.home}–${agg.away}` : 'vs'}
       </span>
       <span className={`flex-1 truncate ${tie.winnerId === tie.awayTeamId ? 'text-gold font-bold' : ''}`}>
         {teamName(teams, tie.awayTeamId)}
@@ -321,12 +455,17 @@ function TieRow({ tie, teams, busy, onPlay }: { tie: TwoLeggedTie; teams: Team[]
 }
 
 // ---------------------------------------------------------------------------
+// Panel de temporada (ascensos y descensos)
+// ---------------------------------------------------------------------------
 
-function SeasonPanel({ leagues }: { leagues: LeagueTournament[] }) {
+function SeasonPanel({ leagues }: { leagues: LigaTournament[] }) {
   const teams = useTournamentStore((s) => s.teams);
-  const { year, busy, closeSeason } = useLeagueModeStore();
+  const { year, busy, closeSeason, descriptor } = useSeasonModeStore();
 
-  const allComplete = leagues.length === 2 && leagues.every((l) => isLeagueComplete(l.state));
+  const promotionCount = descriptor.promotion?.count ?? 0;
+  const expected = descriptor.divisions.length;
+  const allComplete =
+    expected > 0 && leagues.length === expected && leagues.every((l) => isLeagueComplete(l.state));
 
   return (
     <div className="space-y-6">
@@ -336,15 +475,16 @@ function SeasonPanel({ leagues }: { leagues: LeagueTournament[] }) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-grass-soft mb-4">
-            Al cerrar la temporada, los 3 mejores de cada división ascienden y los 3 peores
-            descienden, y arranca la temporada {year !== null ? year + 1 : ''}.
+            Al cerrar la temporada, los {promotionCount} mejores de cada división ascienden y los{' '}
+            {promotionCount} peores descienden, y arranca la temporada{' '}
+            {year !== null ? year + 1 : ''}.
           </p>
           <Button onClick={closeSeason} loading={busy} disabled={!allComplete} className="gap-2">
             <Hammer className="w-4 h-4" /> Cerrar temporada y aplicar ascensos/descensos
           </Button>
           {!allComplete && (
             <p className="text-[10px] text-grass-soft mt-2 uppercase font-arcade">
-              Requiere ambas ligas completas
+              Requiere todas las ligas completas
             </p>
           )}
         </CardContent>
@@ -353,10 +493,15 @@ function SeasonPanel({ leagues }: { leagues: LeagueTournament[] }) {
       {leagues.map((l) => (
         <Card key={l.id}>
           <CardHeader>
-            <CardTitle>Liga {l.division}</CardTitle>
+            <CardTitle>{l.name}</CardTitle>
           </CardHeader>
           <CardContent>
-            <StandingsTable standings={l.state.standings} teams={teams} matches={l.state.matches} highlightQualified={3} />
+            <StandingsTable
+              standings={l.state.standings}
+              teams={teams}
+              matches={l.state.matches}
+              highlightQualified={promotionCount}
+            />
           </CardContent>
         </Card>
       ))}
