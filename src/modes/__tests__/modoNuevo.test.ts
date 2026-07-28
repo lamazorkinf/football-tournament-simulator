@@ -103,6 +103,8 @@ describe('un modo nuevo, sólo con modes.config', () => {
       modeId: 'clubes',
       descriptor,
       year: 2030,
+      currentYear: 2030,
+      availableYears: [2030],
       divisions: {},
       previousDivisions: null,
       tournaments: [],

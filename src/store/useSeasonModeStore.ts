@@ -71,7 +71,16 @@ type SeasonModeStatus = 'idle' | 'loading' | 'ready' | 'needs-seed' | 'error';
 interface SeasonModeState {
   modeId: string | null;
   descriptor: ModeDescriptor;
+  /** El año que se está mirando. No siempre es el que corre. */
   year: number | null;
+  /**
+   * El año en curso del modo (`modes.current_year`). Es el único que se puede
+   * jugar: mirar una temporada vieja es de sólo lectura, y cerrarla desde ahí
+   * mandaría el modo para atrás.
+   */
+  currentYear: number | null;
+  /** Temporadas sembradas, de la más nueva a la más vieja. */
+  availableYears: number[];
   /** Composición sembrada del año en curso, por división. */
   divisions: Record<string, string[]>;
   /** Composición del año anterior (los sorteos con `usePreviousYear` la usan). */
@@ -83,6 +92,8 @@ interface SeasonModeState {
   activeTab: string;
 
   loadForMode: (mode: GameMode) => Promise<void>;
+  /** Mirar otra temporada del mismo modo. */
+  selectYear: (year: number) => Promise<void>;
   startSeason: () => Promise<void>;
   simulateMatch: (tournamentId: string, matchId: string, rng?: () => number) => Promise<void>;
   simulateMatchday: (tournamentId: string, matchday: number, rng?: () => number) => Promise<void>;
@@ -174,6 +185,7 @@ const NO_MODE: ModeDescriptor = {
 type SeasonModeData = Omit<
   SeasonModeState,
   | 'loadForMode'
+  | 'selectYear'
   | 'startSeason'
   | 'simulateMatch'
   | 'simulateMatchday'
@@ -187,6 +199,8 @@ const EMPTY: SeasonModeData = {
   modeId: null,
   descriptor: NO_MODE,
   year: null,
+  currentYear: null,
+  availableYears: [],
   divisions: {},
   previousDivisions: null,
   tournaments: [],
@@ -205,35 +219,31 @@ export const useSeasonModeStore = create<SeasonModeState>((set, get) => ({
   loadForMode: async (mode: GameMode) => {
     const year = mode.currentYear ?? new Date().getFullYear();
     const descriptor = descriptorForMode(mode);
-    set({ modeId: mode.id, descriptor, year, status: 'loading' });
+    // Al entrar (o volver) a un modo se mira siempre el año en curso.
+    set({ modeId: mode.id, descriptor, year, currentYear: year, status: 'loading' });
     try {
-      const season = await modeSeasonService.getSeason(mode.id, year);
-      if (!season) {
-        // El modo existe pero todavía no tiene equipos sembrados en divisiones.
-        set({ divisions: {}, previousDivisions: null, tournaments: [], status: 'needs-seed' });
-        return;
-      }
-      const [tournaments, previous] = await Promise.all([
-        modeTournamentService.listByMode(mode.id, year, (format, division) =>
-          competitionForLegacyRow(descriptor, format, division)?.id ?? null,
-        ),
-        modeSeasonService.getSeason(mode.id, year - 1),
-      ]);
-      set({
-        divisions: season.divisions,
-        previousDivisions: previous?.divisions ?? null,
-        tournaments,
-        status: 'ready',
-      });
+      const years = await modeSeasonService.listYears(mode.id);
+      // El año en curso puede no tener fila todavía (modo recién creado, sin
+      // sembrar): igual tiene que estar en la lista, es el que se va a iniciar.
+      set({ availableYears: [...new Set([year, ...years])].sort((a, b) => b - a) });
     } catch (error) {
-      console.error('Error cargando el modo de temporada:', error);
-      set({ status: 'error' });
+      console.error('No se pudieron listar las temporadas del modo:', error);
+      set({ availableYears: [year] });
     }
+    await loadSeasonYear(set, mode.id, descriptor, year);
+  },
+
+  selectYear: async (year: number) => {
+    const { modeId, descriptor, year: current, busy } = get();
+    if (!modeId || busy || year === current) return;
+    set({ year, status: 'loading' });
+    await loadSeasonYear(set, modeId, descriptor, year);
   },
 
   startSeason: async () => {
-    const { modeId, year, descriptor, tournaments } = get();
+    const { modeId, year, currentYear, descriptor, tournaments } = get();
     if (!modeId || year === null || get().busy) return;
+    if (year !== currentYear) return; // mirando una temporada vieja: sólo lectura
     if (tournaments.length > 0) return; // ya arrancada
     if (Object.keys(get().divisions).length === 0 && descriptor.divisions.length > 0) return;
 
@@ -298,8 +308,12 @@ export const useSeasonModeStore = create<SeasonModeState>((set, get) => ({
   },
 
   closeSeason: async () => {
-    const { modeId, year, descriptor, tournaments } = get();
+    const { modeId, year, currentYear, descriptor, tournaments } = get();
     if (!modeId || year === null || get().busy) return;
+    // Cerrar desde una temporada vieja mandaría `currentYear` para atrás y
+    // reescribiría divisiones ya jugadas. La vista de un año pasado no ofrece
+    // el botón, pero el guard va acá: es el store el que no puede permitirlo.
+    if (year !== currentYear) return;
     if (!descriptor.promotion || descriptor.divisions.length < 2) return;
 
     // Una tabla por división, en el orden que declara el descriptor. Requiere
@@ -355,6 +369,45 @@ export const useSeasonModeStore = create<SeasonModeState>((set, get) => ({
 
 type Get = () => SeasonModeState;
 type Set = (partial: Partial<SeasonModeState> | ((s: SeasonModeState) => Partial<SeasonModeState>)) => void;
+
+/**
+ * Carga una temporada concreta: su composición de divisiones, la del año
+ * anterior (que usan los sorteos con `usePreviousYear`) y sus torneos.
+ *
+ * Es lo mismo para el año en curso y para uno viejo — la diferencia no está en
+ * cómo se lee sino en qué se puede hacer después, y eso lo deciden los guards
+ * de `startSeason`/`closeSeason` contra `currentYear`.
+ */
+async function loadSeasonYear(
+  set: Set,
+  modeId: string,
+  descriptor: ModeDescriptor,
+  year: number,
+): Promise<void> {
+  try {
+    const season = await modeSeasonService.getSeason(modeId, year);
+    if (!season) {
+      // El año existe pero todavía no tiene equipos sembrados en divisiones.
+      set({ divisions: {}, previousDivisions: null, tournaments: [], status: 'needs-seed' });
+      return;
+    }
+    const [tournaments, previous] = await Promise.all([
+      modeTournamentService.listByMode(modeId, year, (format, division) =>
+        competitionForLegacyRow(descriptor, format, division)?.id ?? null,
+      ),
+      modeSeasonService.getSeason(modeId, year - 1),
+    ]);
+    set({
+      divisions: season.divisions,
+      previousDivisions: previous?.divisions ?? null,
+      tournaments,
+      status: 'ready',
+    });
+  } catch (error) {
+    console.error('Error cargando la temporada:', error);
+    set({ status: 'error' });
+  }
+}
 
 function indexByCompetition(tournaments: ModeTournament[]): Record<string, ModeTournament> {
   return Object.fromEntries(tournaments.map((t) => [t.competitionId, t]));
@@ -420,8 +473,9 @@ async function simulateMatches(
   pick: (m: Match) => boolean,
   rng?: () => number,
 ) {
-  const { modeId } = get();
+  const { modeId, year, currentYear } = get();
   if (!modeId || get().busy) return;
+  if (year !== currentYear) return; // temporada vieja: sólo lectura
   const tournament = get().tournaments.find((t) => t.id === tournamentId);
   if (!tournament || tournament.format === 'eliminacion') return;
   const competition = competitionOf(get, tournament);
@@ -540,8 +594,9 @@ async function simulateBracketTie(
   tieId: string,
   rng?: () => number,
 ) {
-  const { modeId } = get();
+  const { modeId, year, currentYear } = get();
   if (!modeId || get().busy) return;
+  if (year !== currentYear) return; // temporada vieja: sólo lectura
   const tournament = get().tournaments.find((t) => t.id === tournamentId);
   if (!tournament) return;
   const competition = competitionOf(get, tournament);

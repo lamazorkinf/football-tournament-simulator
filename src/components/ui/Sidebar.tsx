@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Lock, Shield, Trophy } from 'lucide-react';
-import { TournamentSelector } from './TournamentSelector';
+import { PeriodSelector } from './PeriodSelector';
 import { ModeSelector } from './ModeSelector';
 import { useModeStore } from '../../store/useModeStore';
 import { useSeasonModeStore } from '../../store/useSeasonModeStore';
@@ -112,10 +112,10 @@ export function Sidebar({ currentView, onViewChange, tournamentYear }: SidebarPr
           </div>
         )}
 
-        {/* Tournament Selector — sólo en el ciclo mundialista */}
-        {!isCollapsed && isNationalMode && (
+        {/* Qué edición se mira: torneos en el ciclo, temporadas en un modo anual */}
+        {!isCollapsed && (
           <div className="px-4 py-4 border-b-2 border-grass">
-            <TournamentSelector />
+            <PeriodSelector />
           </div>
         )}
 

@@ -35,6 +35,26 @@ export const modeSeasonService = {
   },
 
   /**
+   * Los años que tiene sembrado un modo, del más nuevo al más viejo.
+   *
+   * Es la lista de temporadas que se pueden mirar. Sale de `mode_season_state`
+   * y no de `mode_tournaments` a propósito: un año sembrado pero sin arrancar
+   * también es una temporada, y es la que el usuario tiene que poder elegir
+   * para iniciarla.
+   */
+  async listYears(modeId: string): Promise<number[]> {
+    if (!isSupabaseConfigured()) return [];
+    const { data, error } = await db
+      .mode_season_state()
+      .select('year')
+      .eq('mode_id', modeId)
+      .order('year', { ascending: false });
+    if (error) throw error;
+    // Una fila por división: hay que deduplicar acá (PostgREST no hace DISTINCT).
+    return [...new Set(((data as { year: number }[]) ?? []).map((r) => r.year))];
+  },
+
+  /**
    * Guarda (upsert) la composición de una división en un año. La clave única
    * (mode_id, year, division) hace idempotente el guardado del rollover.
    */

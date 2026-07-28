@@ -89,14 +89,17 @@ export function ChampionsHistory({ onNavigate }: ChampionsHistoryProps) {
   /**
    * Ir al torneo de una fila. Los ids de un modo de temporada son de
    * `mode_tournaments`, no de `tournaments_new`: pedirle a `selectTournament`
-   * que los cargue no encuentra nada. Se navega a la vista raíz del modo y, si
-   * el año es el que está corriendo, se abre la pestaña de esa competición.
+   * que los cargue no encuentra nada. Se cambia la temporada mirada al año de la
+   * fila y se abre la pestaña de esa competición.
    */
   const handleOpenTournament = async (row: ChampionHistoryRow) => {
     if (row.kind === 'season') {
       const season = useSeasonModeStore.getState();
+      if (season.year !== row.year && season.availableYears.includes(row.year)) {
+        await season.selectYear(row.year);
+      }
       const competition = competitionForDivision(descriptor, row.region || null);
-      if (competition && season.year === row.year) season.setActiveTab(competition.id);
+      if (competition) useSeasonModeStore.getState().setActiveTab(competition.id);
       onNavigate(VIEW_FOR_KIND.season);
       return;
     }
