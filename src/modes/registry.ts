@@ -66,6 +66,7 @@ const SELECCIONES_COMPETITIONS: Competition[] = [
     name: 'Clasificatorias',
     shortLabel: 'Clasif',
     icon: 'route',
+    primary: true,
     order: 3,
     stage: 'qualifier',
     entrants: { from: 'all-teams' },
@@ -80,8 +81,10 @@ const SELECCIONES_COMPETITIONS: Competition[] = [
   {
     id: 'world-cup',
     name: 'Mundial',
-    shortLabel: 'Mundial',
+    // La barra mobile no admite 'Mundial': son 7 caracteres y el presupuesto es 6.
+    shortLabel: 'Copa',
     icon: 'trophy',
+    primary: true,
     order: 4,
     stage: 'world-cup-group',
     entrants: { from: 'competition', competitionId: 'qualifiers', take: 'qualified' },

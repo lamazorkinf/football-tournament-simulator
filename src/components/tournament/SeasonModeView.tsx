@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Trophy, Play, Hammer, ChevronRight, Shield } from 'lucide-react';
-import { useSeasonModeStore, deriveSeasonTabs, resolveSeasonTab } from '../../store/useSeasonModeStore';
+import { useSeasonModeStore } from '../../store/useSeasonModeStore';
+import { useModeNav } from '../../hooks/useModeNav';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
@@ -41,16 +42,11 @@ function teamName(teams: Team[], id: string | null): string {
 export function SeasonModeView() {
   const activeModeId = useModeStore((s) => s.activeModeId);
   const activeMode = useModeStore((s) => s.activeMode());
-  const {
-    status,
-    year,
-    descriptor,
-    tournaments,
-    busy,
-    startSeason,
-    activeTab: requestedTab,
-    setActiveTab,
-  } = useSeasonModeStore();
+  const { status, year, descriptor, tournaments, busy, startSeason, setActiveTab } =
+    useSeasonModeStore();
+  // Misma derivación que usa la sidebar: en desktop navega ella, acá la barra de
+  // pestañas queda para mobile y las dos no se pueden desincronizar.
+  const nav = useModeNav('league');
 
   // (Re)cargar la temporada cada vez que cambia el modo activo.
   useEffect(() => {
@@ -70,10 +66,8 @@ export function SeasonModeView() {
   const seasonReady = status === 'ready' && tournaments.length > 0;
   const leagues = tournaments.filter((t): t is LigaTournament => t.format === 'liga');
 
-  // Navegación compartida con la sidebar (deriveSeasonTabs). En desktop la
-  // sidebar es la que navega; acá la barra de pestañas queda para mobile.
-  const tabs = deriveSeasonTabs(descriptor, status, tournaments);
-  const activeTab = resolveSeasonTab(tabs, requestedTab);
+  const tabs = nav.sections.find((s) => s.key === 'competition')?.items ?? [];
+  const activeTab = nav.tab;
   const activeRun = tournaments.find((t) => t.competitionId === activeTab) ?? null;
   const activeCompetition = activeRun
     ? descriptor.competitions.find((c) => c.id === activeRun.competitionId)
@@ -85,7 +79,7 @@ export function SeasonModeView() {
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => setActiveTab(t.target.tab ?? t.key)}
             className={`px-3 py-2 font-arcade text-[10px] uppercase border-2 transition-colors ${
               activeTab === t.key
                 ? 'bg-grass text-white border-gold'

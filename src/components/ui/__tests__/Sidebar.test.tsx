@@ -27,20 +27,26 @@ describe('Sidebar', () => {
   });
 
   it('marca como bloqueadas las fases no desbloqueadas pero las deja clickeables', async () => {
-    useTournamentStore.setState({ tournaments: [], currentTournamentId: null });
+    // Las fases bloqueadas ya no son un prop: salen del progreso del ciclo
+    // (modes/seleccionesAdapter). Un ciclo sin sortear las tiene todas.
+    useTournamentStore.setState({
+      tournaments: [],
+      currentTournamentId: null,
+      currentTournament: {
+        continental: { brackets: {} },
+        confederationsCup: { groups: [], isComplete: false },
+        worldCup: null,
+      } as never,
+    });
     const onViewChange = vi.fn();
-    render(
-      <Sidebar
-        currentView="wizard"
-        onViewChange={onViewChange}
-        tournamentYear={2026}
-        lockedViews={['confederations']}
-      />
-    );
+    render(<Sidebar currentView="wizard" onViewChange={onViewChange} tournamentYear={2026} />);
 
     const confed = screen.getByRole('button', { name: /confederaciones/i });
     expect(confed).not.toBeDisabled();
+    expect(confed).toHaveAttribute('title', expect.stringContaining('bloqueada'));
     await userEvent.click(confed);
     expect(onViewChange).toHaveBeenCalledWith('confederations');
+
+    useTournamentStore.setState({ currentTournament: null });
   });
 });

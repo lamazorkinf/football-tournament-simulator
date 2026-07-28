@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useSeasonModeStore, deriveSeasonTabs, resolveSeasonTab } from '../useSeasonModeStore';
+import { useSeasonModeStore } from '../useSeasonModeStore';
+import { deriveModeNav } from '../../modes/nav';
 import { useTournamentStore } from '../useTournamentStore';
 import { useModeStore } from '../useModeStore';
 import { modeTournamentService } from '../../services/modeTournamentService';
@@ -209,17 +210,19 @@ describe('useSeasonModeStore — la temporada villamariense, dirigida por el des
     expect(promoted).toHaveLength(3);
   });
 
-  it('las pestañas salen del descriptor y son las mismas de siempre', async () => {
-    const { descriptor, status } = useSeasonModeStore.getState();
-    expect(deriveSeasonTabs(descriptor, status, []).map((t) => t.key)).toEqual(['main', 'crests']);
-
+  it('los torneos creados alimentan la navegacion del modo', async () => {
     await useSeasonModeStore.getState().startSeason();
-    const { tournaments } = useSeasonModeStore.getState();
-    const tabs = deriveSeasonTabs(descriptor, 'ready', tournaments);
-    expect(tabs.map((t) => t.key)).toEqual(['league-A', 'league-B', 'cup', 'season', 'crests']);
-    expect(tabs.map((t) => t.label)).toEqual(['Liga A', 'Liga B', 'Copa', 'Temporada', 'Escudos']);
-    expect(resolveSeasonTab(tabs, 'no-existe')).toBe('league-A');
-    expect(resolveSeasonTab(tabs, 'cup')).toBe('cup');
+    const { descriptor, tournaments } = useSeasonModeStore.getState();
+    const nav = deriveModeNav({
+      descriptor,
+      currentView: 'league',
+      requestedTab: 'season',
+      runningCompetitionIds: tournaments.map((t) => t.competitionId),
+    });
+    expect(nav.sections[0].items.map((i) => i.label)).toEqual([
+      'Liga A', 'Liga B', 'Copa', 'Temporada', 'Escudos',
+    ]);
+    expect(nav.tab).toBe('season');
   });
 });
 

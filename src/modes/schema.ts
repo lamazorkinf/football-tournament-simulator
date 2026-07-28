@@ -185,6 +185,7 @@ function parseCompetition(e: Errors, path: string, v: unknown): Competition | nu
     entrants,
     ...(typeof v.shortLabel === 'string' ? { shortLabel: v.shortLabel } : {}),
     ...(typeof v.icon === 'string' ? { icon: v.icon as IconKey } : {}),
+    ...(v.primary === true ? { primary: true } : {}),
   };
 
   if (format === 'liga') {

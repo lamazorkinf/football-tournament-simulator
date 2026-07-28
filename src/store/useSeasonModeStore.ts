@@ -31,7 +31,7 @@ import type {
   ModeTournamentState,
   LigaTournament,
 } from '../core/formats/modeTournament';
-import type { Competition, IconKey, ModeDescriptor } from '../modes/types';
+import type { Competition, ModeDescriptor } from '../modes/types';
 import { competitionForLegacyRow, descriptorForMode } from '../modes/registry';
 import {
   createCompetitionState,
@@ -63,55 +63,11 @@ import { useModeStore } from './useModeStore';
 
 type SeasonModeStatus = 'idle' | 'loading' | 'ready' | 'needs-seed' | 'error';
 
-export interface SeasonTab {
-  key: string;
-  label: string;
-  /** Clave de icono del descriptor. El mapeo a componentes vive en la UI. */
-  icon: IconKey;
-}
-
 /**
- * Pestañas de un modo de temporada según su estado. Fuente única de verdad para
- * la navegación: la usan tanto la sidebar (desktop) como la barra de pestañas
- * del contenido (mobile), así siempre coinciden. Las pestañas propias del modo
- * (`extraTabs`) están siempre disponibles; las de las competiciones aparecen
- * cuando hay torneos en juego.
+ * La navegación del modo (qué pestañas hay y cuál está activa) NO vive acá:
+ * se deriva del descriptor en `modes/nav.ts`, igual para la sidebar, la barra
+ * mobile y el menú de pausa. El store sólo guarda cuál pidió el usuario.
  */
-const EXTRA_TAB: Record<'season' | 'crests', { label: string; icon: IconKey }> = {
-  season: { label: 'Temporada', icon: 'calendar' },
-  crests: { label: 'Escudos', icon: 'crest' },
-};
-
-export function deriveSeasonTabs(
-  descriptor: ModeDescriptor,
-  status: SeasonModeStatus,
-  tournaments: ModeTournament[],
-): SeasonTab[] {
-  const extras = descriptor.extraTabs.map((key) => ({ key, ...EXTRA_TAB[key] }));
-  const ready = status === 'ready' && tournaments.length > 0;
-  if (!ready) {
-    return [
-      { key: 'main', label: 'Inicio', icon: 'home' },
-      ...extras.filter((t) => t.key === 'crests'),
-    ];
-  }
-
-  // Las competiciones en el orden que declara el descriptor, y sólo las que
-  // efectivamente tienen un torneo corriendo este año.
-  const running = new Set(tournaments.map((t) => t.competitionId));
-  const competitions = descriptor.competitions
-    .filter((c) => running.has(c.id))
-    .sort((a, b) => a.order - b.order)
-    .map((c): SeasonTab => ({ key: c.id, label: c.name, icon: c.icon ?? 'shield' }));
-
-  return [...competitions, ...extras];
-}
-
-/** Pestaña efectiva: la pedida si sigue siendo válida, si no la primera. */
-export function resolveSeasonTab(tabs: SeasonTab[], requested: string): string {
-  return tabs.some((t) => t.key === requested) ? requested : (tabs[0]?.key ?? 'main');
-}
-
 interface SeasonModeState {
   modeId: string | null;
   descriptor: ModeDescriptor;

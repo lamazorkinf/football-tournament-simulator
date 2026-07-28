@@ -99,6 +99,11 @@ interface CompetitionBase {
   /** Rótulo corto para la barra de pestañas mobile (presupuesto: 6 caracteres). */
   shortLabel?: string;
   icon?: IconKey;
+  /**
+   * Va en la barra de pestañas de abajo en mobile, que tiene 4 lugares. Sin
+   * esto la barra se llena con las vistas de datos del modo.
+   */
+  primary?: boolean;
 }
 
 export type Competition =
