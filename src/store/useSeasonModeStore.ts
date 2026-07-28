@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import type { GameMode, Match, Team } from '../types';
+import type { GameMode, Match, MatchdayOutcome, SimulatedMatchOutcome, Team } from '../types';
 import { updateTeamSkill, getStageImportance } from '../core/engine';
 import {
   matchHistoryRow,
   playOneMatch,
-  playTie,
-  tieHistoryRows,
+  playTieLeg,
+  tieLegName,
   type HistoryRow,
 } from '../core/matchPipeline';
 import { getEngineConfig } from './useConfigStore';
@@ -14,10 +14,13 @@ import {
   advanceBracket,
   findTieByMatchId,
   isBracketComplete,
+  isLegPlayable,
+  legIndexOf,
   recordBracketMatch,
   type Bracket,
-  type Tie,
+  type TieLegs,
 } from '../core/formats/bracket';
+import { currentModeJornada } from '../core/formats/modeJornada';
 import {
   isGroupStageComplete,
   recordGroupStageMatch,
@@ -95,9 +98,24 @@ interface SeasonModeState {
   /** Mirar otra temporada del mismo modo. */
   selectYear: (year: number) => Promise<void>;
   startSeason: () => Promise<void>;
-  simulateMatch: (tournamentId: string, matchId: string, rng?: () => number) => Promise<void>;
-  simulateMatchday: (tournamentId: string, matchday: number, rng?: () => number) => Promise<void>;
-  simulateTie: (tournamentId: string, tieId: string, rng?: () => number) => Promise<void>;
+  /**
+   * Juega UN partido, sea de liga, de grupos o de un cuadro (un cruce a ida y
+   * vuelta se juega en dos llamadas, una por partido). Devuelve el resultado
+   * comprometido para reproducirlo en vivo, o `null` si no se pudo jugar.
+   */
+  simulateMatch: (
+    tournamentId: string,
+    matchId: string,
+    rng?: () => number,
+  ) => Promise<SimulatedMatchOutcome | null>;
+  /** Juega una fecha concreta de una liga o de una fase de grupos. */
+  simulateMatchday: (
+    tournamentId: string,
+    matchday: number,
+    rng?: () => number,
+  ) => Promise<MatchdayOutcome[]>;
+  /** Juega la jornada en curso, sea cual sea el formato (ver `currentModeJornada`). */
+  simulateJornada: (tournamentId: string, rng?: () => number) => Promise<MatchdayOutcome[]>;
   closeSeason: () => Promise<void>;
   setActiveTab: (tab: string) => void;
   reset: () => void;
@@ -189,7 +207,7 @@ type SeasonModeData = Omit<
   | 'startSeason'
   | 'simulateMatch'
   | 'simulateMatchday'
-  | 'simulateTie'
+  | 'simulateJornada'
   | 'closeSeason'
   | 'setActiveTab'
   | 'reset'
@@ -296,15 +314,38 @@ export const useSeasonModeStore = create<SeasonModeState>((set, get) => ({
   },
 
   simulateMatch: async (tournamentId, matchId, rng) => {
-    await simulateMatches(get, set, tournamentId, (m) => m.id === matchId, rng);
+    const tournament = get().tournaments.find((t) => t.id === tournamentId);
+    if (!tournament) return null;
+    // Un partido de cuadro se juega por su cruce (necesita el global de la ida
+    // para saber si va al alargue); el resto, por el fixture.
+    const bracket = bracketOf(tournament);
+    if (bracket && findTieByMatchId(bracket, matchId)) {
+      return simulateBracketLeg(get, set, tournamentId, matchId, rng);
+    }
+    const outcomes = await simulateMatches(get, set, tournamentId, (m) => m.id === matchId, rng);
+    return outcomes[0] ?? null;
   },
 
-  simulateMatchday: async (tournamentId, matchday, rng) => {
-    await simulateMatches(get, set, tournamentId, (m) => m.matchday === matchday, rng);
-  },
+  simulateMatchday: async (tournamentId, matchday, rng) =>
+    simulateMatches(get, set, tournamentId, (m) => m.matchday === matchday, rng),
 
-  simulateTie: async (tournamentId, tieId, rng) => {
-    await simulateBracketTie(get, set, tournamentId, tieId, rng);
+  simulateJornada: async (tournamentId, rng) => {
+    const tournament = get().tournaments.find((t) => t.id === tournamentId);
+    if (!tournament) return [];
+    const jornada = currentModeJornada(tournament);
+    if (!jornada) return [];
+
+    // Liga y grupos van por fecha; el cuadro, partido a partido (secuencial:
+    // cada uno relee el estado, y la ronda puede avanzar en el camino).
+    if (jornada.matchday !== undefined) {
+      return simulateMatches(get, set, tournamentId, (m) => m.matchday === jornada.matchday, rng);
+    }
+    const outcomes: MatchdayOutcome[] = [];
+    for (const match of jornada.matches) {
+      const outcome = await simulateBracketLeg(get, set, tournamentId, match.id, rng);
+      if (outcome) outcomes.push(outcome);
+    }
+    return outcomes;
   },
 
   closeSeason: async () => {
@@ -462,9 +503,11 @@ async function saveTournament(
 
 /**
  * Simula todos los partidos de un torneo que cumplan `pick`: una fecha entera o
- * un partido. Cubre los dos formatos que se juegan partido a partido —la liga y
- * la fase de grupos— porque el motor es el mismo; lo único que cambia es dónde
- * se cargan los resultados.
+ * un partido. Cubre los dos formatos con fixture numerado —la liga y la fase de
+ * grupos— porque el motor es el mismo; lo único que cambia es dónde se cargan
+ * los resultados. Los partidos de cuadro van por `simulateBracketLeg`.
+ *
+ * Devuelve lo que se comprometió, para poder reproducirlo en vivo.
  */
 async function simulateMatches(
   get: Get,
@@ -472,21 +515,21 @@ async function simulateMatches(
   tournamentId: string,
   pick: (m: Match) => boolean,
   rng?: () => number,
-) {
+): Promise<MatchdayOutcome[]> {
   const { modeId, year, currentYear } = get();
-  if (!modeId || get().busy) return;
-  if (year !== currentYear) return; // temporada vieja: sólo lectura
+  if (!modeId || get().busy) return [];
+  if (year !== currentYear) return []; // temporada vieja: sólo lectura
   const tournament = get().tournaments.find((t) => t.id === tournamentId);
-  if (!tournament || tournament.format === 'eliminacion') return;
+  if (!tournament || tournament.format === 'eliminacion') return [];
   const competition = competitionOf(get, tournament);
-  if (!competition) return;
+  if (!competition) return [];
 
   const source: Match[] =
     tournament.format === 'liga'
       ? tournament.state.matches
       : tournament.state.groups.groups.flatMap((g) => g.matches);
   const targets = source.filter((m) => pick(m) && !m.isPlayed);
-  if (targets.length === 0) return;
+  if (targets.length === 0) return [];
 
   set({ busy: true });
   try {
@@ -494,6 +537,7 @@ async function simulateMatches(
     const deltas = new Map<string, number>();
     const historyRows: HistoryRow[] = [];
     const scores = new Map<string, { homeScore: number; awayScore: number }>();
+    const outcomes: MatchdayOutcome[] = [];
 
     for (const m of targets) {
       const home = teamById(m.homeTeamId);
@@ -505,6 +549,13 @@ async function simulateMatches(
         rng,
       });
       scores.set(m.id, { homeScore: played.homeScore, awayScore: played.awayScore });
+      outcomes.push({
+        matchId: m.id,
+        homeTeamId: home.id,
+        awayTeamId: away.id,
+        homeScore: played.homeScore,
+        awayScore: played.awayScore,
+      });
       deltas.set(home.id, (deltas.get(home.id) ?? 0) + played.homeChange);
       deltas.set(away.id, (deltas.get(away.id) ?? 0) + played.awayChange);
       historyRows.push(
@@ -514,7 +565,7 @@ async function simulateMatches(
         }),
       );
     }
-    if (scores.size === 0) return;
+    if (scores.size === 0) return [];
 
     let newState: ModeTournamentState;
     let status: 'in-progress' | 'completed';
@@ -552,6 +603,7 @@ async function simulateMatches(
 
     updateTournament(set, get, tournamentId, newState, status);
     await saveTournament(tournamentId, newState, status);
+    return outcomes;
   } finally {
     set({ busy: false });
   }
@@ -582,32 +634,35 @@ function seasonCompetitionDone(competition: Competition, state: ModeTournamentSt
 }
 
 /**
- * Juega un cruce entero —uno o dos partidos, con prórroga y penales si hacen
- * falta— y avanza el cuadro. Un solo camino para la copa a ida y vuelta y para
- * cualquier eliminación a partido único: la diferencia es `legs`, que sale del
- * descriptor.
+ * Juega UN partido de un cuadro y avanza la llave si el cruce quedó definido.
+ *
+ * Un cruce a ida y vuelta se juega en dos llamadas —son dos jornadas distintas
+ * del torneo, como en cualquier copa de verdad—, y la segunda es la que resuelve
+ * el empate: prórroga y, si hace falta, penales. La ida no se puede saltear
+ * (`isLegPlayable`): sin ella no se sabe cómo llega el global a la vuelta.
  */
-async function simulateBracketTie(
+async function simulateBracketLeg(
   get: Get,
   set: Set,
   tournamentId: string,
-  tieId: string,
+  matchId: string,
   rng?: () => number,
-) {
+): Promise<MatchdayOutcome | null> {
   const { modeId, year, currentYear } = get();
-  if (!modeId || get().busy) return;
-  if (year !== currentYear) return; // temporada vieja: sólo lectura
+  if (!modeId || get().busy) return null;
+  if (year !== currentYear) return null; // temporada vieja: sólo lectura
   const tournament = get().tournaments.find((t) => t.id === tournamentId);
-  if (!tournament) return;
+  if (!tournament) return null;
   const competition = competitionOf(get, tournament);
   const bracket = bracketOf(tournament);
-  if (!competition || !bracket) return;
+  if (!competition || !bracket) return null;
 
-  const tie = findTie(bracket, tieId);
-  if (!tie || tie.winnerId || !tie.homeTeamId || !tie.awayTeamId) return;
+  const tie = findTieByMatchId(bracket, matchId);
+  if (!tie || !tie.homeTeamId || !tie.awayTeamId) return null;
+  if (!isLegPlayable(tie, matchId)) return null;
   const home = teamById(tie.homeTeamId);
   const away = teamById(tie.awayTeamId);
-  if (!home || !away) return;
+  if (!home || !away) return null;
 
   set({ busy: true });
   try {
@@ -617,53 +672,67 @@ async function simulateBracketTie(
         ? knockoutStageFor(competition.stage)
         : competition.stage;
 
-    const played = playTie(home, away, {
-      legs: bracket.legs,
+    const legIndex = legIndexOf(tie, matchId);
+    const legs = tie.matches.length as TieLegs;
+    const played = playTieLeg(home, away, {
+      legs,
+      legIndex,
+      // Los partidos ya jugados del cruce: de ahí sale el global.
+      previous: tie.matches.slice(0, legIndex).map((m) => ({
+        homeScore: m.homeScore ?? 0,
+        awayScore: m.awayScore ?? 0,
+      })),
       importance: importanceOf(stage),
       neutral: bracket.neutral,
       rng,
     });
 
-    // Los resultados se cargan partido a partido; los penales y la prórroga van
-    // en el último, que es donde se define el cruce.
-    let next = bracket;
-    tie.matches.forEach((match, i) => {
-      const isLast = i === tie.matches.length - 1;
-      next = recordBracketMatch(next, match.id, {
-        homeScore: played.legs[i].homeScore,
-        awayScore: played.legs[i].awayScore,
-        ...(isLast && played.extraTime ? { extraTime: true } : {}),
-        ...(isLast && played.penalties ? { penalties: played.penalties } : {}),
-      });
+    // El local REAL de este partido: la vuelta invierte la localía del cruce.
+    const local = legIndex % 2 === 0 ? home : away;
+    const visitor = legIndex % 2 === 0 ? away : home;
+
+    let next = recordBracketMatch(bracket, matchId, {
+      homeScore: played.homeScore,
+      awayScore: played.awayScore,
+      ...(played.extraTime ? { extraTime: true } : {}),
+      ...(played.penalties ? { penalties: played.penalties } : {}),
     });
     next = advanceBracket(next);
 
     const newState = withBracket(tournament, next);
     const status = seasonCompetitionDone(competition, newState) ? 'completed' : 'in-progress';
 
-    const newSkills = applySkillDeltas(played.deltas);
+    const newSkills = applySkillDeltas(
+      new Map([
+        [local.id, played.homeChange],
+        [visitor.id, played.awayChange],
+      ]),
+    );
     await persistMatches(
       modeId,
       tournamentId,
-      tieHistoryRows(home, away, played, { stage, name: tournament.name }),
+      [
+        matchHistoryRow(local, visitor, played, {
+          stage,
+          name: tieLegName(tournament.name, legs, legIndex),
+        }),
+      ],
       newSkills,
     );
 
     updateTournament(set, get, tournamentId, newState, status);
     await saveTournament(tournamentId, newState, status);
+
+    return {
+      matchId,
+      homeTeamId: local.id,
+      awayTeamId: visitor.id,
+      homeScore: played.homeScore,
+      awayScore: played.awayScore,
+      ...(played.penalties ? { penalties: played.penalties } : {}),
+      ...(played.extraTime ? { extraTime: played.extraTime } : {}),
+    };
   } finally {
     set({ busy: false });
   }
 }
-
-/** Busca un cruce por id, incluido el del 3er puesto. */
-function findTie(bracket: Bracket, tieId: string): Tie | null {
-  for (const round of bracket.rounds) {
-    const found = round.ties.find((t) => t.id === tieId);
-    if (found) return found;
-  }
-  return bracket.thirdPlaceTie?.id === tieId ? bracket.thirdPlaceTie : null;
-}
-
-/** Reexport: la UI localiza el cruce de un partido para jugarlo entero. */
-export { findTieByMatchId };

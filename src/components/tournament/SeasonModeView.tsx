@@ -1,20 +1,20 @@
-import { useEffect, useMemo } from 'react';
-import { Trophy, Play, Hammer, ChevronRight, Shield } from 'lucide-react';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
+import { Trophy, Play, Hammer, Shield } from 'lucide-react';
 import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { useModeNav } from '../../hooks/useModeNav';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { useFavoritesStore } from '../../store/useFavoritesStore';
-import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiveMatchdayStore';
-import { type MatchResult } from '../../store/useMatchResultsStore';
-import { buildMatchTimeline, hashSeed } from '../../core/liveMatch';
+import { useModeJornada } from '../../hooks/useModeJornada';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
+import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
+import { showMatchResultToast } from '../ui/MatchResultToast';
 import { CrestManager } from './CrestManager';
 import { isLeagueComplete } from '../../core/formats/league';
 import { roundLabel } from '../../core/formats/rounds';
-import { tieAggregate, type Bracket, type Tie } from '../../core/formats/bracket';
+import { isLegPlayable, tieAggregate, type Bracket, type Tie } from '../../core/formats/bracket';
 import type {
   GruposEliminacionTournament,
   LigaTournament,
@@ -166,97 +166,143 @@ function CompetitionPanel({
 }
 
 // ---------------------------------------------------------------------------
+// Acciones de simulación (las mismas cuatro que en el resto del juego)
+// ---------------------------------------------------------------------------
+
+/**
+ * Sólo el año en curso se juega: una temporada vieja se mira. El store ya lo
+ * garantiza (sus acciones no hacen nada), pero ofrecer botones muertos sería
+ * mentirle al usuario.
+ */
+function useIsCurrentSeason(): boolean {
+  return useSeasonModeStore((s) => s.year !== null && s.year === s.currentYear);
+}
+
+/**
+ * Simular un partido suelto del modo. Sirve igual para una fecha de liga, un
+ * partido de grupos y la ida o la vuelta de un cruce: el store rutea solo.
+ */
+function useSeasonMatchPlay(tournamentId: string) {
+  const teams = useTournamentStore((s) => s.teams);
+  const busy = useSeasonModeStore((s) => s.busy);
+  const playable = useIsCurrentSeason();
+
+  const play = async (match: Match) => {
+    const outcome = await useSeasonModeStore.getState().simulateMatch(tournamentId, match.id);
+    if (!outcome) {
+      toast.info('No se pudo simular este partido ahora');
+      return;
+    }
+    showMatchResultToast({
+      homeName: teamName(teams, match.homeTeamId),
+      awayName: teamName(teams, match.awayTeamId),
+      homeScore: outcome.homeScore,
+      awayScore: outcome.awayScore,
+      penalties: outcome.penalties,
+    });
+  };
+
+  return { play, busy, playable };
+}
+
+/** Encabezado con las dos acciones de jornada del torneo y su próxima fecha. */
+function JornadaCard({
+  run,
+  competitionName,
+  completeLabel,
+}: {
+  run: ModeTournament;
+  competitionName: string;
+  completeLabel: string;
+}) {
+  const { jornada, canSimulate, busy, simulate, simulateLive } = useModeJornada(
+    run,
+    competitionName,
+  );
+  const isCurrentSeason = useIsCurrentSeason();
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <CardTitle>{run.name}</CardTitle>
+          {!jornada ? (
+            <span className="font-arcade text-[10px] text-led uppercase">{completeLabel}</span>
+          ) : (
+            isCurrentSeason && (
+              <JornadaSimActions
+                jornadaLabel={jornada.label}
+                onSimulate={simulate}
+                onSimulateLive={simulateLive}
+                disabled={!canSimulate}
+                busy={busy}
+              />
+            )
+          )}
+        </div>
+      </CardHeader>
+      {/* Los partidos de una fecha de liga o de grupos no se ven en otro lado;
+          los de una jornada de cuadro sí (el cuadro los lista cruce por cruce),
+          así que ahí alcanza con las acciones. */}
+      {jornada?.matchday !== undefined && (
+        <CardContent>
+          <FixtureList matches={jornada.matches} tournamentId={run.id} />
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+/** Los partidos de la jornada, cada uno con sus dos acciones. */
+function FixtureList({ matches, tournamentId }: { matches: Match[]; tournamentId: string }) {
+  const teams = useTournamentStore((s) => s.teams);
+  const { play, busy, playable } = useSeasonMatchPlay(tournamentId);
+
+  return (
+    <ul className="space-y-2">
+      {matches.map((m) => (
+        <li
+          key={m.id}
+          className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm border-b border-line/40 pb-2 last:border-b-0"
+        >
+          <span className="flex-1 text-right truncate">{teamName(teams, m.homeTeamId)}</span>
+          <span className="px-3 font-terminal text-grass-soft text-center">vs</span>
+          <span className="flex-1 truncate">{teamName(teams, m.awayTeamId)}</span>
+          {playable && (
+            <MatchSimActions
+              onSimulate={() => play(m)}
+              live={{
+                matchId: m.id,
+                homeTeamId: m.homeTeamId,
+                awayTeamId: m.awayTeamId,
+                kind: 'season',
+                tournamentId,
+              }}
+              disabled={busy}
+              className="sm:flex-shrink-0"
+            />
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Formato 1: liga
 // ---------------------------------------------------------------------------
 
 function LigaPanel({ run, competition }: { run: LigaTournament; competition: Competition }) {
   const teams = useTournamentStore((s) => s.teams);
-  const busy = useSeasonModeStore((s) => s.busy);
-  const favoriteTeamIds = useFavoritesStore((s) => s.favoriteTeamIds);
-  const openLiveSession = useLiveMatchdayStore((s) => s.openSession);
-
   const highlightTop = competition.format === 'liga' ? competition.highlightTop : undefined;
-
-  const nextMatchday = useMemo(() => {
-    const unplayed = run.state.matches.filter((m) => !m.isPlayed);
-    if (unplayed.length === 0) return null;
-    return Math.min(...unplayed.map((m) => m.matchday ?? 0));
-  }, [run.state.matches]);
-
-  const totalMatchdays = useMemo(
-    () => Math.max(0, ...run.state.matches.map((m) => m.matchday ?? 0)),
-    [run.state.matches],
-  );
-
-  const currentFixtures = run.state.matches.filter((m) => m.matchday === nextMatchday);
-
-  // Juega una fecha y la reproduce en vivo (mismo overlay que el Mundial):
-  // commit-then-replay. La fecha se simula/persiste en el store; después se
-  // arma el timeline minuto a minuto desde el marcador final (seed = matchId).
-  const playFechaLive = async (md: number) => {
-    await useSeasonModeStore.getState().simulateMatchday(run.id, md);
-    const updated = useSeasonModeStore
-      .getState()
-      .tournaments.find((t) => t.id === run.id) as LigaTournament | undefined;
-    if (!updated) return;
-    const played = updated.state.matches.filter(
-      (m) => m.matchday === md && m.isPlayed && m.homeScore != null && m.awayScore != null,
-    );
-    if (played.length === 0) return;
-
-    const favs = new Set(favoriteTeamIds);
-    const title = `${competition.name} · Fecha ${md}`;
-    const entries: LiveMatchdayEntry[] = played.map((m) => ({
-      matchId: m.id,
-      homeTeamId: m.homeTeamId,
-      awayTeamId: m.awayTeamId,
-      timeline: buildMatchTimeline({ homeScore: m.homeScore!, awayScore: m.awayScore!, seed: hashSeed(m.id) }),
-      groupName: title,
-      isFavorite: favs.has(m.homeTeamId) || favs.has(m.awayTeamId),
-      homeEnergy: 100,
-      awayEnergy: 100,
-      energyHidden: true, // los modos de temporada no modelan energía
-    }));
-    const allResults: MatchResult[] = played.map((m) => ({
-      homeTeam: teamName(teams, m.homeTeamId),
-      awayTeam: teamName(teams, m.awayTeamId),
-      homeTeamId: m.homeTeamId,
-      awayTeamId: m.awayTeamId,
-      homeScore: m.homeScore!,
-      awayScore: m.awayScore!,
-      groupName: title,
-      isFavorite: favs.has(m.homeTeamId) || favs.has(m.awayTeamId),
-    }));
-    openLiveSession({ title, entries, allResults, hiddenCount: 0 });
-  };
-
-  const playAll = async () => {
-    for (let md = 1; md <= totalMatchdays; md++) {
-      await useSeasonModeStore.getState().simulateMatchday(run.id, md);
-    }
-  };
 
   return (
     <div className="space-y-6">
+      <JornadaCard run={run} competitionName={competition.name} completeLabel="Liga completa ✓" />
+
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <CardTitle>{run.name}</CardTitle>
-            <div className="flex gap-2">
-              {nextMatchday !== null ? (
-                <>
-                  <Button size="sm" onClick={() => playFechaLive(nextMatchday)} loading={busy} className="gap-1">
-                    <Play className="w-3 h-3" /> Fecha {nextMatchday} en vivo
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={playAll} loading={busy}>
-                    Jugar todo
-                  </Button>
-                </>
-              ) : (
-                <span className="font-arcade text-[10px] text-led uppercase">Liga completa ✓</span>
-              )}
-            </div>
-          </div>
+          <CardTitle>Posiciones</CardTitle>
         </CardHeader>
         <CardContent>
           <StandingsTable
@@ -272,32 +318,7 @@ function LigaPanel({ run, competition }: { run: LigaTournament; competition: Com
           )}
         </CardContent>
       </Card>
-
-      {nextMatchday !== null && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Próxima fecha ({nextMatchday})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FixtureList matches={currentFixtures} teams={teams} />
-          </CardContent>
-        </Card>
-      )}
     </div>
-  );
-}
-
-function FixtureList({ matches, teams }: { matches: Match[]; teams: Team[] }) {
-  return (
-    <ul className="space-y-2">
-      {matches.map((m) => (
-        <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
-          <span className="flex-1 text-right truncate">{teamName(teams, m.homeTeamId)}</span>
-          <span className="px-3 font-terminal text-grass-soft">vs</span>
-          <span className="flex-1 truncate">{teamName(teams, m.awayTeamId)}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -307,33 +328,10 @@ function FixtureList({ matches, teams }: { matches: Match[]; teams: Team[] }) {
 
 function GruposEliminacionPanel({ run }: { run: GruposEliminacionTournament }) {
   const teams = useTournamentStore((s) => s.teams);
-  const busy = useSeasonModeStore((s) => s.busy);
-
-  const nextMatchday = useMemo(() => {
-    const unplayed = run.state.groups.groups.flatMap((g) => g.matches).filter((m) => !m.isPlayed);
-    if (unplayed.length === 0) return null;
-    return Math.min(...unplayed.map((m) => m.matchday ?? 0));
-  }, [run.state.groups]);
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <CardTitle>{run.name}</CardTitle>
-            {nextMatchday !== null && (
-              <Button
-                size="sm"
-                loading={busy}
-                className="gap-1"
-                onClick={() => useSeasonModeStore.getState().simulateMatchday(run.id, nextMatchday)}
-              >
-                <Play className="w-3 h-3" /> Jugar fecha {nextMatchday}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
+      <JornadaCard run={run} competitionName={run.name} completeLabel="Torneo completo ✓" />
 
       <div className="grid gap-4 md:grid-cols-2">
         {run.state.groups.groups.map((group) => (
@@ -367,6 +365,8 @@ function EliminacionPanel({ run }: { run: EliminacionTournament }) {
 
   return (
     <div className="space-y-6">
+      <JornadaCard run={run} competitionName={run.name} completeLabel="Copa completa ✓" />
+
       {run.state.championId && (
         <Card>
           <CardContent>
@@ -386,16 +386,9 @@ function EliminacionPanel({ run }: { run: EliminacionTournament }) {
   );
 }
 
-/** Las rondas de un cuadro, con su botón de jugar. Sirve para los formatos 2 y 3. */
+/** Las rondas de un cuadro, cruce por cruce. Sirve para los formatos 2 y 3. */
 function BracketRounds({ bracket, tournamentId }: { bracket: Bracket; tournamentId: string }) {
   const teams = useTournamentStore((s) => s.teams);
-  const busy = useSeasonModeStore((s) => s.busy);
-
-  const playRound = async (ties: Tie[]) => {
-    for (const tie of ties) {
-      if (!tie.winnerId) await useSeasonModeStore.getState().simulateTie(tournamentId, tie.id);
-    }
-  };
 
   const rounds = [
     ...bracket.rounds,
@@ -406,62 +399,98 @@ function BracketRounds({ bracket, tournamentId }: { bracket: Bracket; tournament
 
   return (
     <>
-      {rounds.map((round, i) => {
-        const pending = round.ties.filter((t) => !t.winnerId && t.homeTeamId && t.awayTeamId);
-        return (
-          <Card key={`${round.round}-${i}`}>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle>{roundLabel(round.round)}</CardTitle>
-                {pending.length > 0 && (
-                  <Button size="sm" onClick={() => playRound(round.ties)} loading={busy} className="gap-1">
-                    <Play className="w-3 h-3" /> Jugar ronda
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {round.ties.map((tie) => (
-                  <TieRow
-                    key={tie.id}
-                    tie={tie}
-                    teams={teams}
-                    busy={busy}
-                    onPlay={() => useSeasonModeStore.getState().simulateTie(tournamentId, tie.id)}
-                  />
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {rounds.map((round, i) => (
+        <Card key={`${round.round}-${i}`}>
+          <CardHeader>
+            <CardTitle>{roundLabel(round.round)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-4">
+              {round.ties.map((tie) => (
+                <TieRow key={tie.id} tie={tie} teams={teams} tournamentId={tournamentId} />
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ))}
     </>
   );
 }
 
-function TieRow({ tie, teams, busy, onPlay }: { tie: Tie; teams: Team[]; busy: boolean; onPlay: () => void }) {
+/**
+ * Un cruce: el global arriba y sus partidos abajo, cada uno con sus acciones.
+ *
+ * La ida y la vuelta se juegan por separado —son dos jornadas distintas—, así
+ * que cada partido tiene su propio botón y la vuelta recién se habilita cuando
+ * la ida está jugada (`isLegPlayable`).
+ */
+function TieRow({
+  tie,
+  teams,
+  tournamentId,
+}: {
+  tie: Tie;
+  teams: Team[];
+  tournamentId: string;
+}) {
   const agg = tieAggregate(tie);
+  const { play, busy, playable: seasonPlayable } = useSeasonMatchPlay(tournamentId);
+  const twoLegged = tie.matches.length === 2;
 
   return (
-    <li className="flex items-center gap-2 text-sm border-b border-line/40 pb-2">
-      <span className={`flex-1 text-right truncate ${tie.winnerId === tie.homeTeamId ? 'text-gold font-bold' : ''}`}>
-        {teamName(teams, tie.homeTeamId)}
-      </span>
-      <span className="px-2 font-terminal tabular-nums text-grass-soft min-w-[3rem] text-center">
-        {agg ? `${agg.home}–${agg.away}` : 'vs'}
-      </span>
-      <span className={`flex-1 truncate ${tie.winnerId === tie.awayTeamId ? 'text-gold font-bold' : ''}`}>
-        {teamName(teams, tie.awayTeamId)}
-      </span>
-      {tie.penalties && (
-        <span className="text-[10px] text-grass-soft">(pen {tie.penalties.homeScore}-{tie.penalties.awayScore})</span>
-      )}
-      {!tie.winnerId && tie.homeTeamId && tie.awayTeamId && (
-        <Button size="sm" variant="ghost" onClick={onPlay} loading={busy} className="!px-2">
-          <ChevronRight className="w-4 h-4" />
-        </Button>
-      )}
+    <li className="space-y-2 border-b border-line/40 pb-3 last:border-b-0">
+      <div className="flex items-center gap-2 text-sm">
+        <span className={`flex-1 text-right truncate ${tie.winnerId === tie.homeTeamId ? 'text-gold font-bold' : ''}`}>
+          {teamName(teams, tie.homeTeamId)}
+        </span>
+        <span className="px-2 font-terminal tabular-nums text-grass-soft min-w-[3rem] text-center">
+          {agg ? `${agg.home}–${agg.away}` : 'vs'}
+        </span>
+        <span className={`flex-1 truncate ${tie.winnerId === tie.awayTeamId ? 'text-gold font-bold' : ''}`}>
+          {teamName(teams, tie.awayTeamId)}
+        </span>
+        {tie.penalties && (
+          <span className="text-[10px] text-grass-soft">
+            (pen {tie.penalties.homeScore}-{tie.penalties.awayScore})
+          </span>
+        )}
+      </div>
+
+      {tie.matches.map((m, i) => {
+        const legPlayable = isLegPlayable(tie, m.id);
+        return (
+          <div
+            key={m.id}
+            className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-grass-soft"
+          >
+            {twoLegged && (
+              <span className="font-arcade text-[9px] uppercase text-gold w-14 flex-shrink-0">
+                {i === 0 ? 'Ida' : 'Vuelta'}
+              </span>
+            )}
+            <span className="flex-1 text-right truncate">{teamName(teams, m.homeTeamId)}</span>
+            <span className="px-2 font-terminal tabular-nums min-w-[3rem] text-center">
+              {m.isPlayed ? `${m.homeScore}–${m.awayScore}` : 'vs'}
+            </span>
+            <span className="flex-1 truncate">{teamName(teams, m.awayTeamId)}</span>
+            {!m.isPlayed && seasonPlayable && (
+              <MatchSimActions
+                onSimulate={() => play(m)}
+                live={{
+                  matchId: m.id,
+                  homeTeamId: m.homeTeamId,
+                  awayTeamId: m.awayTeamId,
+                  kind: 'season',
+                  tournamentId,
+                }}
+                disabled={busy || !legPlayable}
+                disabledTitle={!legPlayable ? 'Primero se juega la ida' : undefined}
+                className="sm:flex-shrink-0"
+              />
+            )}
+          </div>
+        );
+      })}
     </li>
   );
 }

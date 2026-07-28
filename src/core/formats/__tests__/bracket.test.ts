@@ -2,6 +2,8 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   advanceBracket,
   createBracket,
+  currentBracketJornada,
+  isLegPlayable,
   isBracketComplete,
   isRoundResolved,
   nextPowerOfTwo,
@@ -416,6 +418,44 @@ describe('cuadro a ida y vuelta', () => {
     expect(resolved.extraTime).toBe(true);
     // Los penales se marcan desde homeTeamId del cruce, que es 'A'.
     expect(resolved.winnerId).toBe('B');
+  });
+
+  it('la vuelta no se puede jugar antes que la ida', () => {
+    let b = twoLegged();
+    const tie = () => b.rounds[0].ties[0];
+    const [ida, vuelta] = tie().matches;
+
+    expect(isLegPlayable(tie(), ida.id)).toBe(true);
+    expect(isLegPlayable(tie(), vuelta.id)).toBe(false);
+
+    b = recordBracketMatch(b, ida.id, { homeScore: 2, awayScore: 0 });
+    expect(isLegPlayable(tie(), ida.id)).toBe(false); // ya jugada
+    expect(isLegPlayable(tie(), vuelta.id)).toBe(true);
+  });
+
+  it('la jornada del cuadro son todas las idas y después todas las vueltas', () => {
+    let b = createBracket({
+      entrants: ['A', 'B', 'C', 'D'],
+      legs: 2,
+      neutral: false,
+      stage: 'cup',
+      idPrefix: 'cup',
+      plan: standardPlan(4),
+      seed: { kind: 'explicit' },
+    });
+
+    const ida = currentBracketJornada(b)!;
+    expect(ida.label).toBe('Semis · Ida');
+    expect(ida.leg).toBe(0);
+    // Los dos cruces de la ronda, su primer partido y ninguno más.
+    expect(ida.matches.map((m) => m.id)).toEqual(b.rounds[0].ties.map((t) => t.matches[0].id));
+
+    for (const m of ida.matches) b = recordBracketMatch(b, m.id, { homeScore: 1, awayScore: 0 });
+
+    const vuelta = currentBracketJornada(b)!;
+    expect(vuelta.label).toBe('Semis · Vuelta');
+    expect(vuelta.leg).toBe(1);
+    expect(vuelta.matches.map((m) => m.id)).toEqual(b.rounds[0].ties.map((t) => t.matches[1].id));
   });
 
   it('un partido a un solo leg usa el marcador directo', () => {

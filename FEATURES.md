@@ -22,6 +22,24 @@ Características:
 - ✅ Sistema ELO para actualización dinámica de habilidades
 - ✅ Soporte para penales (para fase eliminatoria)
 
+### 2b. Oferta de simulación
+**Ubicación**: `src/components/ui/SimActions.tsx`
+
+Cuatro acciones, las mismas en todos los modos y en todas las vistas —y nada más:
+
+| Acción | Alcance |
+| --- | --- |
+| **Jugar** | Simula un partido y muestra el resultado |
+| **Ver en vivo** | Simula un partido y lo reproduce minuto a minuto |
+| **Simular jornada** | Simula la jornada en curso entera |
+| **Jornada en vivo** | Simula la jornada y la reproduce en la grilla en vivo |
+
+Una jornada es la fecha en curso de una liga o fase de grupos; en un cuadro de
+eliminación, todos los partidos de la ronda con el mismo número de partido.
+**Los cruces a ida y vuelta se juegan partido a partido**: la ida y la vuelta
+son dos jornadas distintas, y la vuelta —la que define el cruce con prórroga y
+penales si el global queda empatado— sólo se habilita con la ida jugada.
+
 ### 3. Programador de Partidos
 **Ubicación**: `src/core/scheduler.ts`
 
@@ -122,8 +140,7 @@ Características:
 Características:
 - ✅ Tabla de posiciones actualizada en tiempo real
 - ✅ Lista completa de partidos
-- ✅ Botón individual para simular cada partido
-- ✅ Botón para simular todos los partidos del grupo
+- ✅ Las cuatro acciones de simulación del juego (ver §"Oferta de simulación")
 - ✅ Indicador de progreso (X/Y partidos jugados)
 - ✅ Navegación fácil de regreso
 
@@ -161,7 +178,7 @@ Características:
 ### 2. Fase de Eliminatorias
 1. Usuario navega por regiones
 2. Hace clic en un grupo para ver detalles
-3. Simula partidos individualmente o todos a la vez
+3. Simula partidos sueltos o la jornada entera, con o sin reproducción en vivo
 4. Puede editar equipos en cualquier momento
 5. Visualiza estadísticas en tiempo real
 

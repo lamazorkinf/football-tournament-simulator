@@ -5,6 +5,7 @@ import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { isGroupStageComplete } from '../../core/formats/groupStage';
 import { isBracketComplete } from '../../core/formats/bracket';
+import { currentModeJornada } from '../../core/formats/modeJornada';
 import type { GruposEliminacionTournament } from '../../core/formats/modeTournament';
 import type { Team } from '../../types';
 
@@ -140,18 +141,17 @@ describe('un modo nuevo, sólo con modes.config', () => {
     expect(bracket.neutral).toBe(true);
     expect(bracket.rounds[0].ties.every((t) => t.matches.length === 1)).toBe(true);
 
-    // Jugar todo lo que quede pendiente, ronda tras ronda, hasta que no haya más.
+    // Jugar todo lo que quede pendiente, jornada tras jornada, hasta que no
+    // haya más. A partido único cada ronda es una sola jornada.
+    const jornadas: string[] = [];
     for (let guard = 0; guard < 20; guard++) {
-      const current = run().state.bracket!;
-      const pending = [
-        ...current.rounds.flatMap((r) => r.ties),
-        ...(current.thirdPlaceTie ? [current.thirdPlaceTie] : []),
-      ].filter((t) => !t.winnerId && t.homeTeamId && t.awayTeamId);
-      if (pending.length === 0) break;
-      for (const tie of pending) {
-        await useSeasonModeStore.getState().simulateTie(run().id, tie.id, rng);
-      }
+      const jornada = currentModeJornada(run());
+      if (!jornada) break;
+      jornadas.push(jornada.label);
+      await useSeasonModeStore.getState().simulateJornada(run().id, rng);
     }
+    // La final y el 3er puesto se juegan juntos, como en el ciclo mundialista.
+    expect(jornadas).toEqual(['Cuartos', 'Semis', 'Final y 3er puesto']);
 
     const final = run().state.bracket!;
     expect(final.rounds.map((r) => r.round)).toEqual(['quarter', 'semi', 'final']);

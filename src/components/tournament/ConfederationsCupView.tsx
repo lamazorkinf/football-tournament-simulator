@@ -3,13 +3,13 @@ import { isMatchPlayable, phaseYear } from '../../core/calendar';
 import { isConfederationsDrawn } from '../../utils/cycleProgress';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
-import { Button } from '../ui/Button';
 import { StandingsTable } from '../ui/StandingsTable';
 import { ScoreBug } from '../ui/ScoreBug';
 import { EmptyState } from '../ui/EmptyState';
 import { showMatchResultToast } from '../ui/MatchResultToast';
-import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Trophy, Award, Lock } from 'lucide-react';
+import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
+import { useCycleJornada } from '../../hooks/useCycleJornada';
+import { Trophy, Award, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 type MatchWithPenalties = Match & { penalties?: { homeScore: number; awayScore: number } };
@@ -22,6 +22,7 @@ interface ConfederationsCupViewProps {
 
 export function ConfederationsCupView({ cycle, teams, onNavigate }: ConfederationsCupViewProps) {
   const { simulateConfederationsMatch, isSavingMatch } = useTournamentStore();
+  const jornadaSim = useCycleJornada(cycle, teams);
   const getTeam = (id: string) => teams.find((t) => t.id === id);
   const confed = cycle.confederationsCup;
 
@@ -79,14 +80,23 @@ export function ConfederationsCupView({ cycle, teams, onNavigate }: Confederatio
           </div>
         </CardHeader>
         <CardContent>
-          {confed.championId ? (
-            <div className="flex items-center gap-2 text-gold font-arcade text-xs">
-              <Trophy className="w-5 h-5" />
-              Campeón: {getTeam(confed.championId)?.name ?? confed.championId}
-            </div>
-          ) : (
-            <p className="text-grass-soft text-sm">Jornada {cycle.calendar.matchday}</p>
-          )}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {confed.championId ? (
+              <div className="flex items-center gap-2 text-gold font-arcade text-xs">
+                <Trophy className="w-5 h-5" />
+                Campeón: {getTeam(confed.championId)?.name ?? confed.championId}
+              </div>
+            ) : (
+              <p className="text-grass-soft text-sm">Jornada {cycle.calendar.matchday}</p>
+            )}
+            <JornadaSimActions
+              jornadaLabel={jornadaSim.title}
+              onSimulate={jornadaSim.simulate}
+              onSimulateLive={jornadaSim.simulateLive}
+              disabled={!jornadaSim.canSimulate}
+              busy={jornadaSim.isBusy}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -187,19 +197,17 @@ function ConfedMatch({ match, cycle, getTeam, onPlay, isSaving }: ConfedMatchPro
         </p>
       )}
       {!match.isPlayed && playable && (
-        <div className="space-y-1">
-          <Button variant="primary" size="sm" onClick={() => onPlay(match)} disabled={isSaving} className="w-full gap-1">
-            <Play className="w-3 h-3" /> Jugar
-          </Button>
-          <WatchLiveButton
-            matchId={match.id}
-            homeTeamId={match.homeTeamId}
-            awayTeamId={match.awayTeamId}
-            kind="confederations"
-            disabled={isSaving}
-            className="w-full"
-          />
-        </div>
+        <MatchSimActions
+          onSimulate={() => onPlay(match)}
+          live={{
+            matchId: match.id,
+            homeTeamId: match.homeTeamId,
+            awayTeamId: match.awayTeamId,
+            kind: 'confederations',
+          }}
+          disabled={isSaving}
+          stacked
+        />
       )}
     </div>
   );

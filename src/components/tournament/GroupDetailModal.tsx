@@ -5,7 +5,7 @@ import { StandingsTable } from '../ui/StandingsTable';
 import { Button } from '../ui/Button';
 import { TeamFlag } from '../ui/TeamFlag';
 import { ScoreBug } from '../ui/ScoreBug';
-import { WatchLiveButton } from './WatchLiveButton';
+import { MatchSimActions } from '../ui/SimActions';
 import type { LiveMatchKind } from '../../store/useLiveMatchStore';
 
 interface GroupDetailModalProps {
@@ -115,23 +115,21 @@ export function GroupDetailModal({
                                 homeScore={match.isPlayed ? match.homeScore : null}
                                 awayScore={match.isPlayed ? match.awayScore : null}
                               />
-                              {!match.isPlayed && onSimulate && (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => onSimulate(match.id)}
-                                  className="w-full min-h-11"
-                                >
-                                  Simular
-                                </Button>
-                              )}
-                              {!match.isPlayed && liveKind && (
-                                <WatchLiveButton
-                                  matchId={match.id}
-                                  homeTeamId={match.homeTeamId}
-                                  awayTeamId={match.awayTeamId}
-                                  kind={liveKind}
-                                  groupId={group.id}
+                              {!match.isPlayed && (
+                                <MatchSimActions
+                                  onSimulate={onSimulate ? () => onSimulate(match.id) : undefined}
+                                  live={
+                                    liveKind
+                                      ? {
+                                          matchId: match.id,
+                                          homeTeamId: match.homeTeamId,
+                                          awayTeamId: match.awayTeamId,
+                                          kind: liveKind,
+                                          groupId: group.id,
+                                        }
+                                      : undefined
+                                  }
+                                  stacked
                                 />
                               )}
                             </div>
@@ -173,27 +171,22 @@ export function GroupDetailModal({
                                 />
                               </div>
 
-                              {/* Simulate Button */}
-                              {!match.isPlayed && onSimulate && (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSimulate(match.id);
-                                  }}
+                              {/* Acciones del partido */}
+                              {!match.isPlayed && (
+                                <MatchSimActions
+                                  onSimulate={onSimulate ? () => onSimulate(match.id) : undefined}
+                                  live={
+                                    liveKind
+                                      ? {
+                                          matchId: match.id,
+                                          homeTeamId: match.homeTeamId,
+                                          awayTeamId: match.awayTeamId,
+                                          kind: liveKind,
+                                          groupId: group.id,
+                                        }
+                                      : undefined
+                                  }
                                   className="ml-3 shrink-0"
-                                >
-                                  Simular
-                                </Button>
-                              )}
-                              {!match.isPlayed && liveKind && (
-                                <WatchLiveButton
-                                  matchId={match.id}
-                                  homeTeamId={match.homeTeamId}
-                                  awayTeamId={match.awayTeamId}
-                                  kind={liveKind}
-                                  groupId={group.id}
                                 />
                               )}
                             </div>

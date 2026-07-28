@@ -8,9 +8,10 @@ import { MatchDetailModal } from './MatchDetailModal';
 import { BracketLine } from './BracketLine';
 import { TeamFlag } from '../ui/TeamFlag';
 import { TeamNameTooltip } from '../ui/TeamNameTooltip';
-import { WatchLiveButton } from './WatchLiveButton';
+import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
 import { useState, useRef } from 'react';
 import { useMobileAction } from '../../hooks/useMobileAction';
+import { useCycleJornada } from '../../hooks/useCycleJornada';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { matchCardVariants, matchContainerVariants } from './animations';
@@ -128,26 +129,16 @@ const MatchCard = ({ match, teams, onSimulate, onViewDetails, disabled = false }
         {/* Action Buttons */}
         <div className="flex gap-2">
           {!isPlayed && onSimulate && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSimulate(match.id);
+            <MatchSimActions
+              onSimulate={() => onSimulate(match.id)}
+              live={{
+                matchId: match.id,
+                homeTeamId: match.homeTeamId,
+                awayTeamId: match.awayTeamId,
+                kind: 'knockout',
               }}
               disabled={disabled}
-              className="w-full"
-            >
-              {disabled ? 'Guardando…' : 'Simular'}
-            </Button>
-          )}
-          {!isPlayed && onSimulate && (
-            <WatchLiveButton
-              matchId={match.id}
-              homeTeamId={match.homeTeamId}
-              awayTeamId={match.awayTeamId}
-              kind="knockout"
-              disabled={disabled}
+              stacked
               className="w-full"
             />
           )}
@@ -183,6 +174,8 @@ export const KnockoutView = ({
   onNewTournament,
 }: KnockoutViewProps) => {
   const { simulateKnockoutMatch, isSavingMatch } = useTournamentStore();
+  const cycle = useTournamentStore((s) => s.currentTournament);
+  const jornadaSim = useCycleJornada(cycle, teams);
   const [showCelebration, setShowCelebration] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<KnockoutMatch | null>(null);
   const bracketRef = useRef<HTMLDivElement>(null);
@@ -223,24 +216,13 @@ export const KnockoutView = ({
     });
   };
 
-  const nextPendingMatch = [
-    ...knockout.roundOf32,
-    ...knockout.roundOf16,
-    ...knockout.quarterFinals,
-    ...knockout.semiFinals,
-    ...(knockout.thirdPlace ? [knockout.thirdPlace] : []),
-    ...(knockout.final ? [knockout.final] : []),
-  ].find((m) => !m.isPlayed && m.homeTeamId && m.awayTeamId);
-
-  useMobileAction(
-    nextPendingMatch
-      ? {
-          label: isSavingMatch ? 'GUARDANDO…' : '▶ SIMULAR PARTIDO',
-          onPress: () => handleSimulate(nextPendingMatch.id),
-          disabled: isSavingMatch,
-        }
-      : null
-  );
+  // Misma acción que el resto del juego: la jornada en curso, no un partido
+  // suelto (los partidos tienen sus propios botones en cada tarjeta).
+  useMobileAction({
+    label: jornadaSim.isBusy ? 'SIMULANDO…' : '▶ SIMULAR JORNADA',
+    onPress: jornadaSim.simulate,
+    disabled: !jornadaSim.canSimulate,
+  });
 
   const tournamentComplete = championId && runnerUpId;
 
@@ -300,7 +282,7 @@ export const KnockoutView = ({
       {/* Progress Info */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Trophy className="w-8 h-8 text-gold" />
               <div>
@@ -321,11 +303,19 @@ export const KnockoutView = ({
                 </p>
               </div>
             </div>
-            {tournamentComplete && (
+            {tournamentComplete ? (
               <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-gold font-arcade text-[10px] text-gold uppercase blink">
                 <Trophy className="w-5 h-5" />
                 ¡Campeón coronado!
               </div>
+            ) : (
+              <JornadaSimActions
+                jornadaLabel={jornadaSim.title}
+                onSimulate={jornadaSim.simulate}
+                onSimulateLive={jornadaSim.simulateLive}
+                disabled={!jornadaSim.canSimulate}
+                busy={jornadaSim.isBusy}
+              />
             )}
           </div>
         </CardContent>

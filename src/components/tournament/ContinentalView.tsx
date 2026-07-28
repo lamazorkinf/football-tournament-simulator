@@ -6,12 +6,12 @@ import { continentalRoundLabel, isContinentalDrawn } from '../../utils/cycleProg
 import { REGION_LABELS } from '../../utils/regionLabels';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
-import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
 import { EmptyState } from '../ui/EmptyState';
 import { showMatchResultToast } from '../ui/MatchResultToast';
-import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Trophy, Globe2, Lock } from 'lucide-react';
+import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
+import { useCycleJornada } from '../../hooks/useCycleJornada';
+import { Trophy, Globe2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 
@@ -31,6 +31,7 @@ interface ContinentalViewProps {
 
 export function ContinentalView({ cycle, teams, onNavigate }: ContinentalViewProps) {
   const { simulateContinentalMatch, isSavingMatch } = useTournamentStore();
+  const jornadaSim = useCycleJornada(cycle, teams);
   const [region, setRegion] = useState<Region>(CYCLE_REGIONS[0]);
 
   const getTeam = (id: string) => teams.find((t) => t.id === id);
@@ -78,9 +79,19 @@ export function ContinentalView({ cycle, teams, onNavigate }: ContinentalViewPro
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-grass-soft text-sm">
-            Jornada {cycle.calendar.matchday} · {continentalRoundLabel(cycle.calendar.matchday)}
-          </p>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <p className="text-grass-soft text-sm">
+              Jornada {cycle.calendar.matchday} · {continentalRoundLabel(cycle.calendar.matchday)}
+            </p>
+            <JornadaSimActions
+              jornadaLabel={jornadaSim.title}
+              onSimulate={jornadaSim.simulate}
+              onSimulateLive={jornadaSim.simulateLive}
+              disabled={!jornadaSim.canSimulate}
+              busy={jornadaSim.isBusy}
+              hint="se juega entera, en las cuatro confederaciones."
+            />
+          </div>
           <div className="flex flex-wrap gap-2 mt-4">
             {CYCLE_REGIONS.map((r) => (
               <button
@@ -221,19 +232,17 @@ function BracketMatch({ match, cycle, getTeam, onPlay, isSaving }: BracketMatchP
         </p>
       )}
       {!match.isPlayed && playable && (
-        <div className="space-y-1">
-          <Button variant="primary" size="sm" onClick={() => onPlay(match)} disabled={isSaving} className="w-full gap-1">
-            <Play className="w-3 h-3" /> Jugar
-          </Button>
-          <WatchLiveButton
-            matchId={match.id}
-            homeTeamId={match.homeTeamId}
-            awayTeamId={match.awayTeamId}
-            kind="continental"
-            disabled={isSaving}
-            className="w-full"
-          />
-        </div>
+        <MatchSimActions
+          onSimulate={() => onPlay(match)}
+          live={{
+            matchId: match.id,
+            homeTeamId: match.homeTeamId,
+            awayTeamId: match.awayTeamId,
+            kind: 'continental',
+          }}
+          disabled={isSaving}
+          stacked
+        />
       )}
     </div>
   );

@@ -1,31 +1,24 @@
 import { useState, useMemo } from 'react';
-import type { Cycle, Team, Region, MatchdayOutcome } from '../../types';
+import type { Cycle, Team, Region } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ScoreBug } from '../ui/ScoreBug';
+import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
-import { WatchLiveButton } from './WatchLiveButton';
-import { Play, Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Star, Radio } from 'lucide-react';
+import { Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
-import { useMatchResultsStore } from '../../store/useMatchResultsStore';
-import { useLiveMatchdayStore, type LiveMatchdayEntry } from '../../store/useLiveMatchdayStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { useCycleJornada } from '../../hooks/useCycleJornada';
 import { getCyclePhaseBanner } from '../../utils/cycleProgress';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collectAllMatches, type MatchStage, type MatchWithContext } from './matchCenterCollector';
-import { isBatchSimulableStage } from './matchBatchSimulable';
-import { buildJornadaResults } from './jornadaResults';
-import { groupIntoJornadas, getCurrentJornada, type JornadaGroup } from '../../core/jornada';
-import { selectLiveMatches } from '../../core/liveSelection';
+import type { JornadaGroup } from '../../core/jornada';
 import type { PenaltiesScore } from '../../utils/matchLabels';
 import { showMatchResultToast } from '../ui/MatchResultToast';
-import { buildMatchTimeline, hashSeed } from '../../core/liveMatch';
-import { ENERGY_MAX } from '../../core/energy';
-import type { MatchResult } from '../../store/useMatchResultsStore';
 
 interface MatchCenterProps {
   tournament: Cycle;
@@ -34,10 +27,8 @@ interface MatchCenterProps {
 }
 
 export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps) {
-  const { simulateMatch, simulateMatchdayBatch, simulateRoundBatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch, isSavingMatch, isBatchProcessing } = useTournamentStore();
-  const { showResults } = useMatchResultsStore();
-  const openLiveSession = useLiveMatchdayStore((s) => s.openSession);
-  const favoriteTeamIds = useFavoritesStore((s) => s.favoriteTeamIds);
+  const { simulateMatch, simulateKnockoutMatch, simulateContinentalMatch, simulateConfederationsMatch, isSavingMatch } = useTournamentStore();
+  const jornadaSim = useCycleJornada(tournament, teams);
   const [selectedRegion, setSelectedRegion] = useState<Region | 'all'>('all');
   const [selectedStage, setSelectedStage] = useState<MatchStage | 'all'>('all');
   const [selectedMatch, setSelectedMatch] = useState<MatchWithContext | null>(null);
@@ -54,8 +45,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
 
   // Jornadas del ciclo (fase, número) en orden. La "jornada actual" es la
   // primera con partido sin jugar — es GLOBAL: ignora los filtros visuales.
-  const jornadaGroups = useMemo(() => groupIntoJornadas(allMatches), [allMatches]);
-  const currentJornada = useMemo(() => getCurrentJornada(jornadaGroups), [jornadaGroups]);
+  const { jornadaGroups, currentJornada } = jornadaSim;
 
   // Default de la jornada mostrada = jornada actual. Se reajusta durante el
   // render SOLO al cambiar de torneo (patrón React de "derivar estado de
@@ -101,14 +91,6 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
 
   // Separate played and unplayed for display
   const unplayedMatches = filteredMatches.filter((m) => !m.match.isPlayed);
-
-  // Objetivo de simulación: la jornada ACTUAL global (no la mostrada ni la
-  // filtrada), con ambos equipos definidos y sin jugar.
-  const jornadaUnplayed = useMemo(
-    () => (currentJornada ? currentJornada.matches.filter((m) => !m.match.isPlayed) : []),
-    [currentJornada],
-  );
-  const canSimulateJornada = jornadaUnplayed.length > 0 && !isSavingMatch && !isBatchProcessing;
 
   const handleSimulateMatch = async (matchWithContext: MatchWithContext) => {
     const { match, stage, groupId } = matchWithContext;
@@ -180,157 +162,10 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
     });
   };
 
-  // Título de la jornada actual (fase · ronda/jornada).
-  const jornadaTitle = currentJornada ? `${currentJornada.phaseLabel} · ${currentJornada.label}` : '';
-
-  // Simula la jornada ACTUAL (global) ruteando por familia: grupos →
-  // simulateMatchdayBatch, eliminatorias/confed → simulateRoundBatch. Una
-  // jornada es de una sola fase, así que nunca mezcla ambas familias.
-  const runJornadaSimulation = async (
-    toSimulate: MatchWithContext[],
-  ): Promise<MatchdayOutcome[]> => {
-    const groupItems = toSimulate.filter((m) => isBatchSimulableStage(m.stage));
-    const roundItems = toSimulate.filter((m) => !isBatchSimulableStage(m.stage));
-    const outcomes: MatchdayOutcome[] = [];
-
-    if (groupItems.length > 0) {
-      const res = await simulateMatchdayBatch(
-        groupItems.map((m) => ({
-          matchId: m.match.id,
-          groupId: m.groupId,
-          stage: m.stage === 'qualifier' ? ('qualifier' as const) : ('world-cup' as const),
-          groupName: m.groupName,
-          region: m.region,
-        })),
-      );
-      outcomes.push(...res);
-    }
-    if (roundItems.length > 0) {
-      const res = await simulateRoundBatch(
-        roundItems.map((m) => ({
-          matchId: m.match.id,
-          kind: m.stage as 'knockout' | 'continental' | 'confederations',
-        })),
-      );
-      outcomes.push(...res);
-    }
-    return outcomes;
-  };
-
-  // Resumen de la jornada con los favoritos marcados (el modal los ordena
-  // primero). Ver core del builder en jornadaResults.ts.
-  const jornadaResults = (jornada: JornadaGroup, outcomes: MatchdayOutcome[]): MatchResult[] =>
-    buildJornadaResults(jornada, outcomes, teams, new Set(favoriteTeamIds));
-
-  const handleSimulateMatchday = async () => {
-    const jornada = currentJornada;
-    if (!jornada || jornadaUnplayed.length === 0) {
-      toast.info('No hay partidos pendientes para simular');
-      return;
-    }
-    // Solo partidos con ambos equipos definidos (defensivo para eliminatorias).
-    const toSimulate = jornadaUnplayed.filter(
-      (m) => getTeam(m.match.homeTeamId) && getTeam(m.match.awayTeamId),
-    );
-    if (toSimulate.length === 0) {
-      toast.info('Los partidos de esta jornada todavía no tienen equipos definidos');
-      return;
-    }
-
-    try {
-      const outcomes = await runJornadaSimulation(toSimulate);
-      const results = jornadaResults(jornada, outcomes);
-      showResults(results, `${jornadaTitle} — Resultados`);
-      toast.success(`${jornada.label} completada — ${outcomes.length} partidos simulados`);
-    } catch (error) {
-      console.error('Error simulating matchday:', error);
-      toast.error('Error al simular la jornada');
-    }
-  };
-
-  const handleSimulateMatchdayLive = async () => {
-    const jornada = currentJornada;
-    if (!jornada || jornadaUnplayed.length === 0) {
-      toast.info('No hay partidos pendientes para simular');
-      return;
-    }
-    const toSimulate = jornadaUnplayed.filter(
-      (m) => getTeam(m.match.homeTeamId) && getTeam(m.match.awayTeamId),
-    );
-    if (toSimulate.length === 0) {
-      toast.info('Los partidos de esta jornada todavía no tienen equipos definidos');
-      return;
-    }
-
-    // Selección de los ≤12 que se ven en vivo, con skills PRE-simulación.
-    const skillMap = new Map(teams.map((t) => [t.id, t.skill]));
-    const favorites = new Set(favoriteTeamIds);
-    const selectable = toSimulate.map((m) => ({
-      matchId: m.match.id,
-      homeTeamId: m.match.homeTeamId,
-      awayTeamId: m.match.awayTeamId,
-    }));
-    const chosenIds = new Set(
-      selectLiveMatches(selectable, skillMap, favorites).map((s) => s.matchId),
-    );
-
-    try {
-      // Commit-then-replay: se comprometen TODOS los resultados primero.
-      const outcomes = await runJornadaSimulation(toSimulate);
-      const byId = new Map(outcomes.map((o) => [o.matchId, o]));
-      const ctxById = new Map(jornada.matches.map((m) => [m.match.id, m]));
-
-      const entries: LiveMatchdayEntry[] = [];
-      for (const matchId of chosenIds) {
-        const outcome = byId.get(matchId);
-        const ctx = ctxById.get(matchId);
-        if (!outcome || !ctx) continue; // fue salteado en la simulación
-        entries.push({
-          matchId,
-          homeTeamId: outcome.homeTeamId,
-          awayTeamId: outcome.awayTeamId,
-          timeline: buildMatchTimeline({
-            homeScore: outcome.homeScore,
-            awayScore: outcome.awayScore,
-            seed: hashSeed(matchId),
-            penalties: outcome.penalties,
-            extraTime: outcome.extraTime,
-          }),
-          groupName: ctx.groupName,
-          region: ctx.region,
-          isFavorite: favorites.has(outcome.homeTeamId) || favorites.has(outcome.awayTeamId),
-          // Energía de ENTRADA: la que ya resolvió `buildEnergyContext` al
-          // simular (ver `SimulatedMatchOutcome`), no la que queda después
-          // del costo del partido. El fallback sólo cubriría un outcome que
-          // no vino de una acción simulate* real (no ocurre en este flujo).
-          homeEnergy: outcome.homeEnergy ?? ENERGY_MAX,
-          awayEnergy: outcome.awayEnergy ?? ENERGY_MAX,
-        });
-      }
-
-      if (entries.length === 0) {
-        // No se pudo simular nada (fuera de jornada, etc.): mostrar el resumen.
-        const results = jornadaResults(jornada, outcomes);
-        showResults(results, `${jornadaTitle} — Resultados`);
-        return;
-      }
-
-      openLiveSession({
-        title: jornadaTitle,
-        entries,
-        allResults: jornadaResults(jornada, outcomes),
-        hiddenCount: outcomes.length - entries.length,
-      });
-    } catch (error) {
-      console.error('Error simulating matchday live:', error);
-      toast.error('Error al simular la jornada en vivo');
-    }
-  };
-
   useMobileAction({
-    label: isBatchProcessing ? 'SIMULANDO…' : '▶ SIMULAR JORNADA',
-    onPress: handleSimulateMatchday,
-    disabled: !canSimulateJornada,
+    label: jornadaSim.isBusy ? 'SIMULANDO…' : '▶ SIMULAR JORNADA',
+    onPress: jornadaSim.simulate,
+    disabled: !jornadaSim.canSimulate,
   });
 
   const handleMatchClick = (matchCtx: MatchWithContext) => {
@@ -479,31 +314,15 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
             </div>
 
             {/* Quick Actions */}
-            <div className="hidden lg:block space-y-2">
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant="primary"
-                  onClick={handleSimulateMatchday}
-                  disabled={!canSimulateJornada}
-                  loading={isBatchProcessing}
-                  className="gap-2"
-                >
-                  {!isBatchProcessing && <Play className="w-4 h-4" />}
-                  <span>{isBatchProcessing ? 'Simulando…' : 'Simular Jornada'}</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleSimulateMatchdayLive}
-                  disabled={!canSimulateJornada}
-                  className="gap-2"
-                >
-                  <Radio className="w-4 h-4" />
-                  <span>Jornada en vivo</span>
-                </Button>
-              </div>
-              <p className="text-xs text-grass-soft">
-                Se simula la jornada completa, de todas las regiones, sin importar los filtros.
-              </p>
+            <div className="hidden lg:block">
+              <JornadaSimActions
+                jornadaLabel={jornadaSim.title}
+                onSimulate={jornadaSim.simulate}
+                onSimulateLive={jornadaSim.simulateLive}
+                disabled={!jornadaSim.canSimulate}
+                busy={jornadaSim.isBusy}
+                hint="se juega entera, de todas las regiones, sin importar los filtros."
+              />
             </div>
           </div>
         </CardContent>
@@ -533,15 +352,13 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
               ▶
             </button>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleSimulateMatchdayLive}
-            disabled={!canSimulateJornada}
-            className="gap-2 w-full"
-          >
-            <Radio className="w-4 h-4" />
-            <span>Jornada en vivo</span>
-          </Button>
+          <JornadaSimActions
+            jornadaLabel={jornadaSim.title}
+            onSimulate={jornadaSim.simulate}
+            onSimulateLive={jornadaSim.simulateLive}
+            disabled={!jornadaSim.canSimulate}
+            busy={jornadaSim.isBusy}
+          />
         </div>
       )}
 
@@ -830,30 +647,21 @@ function MatchRow({ matchCtx, teams, onSimulate, onMatchClick, index, compact = 
       {/* Action Buttons */}
       <div className="mt-3 sm:mt-0 sm:ml-4 w-full sm:w-auto">
         {!match.isPlayed && onSimulate && (
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSimulate();
-              }}
-              disabled={disabled || !bothTeamsKnown}
-              className="gap-2 flex-1 sm:flex-none"
-              title={!bothTeamsKnown ? 'Equipos por definir (falta resolver la ronda anterior)' : undefined}
-            >
-              <Play className="w-3 h-3" />
-              {disabled ? '…' : !bothTeamsKnown ? 'Por definir' : 'Jugar'}
-            </Button>
-            <WatchLiveButton
-              matchId={matchCtx.match.id}
-              homeTeamId={matchCtx.match.homeTeamId}
-              awayTeamId={matchCtx.match.awayTeamId}
-              kind={matchCtx.stage}
-              groupId={matchCtx.groupId}
-              disabled={disabled || !bothTeamsKnown}
-            />
-          </div>
+          <MatchSimActions
+            onSimulate={onSimulate}
+            live={{
+              matchId: matchCtx.match.id,
+              homeTeamId: matchCtx.match.homeTeamId,
+              awayTeamId: matchCtx.match.awayTeamId,
+              kind: matchCtx.stage,
+              groupId: matchCtx.groupId,
+            }}
+            disabled={disabled || !bothTeamsKnown}
+            disabledTitle={
+              !bothTeamsKnown ? 'Equipos por definir (falta resolver la ronda anterior)' : undefined
+            }
+            className="w-full sm:w-auto"
+          />
         )}
       </div>
     </motion.div>
