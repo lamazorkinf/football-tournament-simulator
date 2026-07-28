@@ -108,6 +108,15 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
+ * Modo al que se le atribuye lo que este store escriba. El store sólo sostiene
+ * el ciclo del modo activo (cambiar de modo lo resetea), así que el modo activo
+ * ES el dueño de lo que se guarda. Los servicios no leen stores: se los pasa.
+ */
+function activeModeIdForWrite(): string {
+  return useModeStore.getState().activeModeId;
+}
+
+/**
  * Guarda el torneo en Supabase (header + cycle_state, en ese orden por la FK) con
  * reintento corto. Devuelve true si se confirmó el guardado.
  *
@@ -121,7 +130,7 @@ export async function persistTournament(tournament: Cycle): Promise<boolean> {
   const attempts = SAVE_RETRY_DELAYS_MS.length + 1;
   for (let i = 0; i < attempts; i++) {
     try {
-      await adaptiveTournamentService.saveTournament(tournament);
+      await adaptiveTournamentService.saveTournament(tournament, activeModeIdForWrite());
       await cycleStateService.saveCycleState(ensureCycleFields(tournament));
       return true;
     } catch (error) {
@@ -407,7 +416,7 @@ export const useTournamentStore = create<TournamentState>()(
 
             // Backfill best-effort: exponer en H2H los partidos continental/confed
             // ya jugados (antes de que se normalizaran a match_history).
-            backfillCycleMatchHistory(current, get().teams)
+            backfillCycleMatchHistory(current, get().teams, activeModeIdForWrite())
               .then((n) => { if (n > 0) console.log(`🔁 Backfill continental/confed: +${n} partidos`); })
               .catch((error) => console.error('Backfill continental/confed falló:', error));
           } catch (error) {
@@ -537,7 +546,7 @@ export const useTournamentStore = create<TournamentState>()(
           if (isSupabaseConfigured()) {
             try {
               progress.updateProgress('Guardando torneo en base de datos…', 4);
-              await adaptiveTournamentService.saveTournament(tournament);
+              await adaptiveTournamentService.saveTournament(tournament, activeModeIdForWrite());
               await cycleStateService.saveCycleState(tournament);
               console.log(`Tournament ${year} created and saved to database`);
 
@@ -1320,7 +1329,7 @@ export const useTournamentStore = create<TournamentState>()(
             // 1. Batch insert match history
             if (matchHistoryEntries.length > 0) {
               dbOperations.push(
-                matchHistoryService.createMatchesBatch(matchHistoryEntries)
+                matchHistoryService.createMatchesBatch(matchHistoryEntries, activeModeIdForWrite())
                   .then(() => console.log(`✅ Saved ${matchHistoryEntries.length} match history entries`))
               );
             }
@@ -2206,7 +2215,7 @@ export const useTournamentStore = create<TournamentState>()(
               // si su id no está en tournaments_new (p.ej. sólo en memoria, o
               // tras cambiar de proyecto Supabase) el insert de grupos violaba
               // la FK (23503). saveTournament hace upsert.
-              await adaptiveTournamentService.saveTournament(updatedTournament);
+              await adaptiveTournamentService.saveTournament(updatedTournament, activeModeIdForWrite());
 
               // Borrado SIEMPRE, no solo con force: los partidos se crean con
               // nanoid nuevo en cada sorteo, así que el upsert por id no puede

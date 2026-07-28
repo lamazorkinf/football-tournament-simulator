@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useModeStore } from '../../store/useModeStore';
 import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ScoreBug } from '../ui/ScoreBug';
@@ -7,12 +8,16 @@ import { EmptyState } from '../ui/EmptyState';
 import { History, Filter, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { matchHistoryService, type MatchHistoryEntry, type MatchCursor } from '../../services/matchHistoryService';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { stageLabel } from '../../core/formats/rounds';
 
 interface MatchHistoryProps {
   teams: Team[];
 }
 
 export function MatchHistory({ teams }: MatchHistoryProps) {
+  // El historial es alcanzable desde cualquier modo, así que TIENE que filtrar
+  // por el activo: si no, la Liga Villamariense muestra partidos del Mundial.
+  const modeId = useModeStore((s) => s.activeModeId) ?? undefined;
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<MatchCursor | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -53,10 +58,10 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         return [newMatch, ...prev];
       });
       loadStatistics();
-    });
+    }, modeId);
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, modeId]);
 
   const loadFirstPage = async (epoch: { cancelled: boolean }) => {
     try {
@@ -65,6 +70,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
       const page = await matchHistoryService.getMatchesPage({
         pageSize: PAGE_SIZE,
         stage: filter === 'all' ? undefined : filter,
+        modeId,
       });
       if (epoch.cancelled) return;
       setMatches(page.matches);
@@ -91,6 +97,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
         cursor: nextCursor,
         pageSize: PAGE_SIZE,
         stage: filter === 'all' ? undefined : filter,
+        modeId,
       });
       if (epoch.cancelled) return;
       setMatches((prev) => [...prev, ...page.matches]);
@@ -111,7 +118,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
 
   const loadStatistics = async () => {
     try {
-      const stats = await matchHistoryService.getMatchStatistics();
+      const stats = await matchHistoryService.getMatchStatistics(modeId);
       setStatistics(stats);
     } catch (error) {
       console.error('Error loading statistics:', error);
@@ -131,15 +138,6 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
-  };
-
-  const getStageLabel = (stage: string) => {
-    const labels = {
-      qualifier: 'Clasificatorias',
-      'world-cup-group': 'Mundial · Grupos',
-      'world-cup-knockout': 'Mundial · Playoffs',
-    };
-    return labels[stage as keyof typeof labels] || stage;
   };
 
   const getSkillChangeIcon = (change: number) => {
@@ -281,7 +279,7 @@ export function MatchHistory({ teams }: MatchHistoryProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-arcade text-[10px] uppercase bg-black/40 text-gold border border-gold px-2 py-1">
-                          {getStageLabel(match.stage)}
+                          {stageLabel(match.stage)}
                         </span>
                         {match.groupName && (
                           <span className="font-arcade text-[10px] uppercase bg-black/40 text-grass-soft border border-grass px-2 py-1">

@@ -1,6 +1,7 @@
 import type { Team, Match } from '../types';
 import { useTournamentStore } from '../store/useTournamentStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { isRoundKey, roundLongLabel } from '../core/formats/rounds';
 
 export interface HeadToHeadStats {
   totalMatches: number;
@@ -33,21 +34,14 @@ export interface MatchResult {
 }
 
 /**
- * Translates knockout round codes to Spanish display names
+ * Translates knockout round codes to Spanish display names.
+ * Los rótulos viven en core/formats/rounds.ts (fuente única); acá sólo se
+ * conserva el fallback histórico a 'Eliminatorias' para rondas desconocidas.
  */
 export function getKnockoutRoundName(knockoutRound: string | undefined): string {
   if (!knockoutRound) return 'Eliminatorias';
-
-  const roundNames: Record<string, string> = {
-    'round-of-32': 'Dieciseisavos de Final',
-    'round-of-16': 'Octavos de Final',
-    'quarter': 'Cuartos de Final',
-    'semi': 'Semifinales',
-    'third-place': 'Tercer Puesto',
-    'final': 'Final',
-  };
-
-  return roundNames[knockoutRound] || 'Eliminatorias';
+  if (!isRoundKey(knockoutRound)) return 'Eliminatorias';
+  return roundLongLabel(knockoutRound);
 }
 
 /**

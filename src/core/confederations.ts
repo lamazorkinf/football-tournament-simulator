@@ -1,7 +1,25 @@
 import { nanoid } from 'nanoid';
 import { initializeStandings, sortStandings } from './scheduler';
-import { WORLD_CUP_FIXTURE_TEMPLATE } from '../constants/fixtureTemplate';
-import type { Match, Region, Team, WorldCupGroup, KnockoutMatch } from '../types';
+import { generateGroupFixturesFromTemplate } from './formats/groupStage';
+import type { Region, Team, WorldCupGroup, KnockoutMatch } from '../types';
+import {
+  advanceBracket,
+  createBracket,
+  standardPlan,
+  type Bracket,
+  type BracketPlan,
+} from './formats/bracket';
+import { knockoutMatchesToTies, tiesToKnockoutMatches } from './formats/knockoutCompat';
+
+/**
+ * La llave de la Copa Confederaciones: 4 equipos, 3er puesto, semis en la
+ * jornada 4 y final + 3er puesto en la 5. Con la primitiva de eliminación esto
+ * es sólo un plan; el cruce entre grupos se expresa como orden de entrantes.
+ */
+const CONFED_PLAN: BracketPlan = standardPlan(4, { thirdPlace: true, firstMatchday: 4 });
+
+/** Proyección a KnockoutMatch: confederaciones sí estampa jornada y posición. */
+const AS_KNOCKOUT = { includeMatchday: true, stage: 'confed-knockout' } as const;
 
 /** Finalistas de una confederación (entran a la Copa Confederaciones). */
 export interface ConfederationFinalists {
@@ -46,42 +64,27 @@ function pickBalancedAssignment(
   return { groupA: best!.groupA, groupB: best!.groupB };
 }
 
-/** Partidos de un grupo confed a partir del template FIFA (letras A-D). */
-function generateConfedGroupMatches(
-  letterAssignments: Record<string, PotLetter>,
-): Match[] {
-  const letterToTeam = {} as Record<PotLetter, string>;
-  for (const [teamId, letter] of Object.entries(letterAssignments)) {
-    letterToTeam[letter] = teamId;
-  }
-  return WORLD_CUP_FIXTURE_TEMPLATE.map((f) => ({
-    id: nanoid(),
-    homeTeamId: letterToTeam[f.home],
-    awayTeamId: letterToTeam[f.away],
-    homeScore: null,
-    awayScore: null,
-    isPlayed: false,
-    stage: 'confed-group',
-    matchday: f.matchday,
-  }));
-}
-
-/** Construye un `WorldCupGroup` con letras por skill (más fuerte → 'A'). */
+/**
+ * Construye un `WorldCupGroup` con letras por skill (más fuerte → 'A') y sus
+ * partidos según la plantilla FIFA de 4 (6 partidos en 3 fechas), la misma que
+ * usa el Mundial.
+ */
 function buildGroup(
   name: string,
   teamIds: string[],
   skillOf: (id: string) => number,
 ): WorldCupGroup {
+  const id = nanoid();
   const sorted = [...teamIds].sort((a, b) => skillOf(b) - skillOf(a));
   const letterAssignments: Record<string, PotLetter> = {};
-  sorted.forEach((id, i) => {
-    letterAssignments[id] = POT_LETTERS[i];
+  sorted.forEach((teamId, i) => {
+    letterAssignments[teamId] = POT_LETTERS[i];
   });
   return {
-    id: nanoid(),
+    id,
     name,
     teamIds: sorted,
-    matches: generateConfedGroupMatches(letterAssignments),
+    matches: generateGroupFixturesFromTemplate(letterAssignments, 'fifa-4', 'confed-group', id),
     standings: initializeStandings(sorted),
     letterAssignments,
   };
@@ -111,28 +114,6 @@ export function generateConfederationsGroups(
   ];
 }
 
-/** Factory de partido de llave confed (siempre `stage:'confed-knockout'`). */
-function newConfedKnockoutMatch(
-  homeTeamId: string,
-  awayTeamId: string,
-  round: KnockoutMatch['round'],
-  matchday: number,
-  position: number,
-): KnockoutMatch {
-  return {
-    id: nanoid(),
-    homeTeamId,
-    awayTeamId,
-    homeScore: null,
-    awayScore: null,
-    isPlayed: false,
-    stage: 'confed-knockout',
-    round,
-    matchday,
-    position,
-  };
-}
-
 /**
  * Semifinales: 1ºA-2ºB y 1ºB-2ºA. Requiere 2 grupos con TODOS los partidos
  * jugados (si no, `[]`). Los grupos se ordenan por `name` para que "A"/"B" sean
@@ -156,30 +137,51 @@ export function generateConfederationsSemiFinals(
   const b2 = rankedB[1]?.teamId;
   if (!a1 || !a2 || !b1 || !b2) return [];
 
-  return [
-    newConfedKnockoutMatch(a1, b2, 'semi', 4, 0),
-    newConfedKnockoutMatch(b1, a2, 'semi', 4, 1),
-  ];
+  // El cruce 1ºA-2ºB / 1ºB-2ºA sale del ORDEN de los entrantes, no de una regla
+  // propia: con ese orden, la adyacencia de la primitiva da exactamente eso.
+  const bracket = createBracket({
+    entrants: [a1, b2, b1, a2],
+    legs: 1,
+    neutral: true,
+    stage: 'confed-knockout',
+    idPrefix: 'confed',
+    plan: CONFED_PLAN,
+    seed: { kind: 'explicit' },
+  });
+  return tiesToKnockoutMatches(bracket.rounds[0].ties, AS_KNOCKOUT);
+}
+
+/** Rehidrata la llave con las semis para poder pedirle la final / el 3er puesto. */
+function bracketFromSemis(semiFinals: KnockoutMatch[]): Bracket {
+  return {
+    id: 'confed',
+    plan: CONFED_PLAN,
+    legs: 1,
+    neutral: true,
+    stage: 'confed-knockout',
+    idPrefix: 'confed',
+    rounds: [{ round: 'semi', ties: knockoutMatchesToTies(semiFinals) }],
+    thirdPlaceTie: null,
+    byeTeamIds: [],
+  };
 }
 
 /** Final: ganadores de las 2 semis. `null` si aún no están definidos. */
 export function generateConfederationsFinal(
   semiFinals: KnockoutMatch[],
 ): KnockoutMatch | null {
-  const winners = semiFinals
-    .filter((m) => m.winnerId)
-    .map((m) => m.winnerId!);
-  if (winners.length !== 2) return null;
-  return newConfedKnockoutMatch(winners[0], winners[1], 'final', 5, 0);
+  const advanced = advanceBracket(bracketFromSemis(semiFinals));
+  const finalRound = advanced.rounds[1];
+  if (!finalRound || finalRound.ties.length === 0) return null;
+  return tiesToKnockoutMatches(finalRound.ties, AS_KNOCKOUT)[0];
 }
 
 /** Tercer puesto: perdedores de las 2 semis. `null` si aún no están definidos. */
 export function generateConfederationsThirdPlace(
   semiFinals: KnockoutMatch[],
 ): KnockoutMatch | null {
-  const losers = semiFinals
-    .filter((m) => m.loserId)
-    .map((m) => m.loserId!);
-  if (losers.length !== 2) return null;
-  return newConfedKnockoutMatch(losers[0], losers[1], 'third-place', 5, 0);
+  const advanced = advanceBracket(bracketFromSemis(semiFinals));
+  return advanced.thirdPlaceTie
+    ? tiesToKnockoutMatches([advanced.thirdPlaceTie], AS_KNOCKOUT)[0]
+    : null;
 }

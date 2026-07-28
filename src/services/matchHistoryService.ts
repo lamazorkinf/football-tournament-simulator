@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured, escapeOrValue } from '../lib/supabase';
 import type { Database } from '../types/database';
+import type { MatchHistoryStage } from '../core/formats/rounds';
 
 type MatchHistoryRow = Database['public']['Tables']['match_history']['Row'];
 type MatchHistoryInsert = Database['public']['Tables']['match_history']['Insert'];
@@ -10,7 +11,7 @@ export interface MatchHistoryEntry {
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
-  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup';
+  stage: MatchHistoryStage;
   groupName?: string;
   region?: string;
   tournamentId?: string;
@@ -31,7 +32,7 @@ export interface CreateMatchHistoryParams {
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
-  stage: 'qualifier' | 'world-cup-group' | 'world-cup-knockout' | 'continental' | 'confed-group' | 'confed-knockout' | 'league' | 'cup';
+  stage: MatchHistoryStage;
   groupName?: string;
   region?: string;
   tournamentId?: string;
@@ -63,6 +64,12 @@ export interface GetMatchesPageParams {
   cursor?: MatchCursor | null;
   pageSize?: number;
   stage?: MatchHistoryEntry['stage'];
+  /**
+   * Modo (competición) al que limitar la consulta. Sin esto el historial mezcla
+   * los partidos de todos los modos: la pestaña es alcanzable desde cualquiera.
+   * `undefined` = sin filtrar, que es lo que hacía antes de la migración 021.
+   */
+  modeId?: string;
 }
 
 export interface TeamStatsRow {
@@ -167,7 +174,7 @@ export const matchHistoryService = {
 
   // Página keyset del historial (cursor sobre played_at DESC, id DESC).
   async getMatchesPage(
-    { cursor, pageSize = 30, stage }: GetMatchesPageParams = {},
+    { cursor, pageSize = 30, stage, modeId }: GetMatchesPageParams = {},
   ): Promise<MatchPage> {
     if (!isSupabaseConfigured()) {
       return { matches: [], nextCursor: null, hasMore: false };
@@ -178,6 +185,7 @@ export const matchHistoryService = {
       p_cursor_id: cursor?.id ?? null,
       p_page_size: pageSize,
       p_stage: stage ?? null,
+      p_mode_id: modeId ?? null,
     });
 
     if (error) throw error;
@@ -187,15 +195,18 @@ export const matchHistoryService = {
   },
 
   // Get matches for a specific team
-  async getTeamMatches(teamId: string, limit = 20): Promise<MatchHistoryEntry[]> {
+  async getTeamMatches(teamId: string, limit = 20, modeId?: string): Promise<MatchHistoryEntry[]> {
     if (!isSupabaseConfigured()) {
       return [];
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('match_history')
       .select('*')
-      .or(`home_team_id.eq.${escapeOrValue(teamId)},away_team_id.eq.${escapeOrValue(teamId)}`)
+      .or(`home_team_id.eq.${escapeOrValue(teamId)},away_team_id.eq.${escapeOrValue(teamId)}`);
+    if (modeId) query = query.eq('mode_id', modeId);
+
+    const { data, error } = await query
       .order('played_at', { ascending: false })
       .limit(limit);
 
@@ -219,31 +230,30 @@ export const matchHistoryService = {
   },
 
   // Get matches by tournament
-  async getTournamentMatches(tournamentId: string): Promise<MatchHistoryEntry[]> {
+  async getTournamentMatches(tournamentId: string, modeId?: string): Promise<MatchHistoryEntry[]> {
     if (!isSupabaseConfigured()) {
       return [];
     }
 
-    const { data, error } = await supabase
-      .from('match_history')
-      .select('*')
-      .eq('tournament_id', tournamentId)
-      .order('played_at', { ascending: false });
+    let query = supabase.from('match_history').select('*').eq('tournament_id', tournamentId);
+    if (modeId) query = query.eq('mode_id', modeId);
+
+    const { data, error } = await query.order('played_at', { ascending: false });
 
     if (error) throw error;
     return data.map(dbMatchToMatch);
   },
 
   // Get matches by region
-  async getMatchesByRegion(region: string): Promise<MatchHistoryEntry[]> {
+  async getMatchesByRegion(region: string, modeId?: string): Promise<MatchHistoryEntry[]> {
     if (!isSupabaseConfigured()) {
       return [];
     }
 
-    const { data, error } = await supabase
-      .from('match_history')
-      .select('*')
-      .eq('region', region)
+    let query = supabase.from('match_history').select('*').eq('region', region);
+    if (modeId) query = query.eq('mode_id', modeId);
+
+    const { data, error } = await query
       .order('played_at', { ascending: false })
       .limit(100);
 
@@ -252,12 +262,14 @@ export const matchHistoryService = {
   },
 
   // Estadísticas globales (una sola llamada agregada en el servidor).
-  async getMatchStatistics() {
+  async getMatchStatistics(modeId?: string) {
     if (!isSupabaseConfigured()) {
       return { totalMatches: 0, totalGoals: 0, averageGoalsPerMatch: 0 };
     }
 
-    const { data, error } = await (supabase as any).rpc('get_match_statistics');
+    const { data, error } = await (supabase as any).rpc('get_match_statistics', {
+      p_mode_id: modeId ?? null,
+    });
     if (error) throw error;
 
     const row = (data?.[0] ?? {}) as {
@@ -273,10 +285,12 @@ export const matchHistoryService = {
   },
 
   // Stats agregadas por equipo (una fila por equipo con partidos).
-  async getTeamStats(): Promise<TeamStatsRow[]> {
+  async getTeamStats(modeId?: string): Promise<TeamStatsRow[]> {
     if (!isSupabaseConfigured()) return [];
 
-    const { data, error } = await (supabase as any).rpc('get_team_stats');
+    const { data, error } = await (supabase as any).rpc('get_team_stats', {
+      p_mode_id: modeId ?? null,
+    });
     if (error) throw error;
 
     return ((data ?? []) as any[]).map((r) => ({
@@ -291,10 +305,12 @@ export const matchHistoryService = {
   },
 
   // Stats regionales de eliminatorias (una fila por región).
-  async getRegionStats(): Promise<RegionStatsRow[]> {
+  async getRegionStats(modeId?: string): Promise<RegionStatsRow[]> {
     if (!isSupabaseConfigured()) return [];
 
-    const { data, error } = await (supabase as any).rpc('get_region_stats');
+    const { data, error } = await (supabase as any).rpc('get_region_stats', {
+      p_mode_id: modeId ?? null,
+    });
     if (error) throw error;
 
     return ((data ?? []) as any[]).map((r) => ({
@@ -329,8 +345,18 @@ export const matchHistoryService = {
     return ids;
   },
 
-  // Batch create multiple match history entries
-  async createMatchesBatch(matchesParams: CreateMatchHistoryParams[]): Promise<MatchHistoryEntry[]> {
+  /**
+   * Batch create multiple match history entries.
+   *
+   * `modeId` es el modo al que pertenecen todas las filas del batch; cada fila
+   * puede traer el suyo y en ese caso gana. Sin esto, el batch caía en el
+   * DEFAULT 'selecciones' de la columna y el historial de cualquier modo nuevo
+   * terminaba dentro de selecciones.
+   */
+  async createMatchesBatch(
+    matchesParams: CreateMatchHistoryParams[],
+    modeId?: string,
+  ): Promise<MatchHistoryEntry[]> {
     if (!isSupabaseConfigured()) {
       // Return mock entries if Supabase is not configured
       return matchesParams.map(params => ({
@@ -355,6 +381,7 @@ export const matchHistoryService = {
       away_skill_after: params.awaySkillAfter,
       home_skill_change: params.homeSkillChange,
       away_skill_change: params.awaySkillChange,
+      ...(params.modeId ?? modeId ? { mode_id: params.modeId ?? modeId } : {}),
       metadata: (params.metadata || {}) as any,
       went_to_extra_time: params.wentToExtraTime ?? false,
     }));
@@ -385,17 +412,26 @@ export const matchHistoryService = {
   // Suscripción a inserts en tiempo real. Entrega la fila nueva ya convertida;
   // el consumidor decide cómo integrarla (p.ej. anteponerla a su lista paginada)
   // en vez de re-descargar todo el historial.
-  subscribeToMatches(callback: (newMatch: MatchHistoryEntry) => void) {
+  /**
+   * @param modeId Si se pasa, sólo llegan los partidos de ese modo. Sin esto un
+   *   INSERT de otro modo se colaría en una lista ya filtrada por modo.
+   */
+  subscribeToMatches(callback: (newMatch: MatchHistoryEntry) => void, modeId?: string) {
     if (!isSupabaseConfigured()) {
       console.warn('Supabase not configured, real-time updates disabled');
       return () => {};
     }
 
     const channel = supabase
-      .channel('match-history-changes')
+      .channel(modeId ? `match-history-changes:${modeId}` : 'match-history-changes')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'match_history' },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'match_history',
+          ...(modeId ? { filter: `mode_id=eq.${modeId}` } : {}),
+        },
         (payload) => {
           callback(dbMatchToMatch(payload.new as MatchHistoryRow));
         }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
 import { useModeStore } from './store/useModeStore';
 import { useLiveMatchStore } from './store/useLiveMatchStore';
@@ -32,9 +32,9 @@ import { PauseMenu } from './components/ui/PauseMenu';
 import { ActionDock } from './components/ui/ActionDock';
 import { ConnectionError } from './components/ui/ConnectionError';
 import { PixelBar } from './components/ui/PixelBar';
-import { LeagueModeView } from './components/tournament/LeagueModeView';
+import { SeasonModeView } from './components/tournament/SeasonModeView';
 import { MobileActionProvider } from './hooks/useMobileAction';
-import { isContinentalDrawn, isConfederationsDrawn } from './utils/cycleProgress';
+import { useModeNav } from './hooks/useModeNav';
 import { themeForMode } from './lib/modeTheme';
 import { Trophy } from 'lucide-react';
 import type { View } from './types/view';
@@ -50,11 +50,11 @@ function App() {
   } = useTournamentStore();
 
   const { isCollapsed } = useSidebarCollapse();
-  const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
   const activeMode = useModeStore((s) => s.activeMode());
   const [currentView, setCurrentView] = useState<View>('wizard');
   const [isPauseOpen, setIsPauseOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
+  const nav = useModeNav(currentView);
 
   // Navigation handler with optional parameters
   const handleNavigate = (view: string, options?: { region?: string; groupId?: string }) => {
@@ -96,17 +96,12 @@ function App() {
     hydrateSettings();
   }, []);
 
-  // Al cambiar el tipo de modo, encarrilar la vista para no quedar en una que no
-  // aplica (p. ej. 'worldcup' en un modo de liga, o 'league' en selecciones).
-  // Las vistas mode-agnósticas (Comparar/Favoritos/Historial/Ajustes) se respetan.
+  // Al cambiar de modo, encarrilar la vista para no quedar en una que no aplica
+  // (p. ej. 'worldcup' en un modo de temporada, o 'league' en el ciclo). Qué
+  // vistas alcanza cada modo sale del descriptor: `nav.view` ya es la efectiva.
   useEffect(() => {
-    const leagueValid: View[] = ['league', 'comparison', 'favorites', 'history', 'settings'];
-    if (isNationalMode) {
-      if (currentView === 'league') setCurrentView('wizard');
-    } else if (!leagueValid.includes(currentView)) {
-      setCurrentView('league');
-    }
-  }, [isNationalMode, currentView]);
+    if (nav.view !== currentView) setCurrentView(nav.view);
+  }, [nav.view, currentView]);
 
   // Carga inicial desde la DB, la única fuente de verdad. Es idempotente vía
   // initializationInFlight, así que se llama incondicionalmente.
@@ -130,21 +125,6 @@ function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [refreshFromDatabase]);
 
-  // Debe declararse ANTES de los returns condicionales de más abajo: si no,
-  // cuando currentTournament pasa de null a existente cambia la cantidad de
-  // hooks ejecutados y React lanza "Rendered more hooks than during the
-  // previous render" (mismo motivo documentado en TournamentWizard.tsx). Por
-  // eso es tolerante a currentTournament nulo.
-  const lockedViews = useMemo(() => {
-    if (!currentTournament) return [];
-    const locked: View[] = [];
-    if (!isContinentalDrawn(currentTournament)) locked.push('continental');
-    if (!isConfederationsDrawn(currentTournament)) locked.push('confederations');
-    if (!currentTournament.confederationsCup.isComplete) locked.push('qualifiers');
-    if (!currentTournament.worldCup) locked.push('worldcup');
-    return locked;
-  }, [currentTournament]);
-
   if (initStatus === 'error' || initStatus === 'unconfigured') {
     return (
       <>
@@ -154,11 +134,11 @@ function App() {
     );
   }
 
-  // Sólo el modo selecciones bloquea hasta tener un torneo cargado. Los modos de
-  // ligas arrancan sin `currentTournament` (sus torneos son Etapa 2): ahí se cae
-  // a la pantalla principal con un placeholder, para no atrapar al usuario en un
-  // "Cargando…" sin salida (el selector de modo vive en el Sidebar).
-  if (!currentTournament && isNationalMode) {
+  // Sólo el ciclo mundialista bloquea hasta tener un torneo cargado. Los modos
+  // de temporada arrancan sin `currentTournament` (sus torneos viven en
+  // mode_tournaments): ahí se cae a la pantalla principal, para no atrapar al
+  // usuario en un "Cargando…" sin salida (el selector de modo vive en el Sidebar).
+  if (!currentTournament && nav.engine === 'national-cycle') {
     return (
       <>
         <Scanlines />
@@ -176,6 +156,44 @@ function App() {
         </div>
       </>
     );
+  }
+
+  /**
+   * Qué panel se dibuja. Las vistas del ciclo mundialista necesitan el torneo
+   * cargado; el resto son mode-agnósticas. `nav.view` ya garantiza que la vista
+   * aplica a este modo, así que acá no hay ninguna rama por tipo de modo.
+   */
+  function renderView(): ReactNode {
+    const shared: Partial<Record<View, ReactNode>> = {
+      settings: <SettingsHub />,
+      history: <MatchHistory teams={teams} />,
+      comparison: <TeamComparison />,
+      favorites: <FavoritesView />,
+      tournaments: <TournamentHistory />,
+      champions: <ChampionsHistory onNavigate={handleNavigate} />,
+      league: <SeasonModeView />,
+    };
+    if (shared[currentView]) return shared[currentView];
+    if (!currentTournament) return <SeasonModeView />;
+
+    const cycleViews: Partial<Record<View, ReactNode>> = {
+      wizard: <TournamentWizard onNavigate={handleNavigate} />,
+      matches: <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />,
+      stats: <StatsDashboard tournament={currentTournament} teams={teams} />,
+      worldcup: <WorldCupViewEnhanced onNavigate={handleNavigate} />,
+      qualifiers: (
+        <QualifiersView
+          initialRegion={viewOptions.region}
+          initialGroupId={viewOptions.groupId}
+          onNavigate={handleNavigate}
+        />
+      ),
+      continental: <ContinentalView cycle={currentTournament} teams={teams} onNavigate={handleNavigate} />,
+      confederations: (
+        <ConfederationsCupView cycle={currentTournament} teams={teams} onNavigate={handleNavigate} />
+      ),
+    };
+    return cycleViews[currentView] ?? null;
   }
 
   return (
@@ -203,7 +221,6 @@ function App() {
         currentView={currentView}
         onViewChange={setCurrentView}
         tournamentYear={currentTournament?.year ?? 0}
-        lockedViews={lockedViews}
       />
 
       {/* Main content area with dynamic left margin based on sidebar state */}
@@ -217,57 +234,13 @@ function App() {
               </h1>
             </div>
             <div className="flex-shrink-0">
-              {isNationalMode && <TournamentSelector />}
+              {nav.engine === 'national-cycle' && <TournamentSelector />}
             </div>
           </div>
         </header>
 
         <main className="px-4 sm:px-6 lg:px-8 py-6">
-        {!currentTournament ? (
-          // Modo de ligas: sus vistas propias (liga, copa, temporada). Ajustes,
-          // historial, comparación y favoritos son mode-agnósticos y siguen a mano.
-          currentView === 'settings' ? (
-            <SettingsHub />
-          ) : currentView === 'history' ? (
-            <MatchHistory teams={teams} />
-          ) : currentView === 'comparison' ? (
-            <TeamComparison />
-          ) : currentView === 'favorites' ? (
-            <FavoritesView />
-          ) : (
-            <LeagueModeView />
-          )
-        ) : currentView === 'wizard' ? (
-          <TournamentWizard onNavigate={handleNavigate} />
-        ) : currentView === 'matches' ? (
-          <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />
-        ) : currentView === 'stats' ? (
-          <StatsDashboard tournament={currentTournament} teams={teams} />
-        ) : currentView === 'history' ? (
-          <MatchHistory teams={teams} />
-        ) : currentView === 'settings' ? (
-          <SettingsHub />
-        ) : currentView === 'comparison' ? (
-          <TeamComparison />
-        ) : currentView === 'worldcup' ? (
-          <WorldCupViewEnhanced onNavigate={handleNavigate} />
-        ) : currentView === 'qualifiers' ? (
-          <QualifiersView
-            initialRegion={viewOptions.region}
-            initialGroupId={viewOptions.groupId}
-            onNavigate={handleNavigate}
-          />
-        ) : currentView === 'tournaments' ? (
-          <TournamentHistory />
-        ) : currentView === 'champions' ? (
-          <ChampionsHistory onNavigate={handleNavigate} />
-        ) : currentView === 'continental' ? (
-          <ContinentalView cycle={currentTournament} teams={teams} onNavigate={handleNavigate} />
-        ) : currentView === 'confederations' ? (
-          <ConfederationsCupView cycle={currentTournament} teams={teams} onNavigate={handleNavigate} />
-        ) : currentView === 'favorites' ? (
-          <FavoritesView />
-        ) : null}
+          {renderView()}
         </main>
       </div>
       </div>

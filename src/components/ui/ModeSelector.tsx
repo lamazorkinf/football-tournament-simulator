@@ -3,15 +3,20 @@ import { ChevronDown, Check, Globe2, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { useLeagueModeStore } from '../../store/useLeagueModeStore';
-import type { ModeKind } from '../../types';
+import { useSeasonModeStore } from '../../store/useSeasonModeStore';
+import { descriptorForMode } from '../../modes/registry';
+import type { GameMode } from '../../types';
 
-function kindIcon(kind: ModeKind) {
-  return kind === 'national-cycle' ? Globe2 : Shield;
+/**
+ * Un modo se presenta por su MOTOR, no por su `kind`: lo que cambia la forma de
+ * la app es si corre la máquina de fases de 4 años o el motor de temporada.
+ */
+function engineIcon(mode: GameMode | null) {
+  return descriptorForMode(mode).engine === 'national-cycle' ? Globe2 : Shield;
 }
 
-function kindLabel(kind: ModeKind): string {
-  return kind === 'national-cycle' ? 'Selecciones' : 'Liga / Copa';
+function engineLabel(mode: GameMode): string {
+  return descriptorForMode(mode).engine === 'national-cycle' ? 'Selecciones' : 'Liga / Copa';
 }
 
 /**
@@ -38,17 +43,18 @@ export function ModeSelector() {
     selectMode(id);
 
     const store = useTournamentStore.getState();
-    const isNational = useModeStore.getState().activeModeKind() === 'national-cycle';
-    // Resetear el store de la liga siempre (evita arrastrar datos del modo previo).
-    useLeagueModeStore.getState().reset();
+    const selected = useModeStore.getState().activeMode();
+    const isNational = descriptorForMode(selected).engine === 'national-cycle';
+    // Resetear el store de temporada siempre (evita arrastrar datos del modo previo).
+    useSeasonModeStore.getState().reset();
 
     if (isNational) {
       await store.loadTeamsFromDatabase();
       await store.initializeTournament();
     } else {
-      // Modo de ligas: no hay Cycle. Limpiar el estado del Mundial de una (así la
+      // Modo de temporada: no hay Cycle. Limpiar el estado del Mundial de una (así la
       // vista cambia al toque) y cargar el plantel del modo; la temporada la
-      // carga LeagueModeView. No se pasa por initializeTournament, que es del ciclo.
+      // carga SeasonModeView. No se pasa por initializeTournament, que es del ciclo.
       useTournamentStore.setState({
         currentTournament: null,
         currentTournamentId: null,
@@ -59,7 +65,7 @@ export function ModeSelector() {
     }
   };
 
-  const ActiveIcon = activeMode ? kindIcon(activeMode.kind) : Globe2;
+  const ActiveIcon = engineIcon(activeMode);
 
   return (
     <div className="relative">
@@ -91,7 +97,7 @@ export function ModeSelector() {
               className="absolute left-0 right-0 mt-1 z-30 bg-grass-dark border-2 border-line shadow-hard-panel max-h-72 overflow-auto"
             >
               {modes.map((mode) => {
-                const Icon = kindIcon(mode.kind);
+                const Icon = engineIcon(mode);
                 const isActive = mode.id === activeModeId;
                 return (
                   <li key={mode.id}>
@@ -107,7 +113,7 @@ export function ModeSelector() {
                           {mode.name}
                         </span>
                         <span className="block text-[10px] text-grass-soft truncate">
-                          {kindLabel(mode.kind)}
+                          {engineLabel(mode)}
                         </span>
                       </span>
                       {isActive && <Check className="w-4 h-4 text-led flex-shrink-0" />}

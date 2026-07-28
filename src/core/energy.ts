@@ -66,6 +66,9 @@ export const DEFAULT_FATIGUE: FatigueConfig = {
 
 /** Orden de las rondas de eliminación directa. Tercer puesto y final comparten jornada. */
 const ROUND_ORDER: Record<KnockoutMatch['round'], number> = {
+  // R128 no la usa ningún torneo del juego hoy; se mapea junto a R64 para que
+  // el Record quede exhaustivo sobre la taxonomía compartida de rondas.
+  'round-of-128': 1,
   'round-of-64': 1,
   'round-of-32': 2,
   'round-of-16': 3,

@@ -1,145 +1,71 @@
-import type { LucideIcon } from 'lucide-react';
-import { Trophy, Globe2, BarChart3, Settings, History, CalendarDays, GitCompare, Workflow, Archive, ChevronLeft, ChevronRight, Medal, Star, Route, Shield, Lock, Home, Image } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Shield, Trophy } from 'lucide-react';
 import { TournamentSelector } from './TournamentSelector';
 import { ModeSelector } from './ModeSelector';
 import { useModeStore } from '../../store/useModeStore';
-import { useLeagueModeStore, deriveLeagueTabs, resolveLeagueTab } from '../../store/useLeagueModeStore';
+import { useSeasonModeStore } from '../../store/useSeasonModeStore';
+import { useModeNav } from '../../hooks/useModeNav';
+import { navIcon } from './navIcons';
 import { useSidebarCollapse } from '../../hooks/useSidebarCollapse';
+import type { NavItem } from '../../modes/nav';
 import type { View } from '../../types/view';
 
 interface SidebarProps {
   currentView: View;
   onViewChange: (view: View) => void;
   tournamentYear: number;
-  /** Fases del ciclo todavía no desbloqueadas: se marcan, pero siguen navegables. */
-  lockedViews?: View[];
 }
 
-type NavItem = { id: View; icon: LucideIcon; label: string };
-type NavSection = { title: string; items: NavItem[] };
-
-// Ciclo mundialista (modo selecciones).
-const NATIONAL_SECTIONS: NavSection[] = [
-  {
-    title: 'Ciclo actual',
-    items: [
-      { id: 'wizard', icon: Workflow, label: 'Progreso' },
-      { id: 'matches', icon: CalendarDays, label: 'Centro de Partidos' },
-      { id: 'continental', icon: Globe2, label: 'Continental' },
-      { id: 'confederations', icon: Shield, label: 'Confederaciones' },
-      { id: 'qualifiers', icon: Route, label: 'Clasificatorias' },
-      { id: 'worldcup', icon: Trophy, label: 'Mundial' },
-    ],
-  },
-  {
-    title: 'Datos',
-    items: [
-      { id: 'stats', icon: BarChart3, label: 'Rendimiento' },
-      { id: 'comparison', icon: GitCompare, label: 'Comparar' },
-      { id: 'favorites', icon: Star, label: 'Favoritos' },
-    ],
-  },
-  {
-    title: 'Archivo',
-    items: [
-      { id: 'champions', icon: Medal, label: 'Campeones' },
-      { id: 'history', icon: History, label: 'Historial' },
-      { id: 'tournaments', icon: Archive, label: 'Torneos' },
-    ],
-  },
-];
-
-// Datos mode-agnósticos que siguen a mano en los modos de ligas (funcionan sin
-// un ciclo de selecciones cargado).
-const LEAGUE_DATA_SECTION: NavSection = {
-  title: 'Datos',
-  items: [
-    { id: 'comparison', icon: GitCompare, label: 'Comparar' },
-    { id: 'favorites', icon: Star, label: 'Favoritos' },
-    { id: 'history', icon: History, label: 'Historial' },
-  ],
-};
-
-const FOOTER_ITEM: NavItem = { id: 'settings', icon: Settings, label: 'Ajustes' };
-
-/** Icono para cada pestaña de un modo de ligas (deriveLeagueTabs). */
-function leagueTabIcon(key: string): LucideIcon {
-  if (key === 'crests') return Image;
-  if (key === 'cup') return Trophy;
-  if (key === 'season') return CalendarDays;
-  if (key.startsWith('league-')) return Shield;
-  return Home; // 'main'
-}
-
-export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews }: SidebarProps) {
+/**
+ * Navegación de escritorio. No sabe qué modo está activo: renderiza las
+ * secciones que le da `useModeNav`, derivadas del descriptor. Antes tenía dos
+ * listas escritas a mano y una ternaria que elegía entre ellas.
+ */
+export function Sidebar({ currentView, onViewChange, tournamentYear }: SidebarProps) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
-  const isNationalMode = useModeStore((s) => s.activeModeKind()) === 'national-cycle';
   const activeMode = useModeStore((s) => s.activeMode());
+  const seasonYear = useSeasonModeStore((s) => s.year);
+  const setSeasonTab = useSeasonModeStore((s) => s.setActiveTab);
+  const nav = useModeNav(currentView);
 
-  // Estado del modo de ligas (para el header y la navegación de la liga).
-  const leagueYear = useLeagueModeStore((s) => s.year);
-  const leagueStatus = useLeagueModeStore((s) => s.status);
-  const leagueTournaments = useLeagueModeStore((s) => s.tournaments);
-  const leagueActiveTab = useLeagueModeStore((s) => s.activeTab);
-  const setLeagueTab = useLeagueModeStore((s) => s.setActiveTab);
+  const isNationalMode = nav.engine === 'national-cycle';
 
-  const renderButton = (
-    { icon: Icon, label }: { icon: LucideIcon; label: string },
-    { active, locked, onClick }: { active: boolean; locked?: boolean; onClick: () => void },
-    key: string,
-  ) => {
-    // La fase bloqueada muestra candado en lugar de su icono, pero el botón
+  const renderItem = (item: NavItem) => {
+    // Una fase bloqueada muestra candado en lugar de su icono, pero el botón
     // sigue habilitado: entrar lleva al EmptyState que explica el desbloqueo.
-    const ShownIcon = locked ? Lock : Icon;
+    const Icon = item.locked ? Lock : navIcon(item.icon);
+    const active =
+      currentView === item.target.view &&
+      (item.target.tab === undefined || nav.tab === item.target.tab);
+
     return (
       <button
-        key={key}
-        onClick={onClick}
-        title={locked ? `${label} — todavía bloqueada` : isCollapsed ? label : undefined}
+        key={item.key}
+        onClick={() => {
+          if (item.target.tab !== undefined) setSeasonTab(item.target.tab);
+          onViewChange(item.target.view);
+        }}
+        title={item.locked ? `${item.label} — todavía bloqueada` : isCollapsed ? item.label : undefined}
         className={`w-full flex items-center gap-3 px-3 py-2.5 transition-all duration-150 ${
           active ? 'bg-grass text-white' : 'text-grass-soft hover:bg-grass/40 hover:text-white'
-        } ${locked ? 'opacity-50' : ''} ${isCollapsed ? 'justify-center' : ''}`}
+        } ${item.locked ? 'opacity-50' : ''} ${isCollapsed ? 'justify-center' : ''}`}
       >
-        <ShownIcon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-gold' : 'text-grass-soft'}`} />
+        <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-gold' : 'text-grass-soft'}`} />
         {!isCollapsed && (
           <span className="truncate font-arcade text-[10px] uppercase leading-relaxed">
             {active && <span className="text-gold">▶ </span>}
-            {label}
+            {item.label}
           </span>
         )}
       </button>
     );
   };
 
-  // Un item "de vista" (currentView === id): usado en selecciones y en la
-  // sección Datos de los modos de ligas.
-  const renderViewItem = (item: NavItem) =>
-    renderButton(item, {
-      active: currentView === item.id,
-      locked: lockedViews?.includes(item.id) ?? false,
-      onClick: () => onViewChange(item.id),
-    }, item.id);
-
-  // Navegación de la liga: cada pestaña vive en useLeagueModeStore.activeTab; la
-  // vista de contenido es 'league'. Activo = estás en 'league' y es esa pestaña.
-  const leagueTabs = deriveLeagueTabs(leagueStatus, leagueTournaments);
-  const resolvedLeagueTab = resolveLeagueTab(leagueTabs, leagueActiveTab);
-  const renderLeagueTabItem = (t: { key: string; label: string }) =>
-    renderButton(
-      { icon: leagueTabIcon(t.key), label: t.label },
-      {
-        active: currentView === 'league' && resolvedLeagueTab === t.key,
-        onClick: () => {
-          setLeagueTab(t.key);
-          onViewChange('league');
-        },
-      },
-      `lt-${t.key}`,
-    );
-
-  const headerYear = isNationalMode ? tournamentYear : leagueYear ?? activeMode?.currentYear ?? 0;
+  const headerYear = isNationalMode ? tournamentYear : seasonYear ?? activeMode?.currentYear ?? 0;
   const headerSubtitle = isNationalMode ? 'Ciclo mundial' : activeMode?.name ?? 'Liga y copa';
   const HeaderIcon = isNationalMode ? Trophy : Shield;
+
+  const sections = nav.sections.filter((s) => s.key !== 'footer');
+  const footer = nav.sections.find((s) => s.key === 'footer');
 
   return (
     <aside className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:bg-grass-dark lg:border-r-4 lg:border-grass transition-all duration-300 ${
@@ -186,7 +112,7 @@ export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews
           </div>
         )}
 
-        {/* Tournament Selector — sólo en modo selecciones */}
+        {/* Tournament Selector — sólo en el ciclo mundialista */}
         {!isCollapsed && isNationalMode && (
           <div className="px-4 py-4 border-b-2 border-grass">
             <TournamentSelector />
@@ -195,42 +121,21 @@ export function Sidebar({ currentView, onViewChange, tournamentYear, lockedViews
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-          {isNationalMode
-            ? NATIONAL_SECTIONS.map((section) => (
-                <div key={section.title} className="space-y-1">
-                  {!isCollapsed ? (
-                    <p className="px-3 font-arcade text-[9px] text-grass-soft uppercase">{section.title}</p>
-                  ) : (
-                    <div className="border-t-2 border-grass mx-2" />
-                  )}
-                  {section.items.map((item) => renderViewItem(item))}
-                </div>
-              ))
-            : (
-              <>
-                <div className="space-y-1">
-                  {!isCollapsed ? (
-                    <p className="px-3 font-arcade text-[9px] text-grass-soft uppercase">Temporada</p>
-                  ) : (
-                    <div className="border-t-2 border-grass mx-2" />
-                  )}
-                  {leagueTabs.map((t) => renderLeagueTabItem(t))}
-                </div>
-                <div className="space-y-1">
-                  {!isCollapsed ? (
-                    <p className="px-3 font-arcade text-[9px] text-grass-soft uppercase">{LEAGUE_DATA_SECTION.title}</p>
-                  ) : (
-                    <div className="border-t-2 border-grass mx-2" />
-                  )}
-                  {LEAGUE_DATA_SECTION.items.map((item) => renderViewItem(item))}
-                </div>
-              </>
-            )}
+          {sections.map((section) => (
+            <div key={section.key} className="space-y-1">
+              {!isCollapsed ? (
+                <p className="px-3 font-arcade text-[9px] text-grass-soft uppercase">{section.title}</p>
+              ) : (
+                <div className="border-t-2 border-grass mx-2" />
+              )}
+              {section.items.map(renderItem)}
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}
         <div className="border-t-2 border-grass">
-          {renderViewItem(FOOTER_ITEM)}
+          {footer?.items.map(renderItem)}
           {!isCollapsed && (
             <div className="px-4 py-4 bg-night">
               <p className="text-xs text-grass-soft text-center">

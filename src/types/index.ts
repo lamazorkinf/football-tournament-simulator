@@ -1,4 +1,8 @@
 import type { EnergyState } from '../core/energy';
+import type { RoundKey } from '../core/formats/rounds';
+
+/** Se reexporta para que los consumidores del cuadro no tengan que importar de dos lados. */
+export type { RoundKey };
 
 export type Region = 'Europe' | 'America' | 'Africa' | 'Asia';
 
@@ -82,7 +86,11 @@ export interface WorldCupGroup {
 }
 
 export interface KnockoutMatch extends Match {
-  round: 'round-of-64' | 'round-of-32' | 'round-of-16' | 'quarter' | 'semi' | 'third-place' | 'final';
+  /**
+   * Ronda del cuadro. La taxonomía vive en core/formats/rounds.ts, que es la
+   * fuente única compartida por los tres formatos de torneo.
+   */
+  round: RoundKey;
   winnerId?: string;
   loserId?: string;
   penalties?: {

@@ -41,6 +41,7 @@ export function stageToPhase(stage: MatchStage): CyclePhase {
  * mundial; se mapea defensivamente junto a R32.
  */
 const WC_KNOCKOUT_JORNADA: Record<KnockoutMatch['round'], number> = {
+  'round-of-128': 1,
   'round-of-64': 1,
   'round-of-32': 1,
   'round-of-16': 2,

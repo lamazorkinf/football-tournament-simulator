@@ -1,6 +1,11 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-export type CompetitionKind = 'world-cup' | 'continental' | 'confederations';
+/**
+ * Qué competición coronó al campeón. `season` cubre a los modos de temporada:
+ * su torneo puede ser una liga, una copa o grupos + eliminación, y todos entran
+ * en la cronología por la misma vía (`champions_history`, migración 021).
+ */
+export type CompetitionKind = 'world-cup' | 'continental' | 'confederations' | 'season';
 
 export interface ChampionHistoryRow {
   tournamentId: string;
@@ -35,6 +40,7 @@ export interface PalmaresRow {
   wcTitles: number;
   continentalTitles: number;
   confedTitles: number;
+  seasonTitles: number;
 }
 
 export interface TimelineFilters {
@@ -90,10 +96,13 @@ const numOrNull = (v: unknown): number | null =>
   v === null || v === undefined ? null : Number(v);
 
 export const championsService = {
-  async getChampionsHistory(): Promise<ChampionHistoryRow[]> {
+  /** @param modeId Modo al que limitar la cronología. Sin él, mezcla todos. */
+  async getChampionsHistory(modeId?: string): Promise<ChampionHistoryRow[]> {
     if (!isSupabaseConfigured()) return [];
 
-    const { data, error } = await (supabase as any).rpc('champions_history');
+    const { data, error } = await (supabase as any).rpc('champions_history', {
+      p_mode_id: modeId ?? null,
+    });
     if (error) throw error;
 
     return ((data ?? []) as any[]).map((r) => ({
@@ -120,10 +129,12 @@ export const championsService = {
     }));
   },
 
-  async getPalmares(): Promise<PalmaresRow[]> {
+  async getPalmares(modeId?: string): Promise<PalmaresRow[]> {
     if (!isSupabaseConfigured()) return [];
 
-    const { data, error } = await (supabase as any).rpc('champions_palmares');
+    const { data, error } = await (supabase as any).rpc('champions_palmares', {
+      p_mode_id: modeId ?? null,
+    });
     if (error) throw error;
 
     return ((data ?? []) as any[]).map((r) => ({
@@ -136,6 +147,7 @@ export const championsService = {
       wcTitles: num(r.wc_titles),
       continentalTitles: num(r.continental_titles),
       confedTitles: num(r.confed_titles),
+      seasonTitles: num(r.season_titles),
     }));
   },
 };

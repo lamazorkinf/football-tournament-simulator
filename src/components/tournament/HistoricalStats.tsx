@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useModeStore } from '../../store/useModeStore';
 import type { Team } from '../../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
@@ -34,6 +35,8 @@ interface RegionalStat {
 }
 
 export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
+  // Las agregaciones son por modo: mezclarlas sumaría partidos de otro pool.
+  const modeId = useModeStore((s) => s.activeModeId) ?? undefined;
   const [loading, setLoading] = useState(true);
   const [teamStats, setTeamStats] = useState<TeamStats[]>([]);
   const [selectedView, setSelectedView] = useState<'overview' | 'teams' | 'tiers'>('overview');
@@ -53,8 +56,8 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
 
     try {
       const [teamRows, regionRows] = await Promise.all([
-        matchHistoryService.getTeamStats(),
-        matchHistoryService.getRegionStats(),
+        matchHistoryService.getTeamStats(modeId),
+        matchHistoryService.getRegionStats(modeId),
       ]);
       if (signal.cancelled) return;
 
@@ -93,6 +96,7 @@ export const HistoricalStats = ({ teams }: HistoricalStatsProps) => {
     return () => {
       signal.cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     // loadStats se omite a propósito de las deps: su única entrada reactiva es
     // `teams` (ya presente); incluirla dispararía el efecto en cada render y
     // recargaría ~10000 partidos.
