@@ -29,3 +29,6 @@ dist-ssr
 .env.local
 .env.*.local
 !.env.example
+
+# Worktrees de sesiones aisladas (scratch, nunca se commitean)
+.claude/worktrees/
