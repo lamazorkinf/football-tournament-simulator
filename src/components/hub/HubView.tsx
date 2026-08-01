@@ -27,6 +27,13 @@ interface HubViewProps {
   currentView: View;
   onSelectStep: (item: NavItem) => void;
   lastResult: MatchResult | null;
+  /**
+   * Qué decir cuando no hay próxima acción. Por defecto, que el modo se terminó;
+   * un modo puede explicar SU cierre (p. ej. una temporada a la que todavía no
+   * le sembraron los clubes nunca se pudo jugar, así que decirle "no queda nada
+   * por jugar" sería mentirle).
+   */
+  emptyMessage?: string;
   /** El modo todavía no resolvió su estado: no se ofrece ninguna acción. */
   isLoading?: boolean;
   /** Salida cuando el ciclo terminó. Ausente en los modos que no terminan nunca. */
@@ -47,6 +54,7 @@ export function HubView({
   currentView,
   onSelectStep,
   lastResult,
+  emptyMessage = 'No queda nada por jugar en este modo.',
   isLoading = false,
   onNewTournament,
 }: HubViewProps) {
@@ -104,7 +112,7 @@ export function HubView({
         <Card>
           <CardContent className="py-8 text-center space-y-4">
             <Trophy className="w-12 h-12 text-gold mx-auto" />
-            <p className="text-grass-soft text-sm">No queda nada por jugar en este modo.</p>
+            <p className="text-grass-soft text-sm">{emptyMessage}</p>
             {onNewTournament && (
               <Button variant="secondary" size="sm" onClick={onNewTournament}>
                 Nuevo torneo

@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
 import { useModeStore } from './store/useModeStore';
 import { useLiveMatchStore } from './store/useLiveMatchStore';
 import { useLiveMatchdayStore } from './store/useLiveMatchdayStore';
-import { useMatchResultsStore } from './store/useMatchResultsStore';
 import { useSeasonModeStore } from './store/useSeasonModeStore';
 import { hydrateSettings } from './lib/hydrateSettings';
 import { useSidebarCollapse } from './hooks/useSidebarCollapse';
@@ -39,23 +38,9 @@ import { MobileActionProvider } from './hooks/useMobileAction';
 import { useModeNav } from './hooks/useModeNav';
 import { useNextAction } from './hooks/useNextAction';
 import { themeForMode } from './lib/modeTheme';
-import {
-  getContinentalProgress,
-  getConfederationsProgress,
-} from './utils/cycleProgress';
-import { getQualifierProgress, getWorldCupGroupProgress } from './utils/tournamentProgress';
-import { currentModeJornada } from './core/formats/modeJornada';
+import { deriveHubHeader } from './modes/hubHeader';
 import { Trophy } from 'lucide-react';
 import type { View } from './types/view';
-
-/** Cómo se lee cada fase del ciclo en la cabecera del Hub. */
-const CYCLE_PHASE_LABEL: Record<string, string> = {
-  continental: 'Torneos Continentales',
-  confed: 'Copa Confederaciones',
-  'wc-qualifiers': 'Clasificatorias',
-  'wc-groups': 'Mundial · Fase de grupos',
-  'wc-knockout': 'Mundial · Playoffs',
-};
 
 function App() {
   const {
@@ -74,15 +59,20 @@ function App() {
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
   const nav = useModeNav(currentView);
 
-  // Navigation handler with optional parameters
-  const handleNavigate = (view: string, options?: { region?: string; groupId?: string }) => {
-    setCurrentView(view as View);
-    if (options) {
-      setViewOptions(options);
-    } else {
-      setViewOptions({});
-    }
-  };
+  // Navigation handler with optional parameters. Estable (sólo usa setters de
+  // estado, que React garantiza estables): así las vistas que lo reciben como
+  // prop no se re-renderizan de gusto, y `navigateTo` puede memoizarse.
+  const handleNavigate = useCallback(
+    (view: string, options?: { region?: string; groupId?: string }) => {
+      setCurrentView(view as View);
+      if (options) {
+        setViewOptions(options);
+      } else {
+        setViewOptions({});
+      }
+    },
+    [],
+  );
 
   // ---------------------------------------------------------------------------
   // Estado del Hub. TODOS estos hooks van ANTES de los `return` condicionales de
@@ -90,54 +80,31 @@ function App() {
   // ejecutados entre renders, React lanza "Rendered more hooks than during the
   // previous render".
   // ---------------------------------------------------------------------------
-  const nextAction = useNextAction((view) => handleNavigate(view));
-  const lastResult = useMatchResultsStore((s) => s.results[0] ?? null);
+  // El adaptador descarta a propósito un eventual segundo argumento:
+  // `handleNavigate` lo usa para opciones de vista (región, grupo) y `Nav` lo
+  // tiene tipado como sub-pestaña, dos cosas distintas. `deriveNextAction` nunca
+  // pasa el segundo argumento. Va memoizado porque es dependencia del `useMemo`
+  // de `useNextAction`: con una función nueva por render no acertaría nunca.
+  const navigateTo = useCallback((view: View) => handleNavigate(view), [handleNavigate]);
+  const nextAction = useNextAction(navigateTo);
   // Suscripción, no getState(): el Hub tiene que re-renderizar cuando la lista
   // de modos termina de cargar.
   const modesLoaded = useModeStore((s) => s.isLoaded);
+  const seasonStatus = useSeasonModeStore((s) => s.status);
   const seasonYear = useSeasonModeStore((s) => s.year);
   const seasonTournaments = useSeasonModeStore((s) => s.tournaments);
 
-  /**
-   * Cabecera del Hub: título, fase y progreso del modo entero.
-   *
-   * El progreso de temporada suma sólo los torneos `liga` a propósito: son los
-   * que tienen un total de partidos conocido de entrada. Un cuadro de
-   * eliminación genera sus rondas a medida que avanza, así que contarlo daría
-   * un porcentaje que retrocede.
-   */
-  const hub = useMemo(() => {
-    if (nav.engine === 'national-cycle') {
-      if (!currentTournament) return { title: 'Ciclo mundial', phaseLabel: 'Cargando…', progress: 0 };
-      const parts = [
-        getContinentalProgress(currentTournament),
-        getConfederationsProgress(currentTournament),
-        getQualifierProgress(currentTournament),
-        currentTournament.worldCup
-          ? getWorldCupGroupProgress(currentTournament.worldCup.groups)
-          : { playedMatches: 0, totalMatches: 0 },
-      ];
-      const played = parts.reduce((n, p) => n + p.playedMatches, 0);
-      const total = parts.reduce((n, p) => n + p.totalMatches, 0);
-      return {
-        title: `Ciclo ${currentTournament.year}`,
-        phaseLabel: CYCLE_PHASE_LABEL[currentTournament.calendar.phase] ?? 'Ciclo completo',
-        progress: total > 0 ? played / total : 0,
-      };
-    }
-
-    const pending = seasonTournaments
-      .map((t) => ({ t, jornada: currentModeJornada(t) }))
-      .find((x) => x.jornada !== null);
-    const matches = seasonTournaments.flatMap((t) =>
-      t.format === 'liga' ? t.state.matches : [],
-    );
-    return {
-      title: seasonYear !== null ? `Temporada ${seasonYear}` : 'Temporada',
-      phaseLabel: pending ? `${pending.t.name} · ${pending.jornada!.label}` : 'Temporada completa',
-      progress: matches.length > 0 ? matches.filter((m) => m.isPlayed).length / matches.length : 0,
-    };
-  }, [nav.engine, currentTournament, seasonTournaments, seasonYear]);
+  // Cabecera del Hub (título, fase, progreso): derivación pura en `modes/`,
+  // igual que la navegación y la próxima acción. Acá sólo se leen los stores.
+  const hub = useMemo(
+    () =>
+      deriveHubHeader({
+        engine: nav.engine,
+        cycle: currentTournament,
+        season: { status: seasonStatus, tournaments: seasonTournaments, year: seasonYear },
+      }),
+    [nav.engine, currentTournament, seasonStatus, seasonTournaments, seasonYear],
+  );
 
   const handleTabChange = (view: View) => {
     setCurrentView(view);
@@ -254,7 +221,16 @@ function App() {
             }
             handleNavigate(item.target.view);
           }}
-          lastResult={lastResult}
+          // Sin último resultado por ahora, a propósito: `useMatchResultsStore`
+          // no es un historial sino el búfer del modal de resultados —
+          // `showResults` setea la lista Y abre el modal, y `close()` vacía las
+          // dos cosas—, así que leerlo acá daba un bloque que sólo tenía datos
+          // mientras un overlay a pantalla completa tapaba el Hub: invisible
+          // siempre. La etapa 2 lo alimenta desde `match_history`; hasta
+          // entonces, no cablear nada es más honesto que cablear el store
+          // equivocado.
+          lastResult={null}
+          emptyMessage={hub.emptyMessage}
           isLoading={!modesLoaded}
           onNewTournament={
             nav.engine === 'national-cycle' ? () => handleNavigate('tournaments') : undefined
@@ -267,10 +243,10 @@ function App() {
       favorites: <FavoritesView />,
       tournaments: <TournamentHistory />,
       champions: <ChampionsHistory onNavigate={handleNavigate} />,
-      league: <SeasonModeView />,
+      league: <SeasonModeView onNavigate={handleNavigate} />,
     };
     if (shared[currentView]) return shared[currentView];
-    if (!currentTournament) return <SeasonModeView />;
+    if (!currentTournament) return <SeasonModeView onNavigate={handleNavigate} />;
 
     const cycleViews: Partial<Record<View, ReactNode>> = {
       matches: <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />,

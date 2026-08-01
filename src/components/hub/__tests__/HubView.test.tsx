@@ -88,6 +88,19 @@ describe('HubView', () => {
     expect(screen.queryByRole('button', { name: /Nuevo torneo/i })).not.toBeInTheDocument();
   });
 
+  it('el modo puede explicar su propio cierre en vez del texto genérico', () => {
+    render(
+      <HubView
+        {...props({
+          nextAction: null,
+          emptyMessage: 'Este modo todavía no tiene sus divisiones cargadas.',
+        })}
+      />,
+    );
+    expect(screen.getByText(/no tiene sus divisiones cargadas/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no queda nada por jugar/i)).not.toBeInTheDocument();
+  });
+
   it('cargando no ofrece ninguna acción', () => {
     render(<HubView {...props({ isLoading: true })} />);
     expect(screen.queryByRole('button', { name: /SORTEAR/ })).not.toBeInTheDocument();
