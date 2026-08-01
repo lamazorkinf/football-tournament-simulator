@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured, escapeOrValue } from '../lib/supabase';
 import type { Database } from '../types/database';
 import type { MatchHistoryStage } from '../core/formats/rounds';
+import { bumpHistoryRevision } from '../store/useHistoryRevisionStore';
 
 type MatchHistoryRow = Database['public']['Tables']['match_history']['Row'];
 type MatchHistoryInsert = Database['public']['Tables']['match_history']['Insert'];
@@ -169,6 +170,7 @@ export const matchHistoryService = {
       .single();
 
     if (error) throw error;
+    bumpHistoryRevision();
     return dbMatchToMatch(data);
   },
 
@@ -392,6 +394,7 @@ export const matchHistoryService = {
       .select();
 
     if (error) throw error;
+    bumpHistoryRevision();
     return data.map(dbMatchToMatch);
   },
 
