@@ -3,13 +3,13 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { PixelBar } from '../ui/PixelBar';
 import { Skeleton } from '../ui/Skeleton';
-import { TeamFlag } from '../ui/TeamFlag';
 import { navIcon } from '../ui/navIcons';
 import { cn } from '../../lib/utils';
+import { HeadlinesCard } from './HeadlinesCard';
 import type { NavItem } from '../../modes/nav';
 import type { HubIdle } from '../../modes/hubHeader';
 import type { MobileAction } from '../../hooks/useMobileAction';
-import type { MatchResult } from '../../store/useMatchResultsStore';
+import type { HeadlineView } from '../../hooks/useRecentHeadlines';
 import type { View } from '../../types/view';
 
 interface HubViewProps {
@@ -27,7 +27,8 @@ interface HubViewProps {
    */
   currentView: View;
   onSelectStep: (item: NavItem) => void;
-  lastResult: MatchResult | null;
+  /** La portada: lo más notable de los últimos partidos del modo. Vacía ⇒ no se rinde. */
+  headlines: HeadlineView[];
   /**
    * Qué pasa cuando no hay próxima acción. `loading` rinde el esqueleto (el modo
    * todavía no contestó); `blocked` rinde la explicación del propio modo; `done`
@@ -53,7 +54,7 @@ export function HubView({
   ladder,
   currentView,
   onSelectStep,
-  lastResult,
+  headlines,
   idle,
   onNewTournament,
 }: HubViewProps) {
@@ -75,32 +76,7 @@ export function HubView({
         </CardContent>
       </Card>
 
-      {lastResult && (
-        <Card>
-          <CardContent className="py-4">
-            <p className="font-arcade text-[9px] text-grass-soft uppercase mb-3">
-              Ultimo resultado
-            </p>
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 min-w-0">
-                {lastResult.homeTeamId && (
-                  <TeamFlag teamId={lastResult.homeTeamId} teamName={lastResult.homeTeam} size={24} />
-                )}
-                <span className="truncate">{lastResult.homeTeam}</span>
-              </span>
-              <span className="font-arcade text-sm text-white shrink-0">
-                {lastResult.homeScore} - {lastResult.awayScore}
-              </span>
-              <span className="flex items-center gap-2 min-w-0 justify-end">
-                <span className="truncate">{lastResult.awayTeam}</span>
-                {lastResult.awayTeamId && (
-                  <TeamFlag teamId={lastResult.awayTeamId} teamName={lastResult.awayTeam} size={24} />
-                )}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <HeadlinesCard headlines={headlines} />
 
       {idle.kind === 'loading' ? (
         <Skeleton className="h-16 w-full" />

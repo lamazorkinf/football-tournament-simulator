@@ -38,6 +38,7 @@ import { MobileActionProvider } from './hooks/useMobileAction';
 import { useModeNav } from './hooks/useModeNav';
 import { useModeDescriptor } from './hooks/useModeDescriptor';
 import { useNextAction } from './hooks/useNextAction';
+import { useRecentHeadlines } from './hooks/useRecentHeadlines';
 import { themeForMode } from './lib/modeTheme';
 import { deriveHubHeader } from './modes/hubHeader';
 import { descriptorForMode } from './modes/registry';
@@ -89,6 +90,7 @@ function App() {
   // de `useNextAction`: con una función nueva por render no acertaría nunca.
   const navigateTo = useCallback((view: View) => handleNavigate(view), [handleNavigate]);
   const nextAction = useNextAction(navigateTo);
+  const headlines = useRecentHeadlines();
   // Suscripción, no getState(): el Hub tiene que re-renderizar cuando la lista
   // de modos termina de cargar.
   const modesLoaded = useModeStore((s) => s.isLoaded);
@@ -256,15 +258,7 @@ function App() {
             }
             handleNavigate(item.target.view);
           }}
-          // Sin último resultado por ahora, a propósito: `useMatchResultsStore`
-          // no es un historial sino el búfer del modal de resultados —
-          // `showResults` setea la lista Y abre el modal, y `close()` vacía las
-          // dos cosas—, así que leerlo acá daba un bloque que sólo tenía datos
-          // mientras un overlay a pantalla completa tapaba el Hub: invisible
-          // siempre. La etapa 2 lo alimenta desde `match_history`; hasta
-          // entonces, no cablear nada es más honesto que cablear el store
-          // equivocado.
-          lastResult={null}
+          headlines={headlines}
           // Mientras la lista de modos no resuelva, el descriptor que tenemos es
           // el de arranque y la cabecera está describiendo un modo que capaz no
           // es el activo: eso también es "todavía no sé", no un cierre.
