@@ -95,11 +95,10 @@ function qualifiersCycle(brokenRegion?: Region): Cycle {
 }
 
 describe('TournamentWizard — sorteo de clasificatorias', () => {
-  it('con el sorteo hecho ofrece rehacerlo y no ofrece empezar', () => {
+  it('con el sorteo hecho no ofrece empezar', () => {
     useTournamentStore.setState({ currentTournament: qualifiersCycle(), teams: [] });
     renderWizard();
 
-    expect(screen.getByRole('button', { name: /rehacer sorteo/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /empezar/i })).not.toBeInTheDocument();
   });
 
@@ -121,34 +120,14 @@ describe('TournamentWizard — sorteo de clasificatorias', () => {
     renderWizard();
 
     expect(screen.getByText(/sorteo incompleto/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /rehacer sorteo/i })).toBeInTheDocument();
-  });
-
-  it('con partidos jugados no se puede rehacer', () => {
-    const cycle = qualifiersCycle();
-    const played: Cycle = {
-      ...cycle,
-      hasAnyMatchPlayed: true,
-      qualifiers: {
-        ...cycle.qualifiers,
-        Europe: cycle.qualifiers.Europe.map((g) => ({
-          ...g,
-          matches: g.matches.map((m, i) => (i === 0 ? { ...m, isPlayed: true, homeScore: 1, awayScore: 0 } : m)),
-        })),
-      },
-    };
-    useTournamentStore.setState({ currentTournament: played, teams: [] });
-    renderWizard();
-
-    expect(screen.queryByRole('button', { name: /rehacer sorteo/i })).not.toBeInTheDocument();
   });
 
   it('sorteo incompleto con partidos ya jugados: el aviso no invita a rehacer', () => {
     // Asia sin partidos = sorteo parcial (misma condición que el test de
-    // arriba), combinado con un partido jugado en Europa: el guard de
-    // "Rehacer sorteo" exige además que no se haya jugado nada, así que en
-    // esta combinación el botón no existe y el aviso no puede pedir una
-    // acción que la UI no ofrece.
+    // arriba), combinado con un partido jugado en Europa: el aviso no puede
+    // invitar a una acción ("Rehacé el sorteo") que ya no está disponible
+    // -el botón de rehacer vive en QualifiersView y ahí exige que no se haya
+    // jugado nada-, así que el texto debe explicar por qué no se puede.
     const cycle = qualifiersCycle('Asia');
     const played: Cycle = {
       ...cycle,
@@ -165,7 +144,6 @@ describe('TournamentWizard — sorteo de clasificatorias', () => {
     renderWizard();
 
     expect(screen.getByText(/sorteo incompleto/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /rehacer sorteo/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/rehac[eé] el sorteo para completarlo/i)).not.toBeInTheDocument();
     expect(screen.getByText(/no se puede rehacer: ya se jugaron partidos/i)).toBeInTheDocument();
   });
@@ -375,25 +353,6 @@ describe('TournamentWizard — regenerar sorteo del Mundial (ConfirmDialog)', ()
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /^regenerar$/i })).not.toBeInTheDocument()
     );
-  });
-});
-
-describe('TournamentWizard — rehacer sorteo de clasificatorias (ConfirmDialog)', () => {
-  it('no festeja y deja el diálogo abierto si el guard rechaza', async () => {
-    useTournamentStore.setState({
-      currentTournament: qualifiersCycle(),
-      teams: [],
-      generateDrawAndFixtures: vi.fn(async () => false),
-    });
-    renderWizard();
-
-    await userEvent.click(screen.getByRole('button', { name: /rehacer sorteo/i }));
-    await userEvent.click(screen.getByRole('button', { name: /^rehacer$/i }));
-
-    expect(toast.success).not.toHaveBeenCalled();
-    // El diálogo sigue abierto: no se cierra como si la acción destructiva
-    // hubiera funcionado (mismo contrato que handleRegenerateWorldCupDraw).
-    expect(screen.getByRole('button', { name: /^rehacer$/i })).toBeInTheDocument();
   });
 });
 

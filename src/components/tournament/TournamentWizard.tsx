@@ -58,7 +58,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   const [showDrawSimulator, setShowDrawSimulator] = useState(false);
   const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
   const [confirmRegenWorldCup, setConfirmRegenWorldCup] = useState(false);
-  const [confirmRedrawQualifiers, setConfirmRedrawQualifiers] = useState(false);
 
   const handleGenerateDraw = async () => {
     if (!currentTournament) return;
@@ -77,16 +76,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
         ? 'Sorteo generado — habilidades en la base de este Mundial'
         : 'Sorteo y fixtures generados'
     );
-  };
-
-  const handleRedrawQualifiers = async () => {
-    const completed = await generateDrawAndFixtures({ force: true });
-    // El store ya avisó el motivo del fallo con su propio toast. Lanzar acá
-    // (en vez de sólo retornar) es lo que hace que ConfirmDialog deje el
-    // diálogo abierto en vez de cerrarlo como si la acción destructiva
-    // hubiera funcionado.
-    if (!completed) throw new Error('No se pudo rehacer el sorteo de clasificatorias.');
-    toast.success('Sorteo de clasificatorias rehecho');
   };
 
   const handleDrawContinental = () => {
@@ -174,7 +163,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   // Check if actions are available
   const canGenerateDraw = canDrawQualifiers(currentTournament);
   const qualifiersDrawn = isQualifiersDrawn(currentTournament);
-  const qualifiersPartial = qualifiersDrawStatus?.state === 'partial';
   // Rehacer solo mientras no se haya jugado nada: con partidos jugados, ni el
   // guard del store lo permite.
   const canRedrawQualifiers = qualifiersDrawn && !currentTournament.hasAnyMatchPlayed;
@@ -435,15 +423,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
                       Ver / Jugar
                     </Button>
                   )}
-                  {canRedrawQualifiers && (
-                    <Button
-                      variant={qualifiersPartial ? 'primary' : 'outline'}
-                      size="sm"
-                      onClick={() => setConfirmRedrawQualifiers(true)}
-                    >
-                      Rehacer sorteo
-                    </Button>
-                  )}
                 </div>
               )
             }
@@ -645,21 +624,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
           if (!completed) throw new Error('No se pudo regenerar el sorteo del Mundial.');
           toast.success('Sorteo del Mundial regenerado');
         }}
-      />
-
-      <ConfirmDialog
-        open={confirmRedrawQualifiers}
-        onOpenChange={setConfirmRedrawQualifiers}
-        variant="danger"
-        title="Rehacer sorteo de clasificatorias"
-        confirmLabel="Rehacer"
-        description={
-          <>
-            <p>Se eliminan todos los grupos y partidos actuales de las clasificatorias y se sortean de nuevo desde cero.</p>
-            <p>Esta acción no se puede deshacer.</p>
-          </>
-        }
-        onConfirm={handleRedrawQualifiers}
       />
     </div>
   );
