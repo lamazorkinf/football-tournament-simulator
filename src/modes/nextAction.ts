@@ -13,6 +13,7 @@ import {
   canAdvanceToWorldCup,
   canAdvanceToKnockout,
 } from '../utils/tournamentProgress';
+import { currentModeJornada } from '../core/formats/modeJornada';
 import type { Cycle } from '../types';
 import type { View } from '../types/view';
 import type { MobileAction } from '../hooks/useMobileAction';
@@ -176,11 +177,53 @@ function cycleNextAction(cycle: Cycle, nav: Nav, actions: ModeActions): MobileAc
   return null;
 }
 
+/**
+ * Próxima acción de un modo de temporada, por prioridad.
+ *
+ * No hay caso "temporada cerrada": `closeSeason` aplica ascensos/descensos,
+ * avanza el año y recarga, con lo cual el modo vuelve a `ready` sin torneos —
+ * o sea, a "empezar temporada" del año siguiente. Un modo de temporada no
+ * termina nunca; el único `null` posible es `needs-seed`.
+ *
+ * El rótulo de la jornada sale de `currentModeJornada`, que ya resuelve los
+ * tres formatos ("Fecha 4" en una liga o una fase de grupos, "Semifinales
+ * (ida)" en un cuadro). No se re-deriva acá.
+ */
+function seasonNextAction(season: SeasonView, actions: ModeActions): MobileAction | null {
+  if (season.status === 'error') {
+    return { label: '▶ REINTENTAR', onPress: () => void actions.reloadMode() };
+  }
+
+  if (season.status !== 'ready') return null;
+
+  if (season.tournaments.length === 0) {
+    return { label: '▶ EMPEZAR TEMPORADA', onPress: () => void actions.startSeason() };
+  }
+
+  for (const tournament of season.tournaments) {
+    const jornada = currentModeJornada(tournament);
+    if (jornada) {
+      return {
+        label: `▶ SIMULAR ${jornada.label.toUpperCase()}`,
+        onPress: () => void actions.simulateJornada(tournament.id),
+      };
+    }
+  }
+
+  return { label: '▶ CERRAR TEMPORADA', onPress: () => void actions.closeSeason() };
+}
+
 export function deriveNextAction(input: DeriveNextActionInput): MobileAction | null {
-  const { engine, cycle, nav, actions, busy } = input;
+  const { engine, cycle, season, nav, actions, busy } = input;
 
   const action =
-    engine === 'national-cycle' ? (cycle ? cycleNextAction(cycle, nav, actions) : null) : null;
+    engine === 'national-cycle'
+      ? cycle
+        ? cycleNextAction(cycle, nav, actions)
+        : null
+      : season
+        ? seasonNextAction(season, actions)
+        : null;
 
   return action ? { ...action, disabled: busy } : null;
 }
