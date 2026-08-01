@@ -25,8 +25,9 @@ import type { ModeTournament } from '../core/formats/modeTournament';
  * LA PRÓXIMA ACCIÓN DE UN MODO — una sola derivación para toda la interfaz.
  *
  * Espejo de `modes/nav.ts`: puro, sin React, con una rama por motor. Vivía
- * suelta dentro de `TournamentWizard.mobileAction`, sólo para selecciones y
- * sólo para el dock de mobile; un modo de temporada no tenía ninguna.
+ * suelta dentro de la vieja pantalla de progreso del ciclo, sólo para
+ * selecciones y sólo para el dock de mobile; un modo de temporada no tenía
+ * ninguna.
  *
  * Regla transversal: si la acción del store devuelve `false`, el store ya avisó
  * el motivo con su propio toast, así que acá no se festeja ni se navega.
@@ -71,7 +72,7 @@ export interface DeriveNextActionInput {
 
 /**
  * Próxima acción del ciclo mundialista, por prioridad. Es la cadena que vivía
- * en `TournamentWizard.mobileAction`, extendida hasta el final: terminaba en
+ * en la vieja pantalla de progreso, extendida hasta el final: terminaba en
  * "JUGAR CLASIFICATORIAS" porque las tarjetas-paso cubrían el resto, y al
  * borrarlas esos peldaños quedaban sin dueño.
  */

@@ -14,7 +14,7 @@ import type { View } from '../../types/view';
 
 const RUNNING = ['league-A', 'league-B', 'cup'];
 
-function nationalNav(currentView: View = 'wizard') {
+function nationalNav(currentView: View = 'hub') {
   return deriveModeNav({ descriptor: SELECCIONES_DESCRIPTOR, currentView });
 }
 
@@ -32,7 +32,7 @@ describe('deriveModeNav — ciclo mundialista', () => {
     const nav = nationalNav();
     expect(nav.sections.map((s) => s.title)).toEqual(['Ciclo actual', 'Datos', 'Archivo', '']);
     expect(nav.sections[0].items.map((i) => i.target.view)).toEqual([
-      'wizard', 'matches', 'continental', 'confederations', 'qualifiers', 'worldcup',
+      'hub', 'matches', 'continental', 'confederations', 'qualifiers', 'worldcup',
     ]);
     expect(nav.sections[1].items.map((i) => i.target.view)).toEqual([
       'stats', 'comparison', 'favorites',
@@ -58,7 +58,7 @@ describe('deriveModeNav — ciclo mundialista', () => {
   });
 
   it('la vista "league" no existe en este modo y cae en la raíz', () => {
-    expect(nationalNav('league').view).toBe('wizard');
+    expect(nationalNav('league').view).toBe('hub');
     expect(nationalNav('worldcup').view).toBe('worldcup');
     expect(nationalNav().allowed).not.toContain('league');
   });
@@ -74,7 +74,7 @@ describe('deriveModeNav — ciclo mundialista', () => {
 
     const nav = deriveModeNav({
       descriptor: SELECCIONES_DESCRIPTOR,
-      currentView: 'wizard',
+      currentView: 'hub',
       lockedViews: locked,
     });
     expect(nav.items.filter((i) => i.locked).map((i) => i.key)).toEqual([
@@ -89,14 +89,19 @@ describe('deriveModeNav — modo de temporada', () => {
   it('las competiciones corriendo son la sub-navegación, en orden del descriptor', () => {
     const nav = seasonNav();
     expect(nav.sections[0].title).toBe('Temporada');
+    // El Hub encabeza la sección: es la raíz del modo, no una competición.
     expect(nav.sections[0].items.map((i) => i.key)).toEqual([
-      'league-A', 'league-B', 'cup', 'season', 'crests',
+      'hub', 'league-A', 'league-B', 'cup', 'season', 'crests',
     ]);
     expect(nav.sections[0].items.map((i) => i.label)).toEqual([
-      'Liga A', 'Liga B', 'Copa', 'Temporada', 'Escudos',
+      'Inicio', 'Liga A', 'Liga B', 'Copa', 'Temporada', 'Escudos',
     ]);
-    // Todas apuntan a la vista raíz y se distinguen por su pestaña.
-    expect(nav.sections[0].items.every((i) => i.target.view === 'league')).toBe(true);
+    // Todas las pestañas apuntan a `league` —que dejó de ser la raíz pero sigue
+    // conteniéndolas— y se distinguen por su `tab`. El Hub es el único item de
+    // la sección que apunta a otra vista, y no es una pestaña.
+    const tabItems = nav.sections[0].items.filter((i) => i.key !== 'hub');
+    expect(tabItems.every((i) => i.target.view === 'league' && i.target.tab !== undefined)).toBe(true);
+    expect(nav.sections[0].items[0].target).toEqual({ view: 'hub' });
   });
 
   it('sin temporada arrancada sólo hay Inicio y Escudos', () => {
@@ -105,8 +110,10 @@ describe('deriveModeNav — modo de temporada', () => {
       currentView: 'league',
       runningCompetitionIds: [],
     });
-    expect(nav.sections[0].items.map((i) => i.key)).toEqual(['main', 'crests']);
-    expect(nav.tab).toBe('main');
+    expect(nav.sections[0].items.map((i) => i.key)).toEqual(['hub', 'crests']);
+    // Sin competiciones corriendo, la única pestaña de la vista contenedora son
+    // los Escudos: la portada del modo dejó de ser una pestaña y es el Hub.
+    expect(nav.tab).toBe('crests');
   });
 
   it('la pestaña pedida se respeta si existe, si no cae en la primera', () => {
@@ -122,7 +129,7 @@ describe('deriveModeNav — modo de temporada', () => {
     const nav = seasonNav();
     expect(nav.primary.map((i) => i.shortLabel)).toEqual(['INICIO', 'VERSUS', 'FAVS', 'REYES']);
     expect(nav.primary.map((i) => i.target.view)).toEqual([
-      'league', 'comparison', 'favorites', 'champions',
+      'hub', 'comparison', 'favorites', 'champions',
     ]);
     expect(nav.overflow.map((i) => i.target.view)).toContain('history');
   });
@@ -135,10 +142,11 @@ describe('deriveModeNav — modo de temporada', () => {
   it('sólo alcanza las vistas que declara el modo', () => {
     const nav = seasonNav();
     expect([...nav.allowed].sort()).toEqual(
-      ['champions', 'comparison', 'favorites', 'history', 'league', 'settings'].sort(),
+      ['champions', 'comparison', 'favorites', 'history', 'hub', 'league', 'settings'].sort(),
     );
-    // Una vista del ciclo no aplica: se encarrila a la raíz del modo.
-    expect(seasonNav('worldcup').view).toBe('league');
+    // Una vista del ciclo no aplica: se encarrila a la raíz del modo, que desde
+    // la unificación es el Hub y no la vista contenedora de las competiciones.
+    expect(seasonNav('worldcup').view).toBe('hub');
     expect(seasonNav('history').view).toBe('history');
     expect(seasonNav('champions').view).toBe('champions');
   });
@@ -191,11 +199,12 @@ describe('deriveModeNav — un modo nuevo se navega sin tocar componentes', () =
       runningCompetitionIds: ['liga', 'copa'],
     });
     expect(nav.sections[0].items.map((i) => [i.label, i.icon])).toEqual([
+      ['Inicio', 'home'],
       ['Torneo Apertura', 'shield'],
       ['Copa de Clubes', 'trophy'],
     ]);
-    expect(nav.allowed).toEqual(['league', 'favorites', 'champions', 'settings']);
+    expect(nav.allowed).toEqual(['hub', 'league', 'favorites', 'champions', 'settings']);
     // La barra se llena con la raíz y las vistas de datos que el modo declaró.
-    expect(nav.primary.map((i) => i.target.view)).toEqual(['league', 'favorites', 'champions']);
+    expect(nav.primary.map((i) => i.target.view)).toEqual(['hub', 'favorites', 'champions']);
   });
 });

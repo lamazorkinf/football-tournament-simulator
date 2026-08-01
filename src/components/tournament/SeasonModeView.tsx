@@ -69,7 +69,12 @@ export function SeasonModeView() {
   const seasonReady = status === 'ready' && tournaments.length > 0;
   const leagues = tournaments.filter((t): t is LigaTournament => t.format === 'liga');
 
-  const tabs = nav.sections.find((s) => s.key === 'competition')?.items ?? [];
+  // Sólo los items que SON pestañas de esta vista: la sección de competición la
+  // encabeza el Hub, que es una vista aparte (su `target` no trae `tab`) y no
+  // tiene nada que hacer en esta barra.
+  const tabs = (nav.sections.find((s) => s.key === 'competition')?.items ?? []).filter(
+    (t) => t.target.tab !== undefined,
+  );
   const activeTab = nav.tab;
   const activeRun = tournaments.find((t) => t.competitionId === activeTab) ?? null;
   const activeCompetition = activeRun

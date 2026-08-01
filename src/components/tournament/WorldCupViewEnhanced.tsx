@@ -106,7 +106,7 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
 
   // Fallback cuando no hay datos del Mundial
   if (!currentTournament.worldCup) {
-    // Mismo guard que habilita "Sorteo Automático" en el wizard: clasificatorias
+    // Mismo guard que habilita "▶ AVANZAR AL MUNDIAL" en el Hub: clasificatorias
     // completas y Mundial todavía sin crear. Sin esto, el botón de sorteo
     // manual quedaría visible incluso con las clasificatorias a medio jugar.
     const canStartWorldCup = canAdvanceToWorldCup(currentTournament);
@@ -240,9 +240,9 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
 
   // Regenerar sólo mientras el Mundial no tenga ningún partido jugado, ni de
   // grupos ni de playoffs: con algo jugado, volver a sortear borraría
-  // resultados reales. Ya no hace falta el `currentTournament.worldCup &&`
-  // inicial del wizard: acá abajo del fallback de arriba, `worldCup` ya está
-  // garantizado.
+  // resultados reales. Ya no hace falta el `currentTournament.worldCup &&` que
+  // llevaba adelante en la vieja pantalla de progreso: acá abajo del fallback
+  // de arriba, `worldCup` ya está garantizado.
   const canRegenerateWorldCup =
     !worldCup.groups.some(group => group.matches.some(m => m.isPlayed)) &&
     !worldCup.knockout.roundOf32.some(m => m.isPlayed) &&
@@ -416,7 +416,7 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
             thirdPlaceId={worldCup.thirdPlace}
             fourthPlaceId={worldCup.fourthPlace}
             onBack={() => setActiveTab('groups')}
-            onNewTournament={onNavigate ? () => onNavigate('wizard') : undefined}
+            onNewTournament={onNavigate ? () => onNavigate('hub') : undefined}
           />
         )}
 

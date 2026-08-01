@@ -56,6 +56,16 @@ function playedQualifierGroup(region: Region): Group {
   };
 }
 
+/** El mismo grupo, pero sin jugar: alcanza para que el sorteo cuente como hecho. */
+function unplayedQualifierGroup(region: Region): Group {
+  return {
+    ...playedQualifierGroup(region),
+    matches: [
+      { id: `${region}-m1`, homeTeamId: 'a', awayTeamId: 'b', homeScore: null, awayScore: null, isPlayed: false, matchday: 1 },
+    ],
+  };
+}
+
 /** Ciclo con continental y Confederaciones completos, calendario ya en
  * clasificatorias: lo mínimo para que las fases previas no compitan por la
  * próxima acción. */
@@ -66,6 +76,19 @@ function cycleReadyToDrawQualifiers(): Cycle {
     continental: { ...base.continental, isComplete: true },
     confederationsCup: { ...base.confederationsCup, isComplete: true },
     calendar: { phase: 'wc-qualifiers', matchday: 1 },
+  };
+}
+
+/** Clasificatorias ya sorteadas y todavía sin jugar. */
+function cycleWithQualifiersDrawn(): Cycle {
+  return {
+    ...cycleReadyToDrawQualifiers(),
+    qualifiers: {
+      Europe: [unplayedQualifierGroup('Europe')],
+      America: [unplayedQualifierGroup('America')],
+      Africa: [unplayedQualifierGroup('Africa')],
+      Asia: [unplayedQualifierGroup('Asia')],
+    },
   };
 }
 
@@ -187,6 +210,17 @@ describe('deriveNextAction — ciclo, prioridad de fases', () => {
   it('con un sorteo o batch en curso la acción queda deshabilitada', () => {
     const action = actionFor(toCycle(baseTournament()), makeActions(), vi.fn(), true);
     expect(action?.disabled).toBe(true);
+  });
+
+  // El matiz que sostenía la pantalla de progreso y que se borró con ella: una
+  // vez sorteadas las clasificatorias, EMPEZAR no se vuelve a ofrecer. Sin este
+  // guard, tocarlo de nuevo duplicaba los 840 partidos.
+  it('clasificatorias ya sorteadas: ofrece jugarlas, no volver a sortearlas', () => {
+    const nav = vi.fn();
+    const action = actionFor(cycleWithQualifiersDrawn(), makeActions(), nav);
+    expect(action?.label).toBe('▶ JUGAR CLASIFICATORIAS');
+    action?.onPress();
+    expect(nav).toHaveBeenCalledWith('qualifiers');
   });
 
   it('clasificatorias completas: ofrece avanzar al mundial y navega', async () => {

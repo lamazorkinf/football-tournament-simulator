@@ -6,7 +6,7 @@ import { GroupView } from './GroupView';
 import { RunnersUpModal } from './RunnersUpModal';
 import type { Region, Group } from '../../types';
 import { Globe2, Filter, Trophy, Lock } from 'lucide-react';
-import { isQualifiersDrawn } from '../../utils/cycleProgress';
+import { isQualifiersDrawn, getQualifiersDrawStatus } from '../../utils/cycleProgress';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -81,8 +81,8 @@ export function QualifiersView({ initialRegion, initialGroupId, onNavigate }: Qu
       <EmptyState
         icon={Lock}
         title="Clasificatorias sin sortear"
-        description="Cuando termine la Copa Confederaciones, sorteá las clasificatorias desde Progreso para armar los grupos."
-        action={{ label: 'Ir a Progreso', onClick: () => onNavigate?.('wizard') }}
+        description="Cuando termine la Copa Confederaciones, sorteá las clasificatorias desde el inicio para armar los grupos."
+        action={{ label: 'Ir al inicio', onClick: () => onNavigate?.('hub') }}
       />
     );
   }
@@ -139,12 +139,32 @@ export function QualifiersView({ initialRegion, initialGroupId, onNavigate }: Qu
   const selectedStats = regionStats.find((s) => s.region === selectedRegion);
 
   // Rehacer solo mientras no se haya jugado nada: con partidos jugados, ni el
-  // guard del store lo permite. Mismo criterio que gobernaba el botón en el
-  // wizard.
+  // guard del store lo permite. Mismo criterio que gobernaba el botón en la
+  // vieja pantalla de progreso.
   const canRedrawQualifiers = isQualifiersDrawn(currentTournament) && !currentTournament.hasAnyMatchPlayed;
+
+  // Un sorteo a medias (una región entera sin grupos, o grupos sin partidos) se
+  // avisa acá, al lado del botón que lo arregla. El aviso vivía en la tarjeta de
+  // Clasificatorias de la pantalla de progreso, que se borró junto con ella.
+  const drawStatus = getQualifiersDrawStatus(currentTournament);
 
   return (
     <div className="space-y-6">
+      {drawStatus.state === 'partial' && (
+        <p className="border-2 border-gold bg-night/60 p-3 text-sm text-gold">
+          Sorteo incompleto:{' '}
+          {drawStatus.regionsMissing > 0
+            ? drawStatus.regionsMissing === 1
+              ? 'falta una región entera'
+              : `faltan ${drawStatus.regionsMissing} regiones enteras`
+            : `faltan partidos en ${drawStatus.groupsMissing} de ${drawStatus.totalGroups} grupos`}
+          .{' '}
+          {canRedrawQualifiers
+            ? 'Rehacé el sorteo para completarlo.'
+            : 'No se puede rehacer: ya se jugaron partidos.'}
+        </p>
+      )}
+
       {/* Header with Filter */}
       <Card className="overflow-hidden">
         <ViewHeader

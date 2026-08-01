@@ -183,11 +183,16 @@ describe('un modo nuevo, sólo con modes.config', () => {
       currentView: 'league',
       runningCompetitionIds: ['mundialito'],
     });
+    // El Hub encabeza la sección en todos los modos; abajo, la competición tal
+    // como la declaró el JSON.
     expect(nav.sections[0].items.map((i) => [i.label, i.icon, i.target.tab])).toEqual([
+      ['Inicio', 'home', undefined],
       ['Mundial de Clubes', 'trophy', 'mundialito'],
     ]);
     expect(nav.tab).toBe('mundialito');
-    expect(nav.allowed).toEqual(['league', 'comparison', 'favorites', 'champions', 'history', 'settings']);
+    expect(nav.allowed).toEqual([
+      'hub', 'league', 'comparison', 'favorites', 'champions', 'history', 'settings',
+    ]);
     expect(nav.primary.map((i) => i.shortLabel)).toEqual(['INICIO', 'VERSUS', 'FAVS', 'REYES']);
   });
 });

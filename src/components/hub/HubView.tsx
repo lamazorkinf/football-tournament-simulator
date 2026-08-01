@@ -20,14 +20,11 @@ interface HubViewProps {
   /** Los items `competition` de la nav del modo. No se re-derivan acá. */
   ladder: NavItem[];
   /**
-   * Vista actual de la app. Se tipa `View | 'hub'` y no sólo `View` porque
-   * HubView también se para en su propia raíz ('hub'), vista que todavía no
-   * existe en `types/view.ts` (la incorpora la Task 7 de este mismo plan,
-   * cuando se monta el componente). Ninguno de los items de `ladder` apunta
-   * a 'hub', así que en ese caso ningún peldaño queda marcado activo — es el
-   * comportamiento correcto parado en el inicio.
+   * Vista actual de la app: marca cuál peldaño de la escalera está activo.
+   * Parado en el inicio vale `'hub'`, que es el primer peldaño de la sección de
+   * competición en los dos motores.
    */
-  currentView: View | 'hub';
+  currentView: View;
   onSelectStep: (item: NavItem) => void;
   lastResult: MatchResult | null;
   /** El modo todavía no resolvió su estado: no se ofrece ninguna acción. */

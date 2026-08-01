@@ -136,7 +136,7 @@ export function serializeCycleState(cycle: Cycle): CycleStatePayload {
 /**
  * Calendario de un torneo legacy (sin cycle_state persistido): salta a la fase
  * Mundial que corresponde por su progreso real. NUNCA 'continental' — de otro
- * modo el wizard ofrecería "Sortear Continental" a un torneo con Mundial jugado.
+ * modo el Hub ofrecería "Sortear Continental" a un torneo con Mundial jugado.
  */
 export function deriveLegacyCalendar(base: Tournament): CalendarState {
   if (base.worldCup?.champion) return { phase: 'completed', matchday: 0 };

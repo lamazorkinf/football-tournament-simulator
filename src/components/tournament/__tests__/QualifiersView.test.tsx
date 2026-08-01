@@ -99,6 +99,41 @@ describe('QualifiersView — rehacer sorteo de clasificatorias (ConfirmDialog)',
   });
 });
 
+/**
+ * El aviso de sorteo a medias vivía en la tarjeta de Clasificatorias de la
+ * pantalla de progreso; al borrarla se mudó acá, que es donde está el botón que
+ * lo arregla. Estos dos casos son los que cubría allá.
+ */
+describe('QualifiersView — aviso de sorteo incompleto', () => {
+  it('sorteo incompleto: lo avisa e invita a rehacerlo', () => {
+    useTournamentStore.setState({ currentTournament: qualifiersCycle('Europe'), teams: [] });
+    renderQualifiers();
+
+    expect(screen.getByText(/sorteo incompleto/i)).toBeInTheDocument();
+    expect(screen.getByText(/rehacé el sorteo para completarlo/i)).toBeInTheDocument();
+  });
+
+  it('sorteo incompleto con partidos ya jugados: el aviso no invita a rehacer', () => {
+    const cycle = qualifiersCycle('Europe');
+    useTournamentStore.setState({
+      currentTournament: { ...cycle, hasAnyMatchPlayed: true },
+      teams: [],
+    });
+    renderQualifiers();
+
+    expect(screen.getByText(/sorteo incompleto/i)).toBeInTheDocument();
+    expect(screen.getByText(/no se puede rehacer/i)).toBeInTheDocument();
+    expect(screen.queryByText(/rehacé el sorteo para completarlo/i)).not.toBeInTheDocument();
+  });
+
+  it('sorteo completo: no hay aviso', () => {
+    useTournamentStore.setState({ currentTournament: qualifiersCycle(), teams: [] });
+    renderQualifiers();
+
+    expect(screen.queryByText(/sorteo incompleto/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('QualifiersView — botón de rehacer sorteo', () => {
   it('con el sorteo hecho y sin partidos jugados ofrece rehacerlo', () => {
     useTournamentStore.setState({ currentTournament: qualifiersCycle(), teams: [] });

@@ -63,8 +63,8 @@ export function ContinentalView({ cycle, teams, onNavigate }: ContinentalViewPro
       <EmptyState
         icon={Lock}
         title="Torneos continentales sin sortear"
-        description="Sorteá los cuatro torneos continentales desde Progreso para empezar el ciclo."
-        action={{ label: 'Ir a Progreso', onClick: () => onNavigate?.('wizard') }}
+        description="Sorteá los cuatro torneos continentales desde el inicio para empezar el ciclo."
+        action={{ label: 'Ir al inicio', onClick: () => onNavigate?.('hub') }}
       />
     );
   }
