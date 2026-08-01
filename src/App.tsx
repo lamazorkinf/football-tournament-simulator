@@ -39,6 +39,7 @@ import { useModeNav } from './hooks/useModeNav';
 import { useNextAction } from './hooks/useNextAction';
 import { themeForMode } from './lib/modeTheme';
 import { deriveHubHeader } from './modes/hubHeader';
+import { descriptorForMode } from './modes/registry';
 import { Trophy } from 'lucide-react';
 import type { View } from './types/view';
 
@@ -126,6 +127,31 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = themeForMode(activeMode);
   }, [activeMode]);
+
+  /**
+   * Cargar la temporada del modo activo.
+   *
+   * Vive acá, con las demás cargas de arranque, y NO adentro de una vista: la
+   * temporada es del MODO, no de una pantalla. Cuando la disparaba
+   * `SeasonModeView` alcanzaba de casualidad, porque la raíz de un modo de
+   * temporada era `'league'` y esa vista montaba al entrar; con el Hub como raíz
+   * única, entrar al modo dejaba la temporada sin cargar para siempre ("Cargando…"
+   * eterno, sin año y sin competiciones).
+   *
+   * La dependencia es el ID y no el objeto del modo: `loadForMode` no tiene guard
+   * de reentrada, y el objeto se reemplaza por identidad cada vez que se reescribe
+   * la lista de modos (`closeSeason`, por ejemplo, que además ya recarga sola).
+   * Así se carga exactamente una vez por modo al que se entra —incluso si la lista
+   * de modos resuelve después que el id, porque ahí el id efectivo pasa de null al
+   * del modo— y se vuelve a cargar al cambiar de modo con la app abierta.
+   */
+  const seasonModeId =
+    activeMode && descriptorForMode(activeMode).engine === 'season' ? activeMode.id : null;
+  useEffect(() => {
+    if (!seasonModeId) return;
+    const mode = useModeStore.getState().activeMode();
+    if (mode) useSeasonModeStore.getState().loadForMode(mode);
+  }, [seasonModeId]);
 
   useEffect(() => {
     loadTeamsFromDatabase();

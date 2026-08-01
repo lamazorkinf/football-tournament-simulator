@@ -1,9 +1,7 @@
-import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Trophy, Hammer } from 'lucide-react';
 import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { useModeNav } from '../../hooks/useModeNav';
-import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useModeJornada } from '../../hooks/useModeJornada';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -21,7 +19,6 @@ import type {
   ModeTournament,
   EliminacionTournament,
 } from '../../core/formats/modeTournament';
-import { descriptorForMode } from '../../modes/registry';
 import type { Competition } from '../../modes/types';
 import type { Match, Team } from '../../types';
 
@@ -40,8 +37,6 @@ function teamName(teams: Team[], id: string | null): string {
  * y la persistencia viven en useSeasonModeStore.
  */
 export function SeasonModeView({ onNavigate }: { onNavigate?: (view: string) => void } = {}) {
-  const activeModeId = useModeStore((s) => s.activeModeId);
-  const activeMode = useModeStore((s) => s.activeMode());
   const { status, year, currentYear, descriptor, tournaments, setActiveTab } =
     useSeasonModeStore();
   // Sólo el año en curso se juega. Los viejos se miran: el store no deja
@@ -51,13 +46,10 @@ export function SeasonModeView({ onNavigate }: { onNavigate?: (view: string) => 
   // pestañas queda para mobile y las dos no se pueden desincronizar.
   const nav = useModeNav('league');
 
-  // (Re)cargar la temporada cada vez que cambia el modo activo.
-  useEffect(() => {
-    if (activeMode && descriptorForMode(activeMode).engine === 'season') {
-      useSeasonModeStore.getState().loadForMode(activeMode);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeModeId]);
+  // La carga de la temporada NO vive acá: es del modo, no de esta pantalla, y
+  // atarla a que monte esta vista fue justamente lo que dejó a los modos de
+  // temporada colgados en "Cargando…" cuando el Hub pasó a ser la raíz. La
+  // dispara `App.tsx` al volverse activo el modo, valga la vista que valga.
 
   if (status === 'loading' || status === 'idle') {
     return <Centered>Cargando temporada…</Centered>;

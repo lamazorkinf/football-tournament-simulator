@@ -35,8 +35,10 @@ function ligaCompleta(id: string, name: string, division: string): LigaTournamen
  * Modo de temporada en la pestaña "Temporada", con las dos ligas terminadas: el
  * único estado en el que el botón de cerrar está habilitado.
  *
- * `loadForMode` va mockeada porque el efecto de montaje la dispara y pisaría lo
- * que sembramos; `closeSeason` también, para no depender de la persistencia.
+ * `closeSeason` va mockeada para no depender de la persistencia. `loadForMode`
+ * también, aunque esta vista ya no la dispare (la carga vive en `App.tsx`): si
+ * alguien vuelve a colgarla de un montaje, el test no sale a la red ni pisa lo
+ * que sembramos.
  */
 function seedSeasonReadyToClose(closeSeason: () => Promise<void>) {
   useModeStore.setState({
