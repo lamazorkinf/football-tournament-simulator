@@ -25,7 +25,7 @@ describe('useNextAction', () => {
   });
 
   it('modo de temporada: usa la rama de la temporada', () => {
-    // `activeModeId` solo no alcanza: `useModeDescriptor` resuelve por el `kind`
+    // `activeModeId` sólo no alcanza: `useModeDescriptor` resuelve por el `kind`
     // del modo activo en `modes`, así que hay que sembrarlo para que caiga en el
     // descriptor de Villamariense (engine 'season') y no en el de selecciones.
     useModeStore.setState({

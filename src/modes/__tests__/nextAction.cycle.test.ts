@@ -184,7 +184,7 @@ describe('deriveNextAction — ciclo, prioridad de fases', () => {
     expect(actionFor(null)).toBeNull();
   });
 
-  it('con un sorteo o batch en curso la accion queda deshabilitada', () => {
+  it('con un sorteo o batch en curso la acción queda deshabilitada', () => {
     const action = actionFor(toCycle(baseTournament()), makeActions(), vi.fn(), true);
     expect(action?.disabled).toBe(true);
   });
@@ -241,7 +241,7 @@ describe('deriveNextAction — ciclo, no festeja cuando el guard rechaza', () =>
     expect(nav).toHaveBeenCalledWith('continental');
   });
 
-  it('avanzar al mundial rechazado: no navega (la mas destructiva de las cuatro nuevas)', async () => {
+  it('avanzar al mundial rechazado: no navega (la más destructiva de las cuatro nuevas)', async () => {
     const nav = vi.fn();
     const actions = makeActions({ advanceToWorldCup: vi.fn(async () => false) });
     await actionFor(cycleReadyForWorldCup(), actions, nav)?.onPress();
@@ -263,7 +263,7 @@ describe('deriveNextAction — ciclo, matiz del toast de EMPEZAR', () => {
     expect(nav).toHaveBeenCalledWith('qualifiers');
   });
 
-  it('sin habilidades originales: el toast es el generico', async () => {
+  it('sin habilidades originales: el toast es el genérico', async () => {
     const action = actionFor(cycleReadyToDrawQualifiers(), makeActions(), vi.fn());
     expect(action?.label).toBe('▶ EMPEZAR');
     await action?.onPress();

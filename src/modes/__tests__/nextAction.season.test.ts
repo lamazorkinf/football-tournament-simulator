@@ -62,7 +62,7 @@ describe('deriveNextAction — temporada, prioridad', () => {
     expect(actionFor({ status: 'needs-seed', tournaments: [] })).toBeNull();
   });
 
-  it('sin conexion ofrece reintentar la carga', async () => {
+  it('sin conexión ofrece reintentar la carga', async () => {
     const actions = makeActions();
     const action = actionFor({ status: 'error', tournaments: [] }, actions);
     expect(action?.label).toBe('▶ REINTENTAR');
@@ -78,7 +78,7 @@ describe('deriveNextAction — temporada, prioridad', () => {
     expect(actions.startSeason).toHaveBeenCalled();
   });
 
-  it('con jornada pendiente: la ofrece con su rotulo y el torneo correcto', async () => {
+  it('con jornada pendiente: la ofrece con su rótulo y el torneo correcto', async () => {
     const lg = liga('lg-A', [match('m1', 1, true), match('m2', 2, false)]);
     const actions = makeActions();
     const action = actionFor({ status: 'ready', tournaments: [lg] }, actions);
@@ -96,13 +96,13 @@ describe('deriveNextAction — temporada, prioridad', () => {
     expect(actions.closeSeason).toHaveBeenCalled();
   });
 
-  it('la primera competicion con jornada pendiente gana, en orden', () => {
+  it('la primera competición con jornada pendiente gana, en orden', () => {
     const a = liga('lg-A', [match('a1', 1, true)]);
     const b = liga('lg-B', [match('b1', 1, false)]);
     expect(actionFor({ status: 'ready', tournaments: [a, b] })?.label).toBe('▶ SIMULAR FECHA 1');
   });
 
-  it('con una accion en vuelo queda deshabilitada', () => {
+  it('con una acción en vuelo queda deshabilitada', () => {
     const action = actionFor({ status: 'ready', tournaments: [] }, makeActions(), vi.fn(), true);
     expect(action?.disabled).toBe(true);
   });

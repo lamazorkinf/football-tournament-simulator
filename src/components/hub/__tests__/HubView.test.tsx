@@ -40,20 +40,20 @@ function props(over: Partial<React.ComponentProps<typeof HubView>> = {}) {
 }
 
 describe('HubView', () => {
-  it('muestra titulo y fase del modo', () => {
+  it('muestra título y fase del modo', () => {
     render(<HubView {...props()} />);
     expect(screen.getByText('Ciclo 2026')).toBeInTheDocument();
     expect(screen.getByText('Torneos Continentales')).toBeInTheDocument();
   });
 
-  it('el boton principal dispara la accion', async () => {
+  it('el botón principal dispara la acción', async () => {
     const onPress = vi.fn();
     render(<HubView {...props({ nextAction: { label: '▶ EMPEZAR', onPress } })} />);
     await userEvent.click(screen.getByRole('button', { name: /EMPEZAR/ }));
     expect(onPress).toHaveBeenCalled();
   });
 
-  it('respeta el disabled de la accion', async () => {
+  it('respeta el disabled de la acción', async () => {
     const onPress = vi.fn();
     render(
       <HubView {...props({ nextAction: { label: '▶ EMPEZAR', onPress, disabled: true } })} />,
@@ -75,7 +75,7 @@ describe('HubView', () => {
     expect(screen.getByRole('button', { name: /SIMULAR FECHA 4/ })).toBeInTheDocument();
   });
 
-  it('sin proxima accion muestra el cierre y ofrece torneo nuevo', async () => {
+  it('sin próxima acción muestra el cierre y ofrece torneo nuevo', async () => {
     const onNewTournament = vi.fn();
     render(<HubView {...props({ nextAction: null, onNewTournament })} />);
     expect(screen.getByText(/no queda nada por jugar/i)).toBeInTheDocument();
@@ -83,22 +83,22 @@ describe('HubView', () => {
     expect(onNewTournament).toHaveBeenCalled();
   });
 
-  it('sin proxima accion y sin salida no rinde boton de cierre', () => {
+  it('sin próxima acción y sin salida no rinde botón de cierre', () => {
     render(<HubView {...props({ nextAction: null })} />);
     expect(screen.queryByRole('button', { name: /Nuevo torneo/i })).not.toBeInTheDocument();
   });
 
-  it('cargando no ofrece ninguna accion', () => {
+  it('cargando no ofrece ninguna acción', () => {
     render(<HubView {...props({ isLoading: true })} />);
     expect(screen.queryByRole('button', { name: /SORTEAR/ })).not.toBeInTheDocument();
   });
 
-  it('sin ultimo resultado no rinde ese bloque', () => {
+  it('sin último resultado no rinde ese bloque', () => {
     render(<HubView {...props()} />);
     expect(screen.queryByText(/ultimo resultado/i)).not.toBeInTheDocument();
   });
 
-  it('con ultimo resultado lo muestra', () => {
+  it('con último resultado lo muestra', () => {
     render(
       <HubView
         {...props({
@@ -110,7 +110,32 @@ describe('HubView', () => {
     expect(screen.getByText('Brasil')).toBeInTheDocument();
   });
 
-  it('el peldano de la escalera avisa cual se eligio', async () => {
+  it('con ids de equipo en el resultado rinde las banderas', () => {
+    // Ids de selección (código de país): `TeamFlag` deriva la URL del id y no
+    // depende del pool de equipos del store, así que no hace falta sembrarlo
+    // para que esta rama sea honesta — si se rompe la condición que hoy exige
+    // `homeTeamId`/`awayTeamId`, este test deja de encontrar el <img>.
+    render(
+      <HubView
+        {...props({
+          lastResult: {
+            homeTeam: 'Islandia',
+            awayTeam: 'Brasil',
+            homeTeamId: 'isl',
+            awayTeamId: 'bra',
+            homeScore: 2,
+            awayScore: 1,
+          },
+        })}
+      />,
+    );
+    const homeFlag = screen.getByRole('img', { name: /islandia/i });
+    const awayFlag = screen.getByRole('img', { name: /brasil/i });
+    expect(homeFlag).toHaveAttribute('src', expect.stringContaining('flagcdn.com'));
+    expect(awayFlag).toHaveAttribute('src', expect.stringContaining('flagcdn.com'));
+  });
+
+  it('el peldaño de la escalera avisa cuál se eligió', async () => {
     const onSelectStep = vi.fn();
     render(<HubView {...props({ onSelectStep })} />);
     await userEvent.click(screen.getByRole('button', { name: 'Continental' }));
