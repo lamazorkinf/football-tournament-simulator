@@ -410,6 +410,10 @@ export const matchHistoryService = {
       .eq('tournament_id', tournamentId);
 
     if (error) throw error;
+    // Un borrado cambia el historial tanto como un insert: sin este bump, la
+    // portada del Hub sigue titulando partidos que ya no existen hasta que algo
+    // más inserte.
+    bumpHistoryRevision();
   },
 
   // Suscripción a inserts en tiempo real. Entrega la fila nueva ya convertida;

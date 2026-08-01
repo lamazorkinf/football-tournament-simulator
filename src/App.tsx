@@ -90,7 +90,12 @@ function App() {
   // de `useNextAction`: con una función nueva por render no acertaría nunca.
   const navigateTo = useCallback((view: View) => handleNavigate(view), [handleNavigate]);
   const nextAction = useNextAction(navigateTo);
-  const headlines = useRecentHeadlines();
+  // El hook se llama SIEMPRE, en todos los renders: lo que cambia con la vista
+  // es su argumento, no si se lo invoca (ver el comentario de arriba sobre la
+  // cantidad de hooks). Apagado fuera del Hub porque la portada sólo se dibuja
+  // ahí, y simular una tanda de octavos con el Hub desmontado disparaba una
+  // consulta de 80 filas por partido contra la misma conexión que los writes.
+  const headlines = useRecentHeadlines(currentView === 'hub');
   // Suscripción, no getState(): el Hub tiene que re-renderizar cuando la lista
   // de modos termina de cargar.
   const modesLoaded = useModeStore((s) => s.isLoaded);

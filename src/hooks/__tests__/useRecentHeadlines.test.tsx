@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useRecentHeadlines } from '../useRecentHeadlines';
+import { toHeadlineMatch, useRecentHeadlines } from '../useRecentHeadlines';
 import { matchHistoryService, type MatchHistoryEntry } from '../../services/matchHistoryService';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
@@ -148,5 +148,150 @@ describe('useRecentHeadlines', () => {
     await flush();
 
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('useRecentHeadlines — filas reconstruidas por el backfill', () => {
+  /**
+   * EL ESCENARIO. Bolivia le ganó 2-1 a Brasil en la Copa América con los dos en
+   * 70 y el insert best-effort se perdió. Dos años después el backfill reinserta
+   * la fila con `played_at = now()` y el skill de HOY (55 y 90) en las dos
+   * columnas de "antes", con los dos cambios en 0. La brecha de 35 es fabricada
+   * y no puede titular BATACAZO.
+   */
+  const delBackfill = (over: Partial<MatchHistoryEntry> = {}): MatchHistoryEntry => ({
+    id: 'backfill-1',
+    homeTeamId: 'bol',
+    awayTeamId: 'bra',
+    homeScore: 2,
+    awayScore: 1,
+    stage: 'continental',
+    homeSkillBefore: 55,
+    awaySkillBefore: 90,
+    homeSkillAfter: 55,
+    awaySkillAfter: 90,
+    homeSkillChange: 0,
+    awaySkillChange: 0,
+    playedAt: '2028-01-01T00:00:00Z',
+    ...over,
+  });
+
+  it('los dos deltas en cero marcan la fila como reconstruida', () => {
+    expect(toHeadlineMatch(delBackfill()).skillsReconstructed).toBe(true);
+    expect(toHeadlineMatch(batacazo()).skillsReconstructed).toBe(false);
+  });
+
+  it('una fila del backfill no titula BATACAZO', async () => {
+    vi.spyOn(matchHistoryService, 'getMatchesPage').mockResolvedValue(page([delBackfill()]));
+    const { result } = renderHook(() => useRecentHeadlines());
+    await flush();
+
+    expect(result.current).toEqual([]);
+  });
+
+  it('una fila del backfill no titula AGUANTE', async () => {
+    vi.spyOn(matchHistoryService, 'getMatchesPage')
+      .mockResolvedValue(page([delBackfill({ homeScore: 1, awayScore: 1 })]));
+    const { result } = renderHook(() => useRecentHeadlines());
+    await flush();
+
+    expect(result.current).toEqual([]);
+  });
+
+  /** La diferencia de gol es real aun cuando los skills se hayan fabricado. */
+  it('una fila del backfill sí titula GOLEADA', async () => {
+    vi.spyOn(matchHistoryService, 'getMatchesPage')
+      .mockResolvedValue(page([delBackfill({ homeScore: 5, awayScore: 0 })]));
+    const { result } = renderHook(() => useRecentHeadlines());
+    await flush();
+
+    expect(result.current[0].kind).toBe('rout');
+  });
+});
+
+describe('useRecentHeadlines — cambio de modo', () => {
+  /**
+   * EL ESCENARIO. Parado en selecciones con la portada llena, se elige la Liga
+   * Villamariense. Antes, el estado sobrevivía al switch (`ModeSelector` no
+   * remonta nada) y la portada seguía mostrando "BATACAZO — Islandia 2 - 1
+   * Brasil" durante los 300 ms del debounce más el round trip, ya con el pool de
+   * equipos rotado: los nombres caían al id crudo sobre el Hub del otro modo.
+   */
+  it('la portada se vacía en el MISMO render, sin esperar la consulta', async () => {
+    vi.spyOn(matchHistoryService, 'getMatchesPage').mockResolvedValue(page([batacazo()]));
+    const { result } = renderHook(() => useRecentHeadlines());
+    await flush();
+    expect(result.current).toHaveLength(1);
+
+    // Cambio de modo: ni un tick de timers, como en el render inmediato del switch.
+    act(() => {
+      useModeStore.setState({ activeModeId: 'selecciones' });
+    });
+
+    expect(result.current).toEqual([]);
+  });
+
+  it('los titulares del modo nuevo aparecen cuando resuelve su consulta', async () => {
+    const spy = vi.spyOn(matchHistoryService, 'getMatchesPage')
+      .mockResolvedValue(page([batacazo()]));
+    const { result } = renderHook(() => useRecentHeadlines());
+    await flush();
+
+    act(() => {
+      useModeStore.setState({ activeModeId: 'selecciones' });
+    });
+    await flush();
+
+    expect(spy).toHaveBeenLastCalledWith({ modeId: 'selecciones', pageSize: 80 });
+    expect(result.current).toHaveLength(1);
+  });
+});
+
+describe('useRecentHeadlines — habilitado', () => {
+  /**
+   * EL ESCENARIO. Octavos del Mundial: `simulateRoundBatch` es secuencial y cada
+   * llave espera dos round trips, o sea más de un debounce entre incrementos de
+   * la revisión. Con el hook siempre encendido eso eran 16 páginas de 80 filas
+   * peleándole la conexión a los writes, con el Hub desmontado.
+   */
+  it('deshabilitado no consulta, ni siquiera al cambiar la revisión', async () => {
+    const spy = vi.spyOn(matchHistoryService, 'getMatchesPage').mockResolvedValue(page([]));
+    renderHook(() => useRecentHeadlines(false));
+    await flush();
+    expect(spy).not.toHaveBeenCalled();
+
+    for (let i = 0; i < 16; i++) {
+      act(() => {
+        useHistoryRevisionStore.getState().bump();
+      });
+      await flush();
+    }
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Ir a otra vista y volver no puede parpadear: lo cacheado se muestra al toque
+   * y la consulta del re-encendido lo refresca 300 ms después.
+   */
+  it('apagar y volver a prender conserva lo que ya tenía y refresca', async () => {
+    const spy = vi.spyOn(matchHistoryService, 'getMatchesPage')
+      .mockResolvedValue(page([batacazo()]));
+    const { result, rerender } = renderHook(({ on }) => useRecentHeadlines(on), {
+      initialProps: { on: true },
+    });
+    await flush();
+    expect(result.current).toHaveLength(1);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    rerender({ on: false });
+    await flush();
+    expect(result.current).toHaveLength(1);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    rerender({ on: true });
+    await flush();
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(result.current).toHaveLength(1);
   });
 });

@@ -38,6 +38,18 @@ export interface HeadlineMatch {
    * el titular a ALARGUE, que sigue siendo cierto.
    */
   penalties?: { homeScore: number; awayScore: number };
+  /**
+   * Los skills previos de esta fila NO se midieron: se fabricaron al
+   * reconstruirla. `collectPlayedCycleMatches` rellena `skillBefore` con el
+   * skill de HOY porque el partido original nunca llegó a guardarse, así que la
+   * brecha que sale de esas columnas es ficción — Bolivia le ganó a Brasil
+   * cuando ambos estaban en 70 y la fila reconstruida dice 55 contra 90.
+   *
+   * Por eso BATACAZO y AGUANTE, los dos titulares que leen la brecha, no se
+   * emiten. GOLEADA y PENALES/ALARGUE sí: la diferencia de gol y la forma de
+   * definición son datos reales aun en una fila reconstruida.
+   */
+  skillsReconstructed?: boolean;
 }
 
 export interface Headline {
@@ -115,8 +127,10 @@ function candidatesFor(m: HeadlineMatch): Candidate[] {
   const draw = m.homeScore === m.awayScore;
   const homeWon = m.homeScore > m.awayScore;
   const winnerId = homeWon ? m.homeTeamId : m.awayTeamId;
+  /** Ver `skillsReconstructed`: en una fila reconstruida la brecha no mide nada. */
+  const gapIsReal = !m.skillsReconstructed;
 
-  if (!draw && gap >= UPSET_MIN_GAP) {
+  if (!draw && gapIsReal && gap >= UPSET_MIN_GAP) {
     const winnerSkill = homeWon ? m.homeSkillBefore : m.awaySkillBefore;
     const loserSkill = homeWon ? m.awaySkillBefore : m.homeSkillBefore;
     if (winnerSkill < loserSkill) {
@@ -156,7 +170,11 @@ function candidatesFor(m: HeadlineMatch): Candidate[] {
     });
   }
 
-  if (draw && gap >= HOLD_MIN_GAP) {
+  // `!m.penalties`: en una eliminación directa definida por penales el marcador
+  // queda empatado, pero nadie empató. Sin este guard el AGUANTE corona al que
+  // erró la tanda y quedó eliminado, y encima con el puntaje más alto de la
+  // portada (la base de `hold` le gana a la de `decider` desde brecha 35).
+  if (draw && gapIsReal && !m.penalties && gap >= HOLD_MIN_GAP) {
     out.push({
       kind: 'hold',
       label: 'AGUANTE',

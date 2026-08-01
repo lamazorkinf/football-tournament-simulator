@@ -1,7 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from '../App';
+import { HEADLINES_DEBOUNCE_MS } from '../hooks/useRecentHeadlines';
 import { matchHistoryService, type MatchHistoryEntry } from '../services/matchHistoryService';
+import { useHistoryRevisionStore } from '../store/useHistoryRevisionStore';
 import { useModeStore } from '../store/useModeStore';
 import { useSeasonModeStore } from '../store/useSeasonModeStore';
 import { useTournamentStore } from '../store/useTournamentStore';
@@ -41,6 +44,13 @@ const BATACAZO: MatchHistoryEntry = {
   playedAt: '2026-01-01T00:00:00Z',
 };
 
+/**
+ * Cuánto espera este archivo por algo que depende del debounce de 300 ms de la
+ * portada. Con timers reales, el default de `findByText` (1000 ms) deja ~640 ms
+ * de margen medido: holgura de sobra para que no titile.
+ */
+const ESPERA_MS = 5000;
+
 beforeEach(() => {
   vi.clearAllMocks();
   useTournamentStore.setState({
@@ -79,7 +89,10 @@ describe('App — los titulares llegan al Hub', () => {
 
     render(<App />);
 
-    expect(await screen.findByText('BATACAZO')).toBeInTheDocument();
+    // Timeout explícito: la consulta espera el debounce de 300 ms y recién
+    // después resuelve. Con el default de 1000 ms el margen quedaba en ~640 ms,
+    // justo en el test que no puede ser intermitente.
+    expect(await screen.findByText('BATACAZO', {}, { timeout: ESPERA_MS })).toBeInTheDocument();
     expect(screen.getByText('Ben Hur')).toBeInTheDocument();
   });
 
@@ -94,5 +107,36 @@ describe('App — los titulares llegan al Hub', () => {
 
     await waitFor(() => expect(matchHistoryService.getMatchesPage).toHaveBeenCalled());
     expect(screen.queryByText(/titulares/i)).not.toBeInTheDocument();
+  });
+
+  /**
+   * EL ESCENARIO. Simular los octavos del Mundial son 16 incrementos de la
+   * revisión espaciados por más de un debounce (`simulateRoundBatch` es
+   * secuencial y cada llave espera dos round trips): con el hook siempre
+   * encendido, eso son hasta 16 páginas de 80 filas peleándole la conexión a los
+   * writes de la simulación mientras el Hub ni siquiera está montado.
+   */
+  it('fuera del Hub, la portada no vuelve a consultar', async () => {
+    vi.spyOn(matchHistoryService, 'getMatchesPage').mockResolvedValue({
+      matches: [BATACAZO],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    render(<App />);
+    await screen.findByText('BATACAZO', {}, { timeout: ESPERA_MS });
+
+    // Salir del Hub a una vista que no lee el historial (Ajustes).
+    await userEvent.click(screen.getAllByRole('button', { name: /Ajustes/i })[0]);
+    await waitFor(() => expect(screen.queryByText('BATACAZO')).not.toBeInTheDocument());
+
+    const antes = vi.mocked(matchHistoryService.getMatchesPage).mock.calls.length;
+    // Diez inserts del motor, como una fecha cualquiera de la simulación.
+    for (let i = 0; i < 10; i++) act(() => useHistoryRevisionStore.getState().bump());
+    // Bastante más que el debounce: si el hook siguiera encendido, ya habría
+    // consultado.
+    await new Promise((resolve) => setTimeout(resolve, HEADLINES_DEBOUNCE_MS * 3));
+
+    expect(vi.mocked(matchHistoryService.getMatchesPage).mock.calls.length).toBe(antes);
   });
 });

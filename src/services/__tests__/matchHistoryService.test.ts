@@ -302,4 +302,36 @@ describe('revisión del historial', () => {
 
     expect(useHistoryRevisionStore.getState().revision).toBe(antes + 1);
   });
+
+  /** Un `delete().eq()` que resuelve con `{ error }`, como el del cliente real. */
+  const mockDelete = (error: Error | null) => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { from: (...a: unknown[]) => unknown }, 'from')
+      .mockReturnValue({
+        delete: () => ({ eq: async () => ({ error }) }),
+      } as never);
+  };
+
+  /**
+   * Un borrado cambia el historial tanto como un insert. Sin bump, borrar los
+   * partidos de un torneo deja la portada del Hub titulando partidos que ya no
+   * existen hasta el próximo insert.
+   */
+  it('un borrado exitoso incrementa la revisión', async () => {
+    mockDelete(null);
+
+    const antes = useHistoryRevisionStore.getState().revision;
+    await matchHistoryService.deleteMatchesByTournament('t1');
+
+    expect(useHistoryRevisionStore.getState().revision).toBe(antes + 1);
+  });
+
+  it('un borrado fallido NO incrementa la revisión', async () => {
+    mockDelete(new Error('sin red'));
+
+    const antes = useHistoryRevisionStore.getState().revision;
+    await expect(matchHistoryService.deleteMatchesByTournament('t1')).rejects.toThrow();
+
+    expect(useHistoryRevisionStore.getState().revision).toBe(antes);
+  });
 });

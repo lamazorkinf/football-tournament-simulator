@@ -100,6 +100,102 @@ describe('deriveHeadlines — aguante', () => {
       match({ homeScore: 1, awayScore: 1, homeSkillBefore: 68, awaySkillBefore: 75 }),
     ])).toEqual([]);
   });
+
+  /**
+   * En una eliminación directa nadie empata. El 0-0 es sólo cómo terminaron los
+   * 120 minutos: el sujeto del "AGUANTE" sería el que erró la tanda y quedó
+   * eliminado, y encima con 1.04 de puntaje —el más alto que puede sacar la
+   * portada— porque la base de `hold` (0.8 × 40/40) le gana a la de `decider`.
+   */
+  it('una definición por penales NO es aguante, aunque el marcador esté empatado', () => {
+    const res = deriveHeadlines([
+      match({
+        homeScore: 0,
+        awayScore: 0,
+        homeSkillBefore: 55,
+        awaySkillBefore: 95,
+        stage: 'world-cup-knockout',
+        penalties: { homeScore: 2, awayScore: 4 },
+      }),
+    ]);
+    expect(res.map((h) => h.kind)).not.toContain('hold');
+    expect(res).toHaveLength(1);
+    expect(res[0].label).toBe('PENALES');
+    // El que perdió la tanda no queda de sujeto de nada.
+    expect(res[0].subjectTeamId).toBeUndefined();
+  });
+});
+
+describe('deriveHeadlines — filas reconstruidas', () => {
+  /**
+   * EL ESCENARIO. Bolivia le ganó 2-1 a Brasil en la Copa América cuando los dos
+   * estaban en 70 y el insert se perdió por un bache de red. Dos años después
+   * Bolivia está en 55 y Brasil en 90; el backfill reinserta la fila con
+   * `played_at = now()` y esos skills de HOY. La brecha de 35 nunca existió.
+   */
+  const reconstruida = (over: Partial<HeadlineMatch> = {}): HeadlineMatch =>
+    match({
+      homeTeamId: 'bol',
+      awayTeamId: 'bra',
+      homeScore: 2,
+      awayScore: 1,
+      homeSkillBefore: 55,
+      awaySkillBefore: 90,
+      stage: 'continental',
+      skillsReconstructed: true,
+      ...over,
+    });
+
+  it('la brecha fabricada no produce BATACAZO', () => {
+    expect(deriveHeadlines([reconstruida()])).toEqual([]);
+    // Control: la MISMA fila sin la marca sí titula, o sea que el test mide la
+    // marca y no otra cosa.
+    const [h] = deriveHeadlines([reconstruida({ skillsReconstructed: false })]);
+    expect(h.kind).toBe('upset');
+  });
+
+  it('la brecha fabricada tampoco produce AGUANTE', () => {
+    expect(deriveHeadlines([
+      reconstruida({ homeScore: 1, awayScore: 1 }),
+    ])).toEqual([]);
+    const [h] = deriveHeadlines([
+      reconstruida({ homeScore: 1, awayScore: 1, skillsReconstructed: false }),
+    ]);
+    expect(h.kind).toBe('hold');
+  });
+
+  /** La diferencia de gol es un dato real aun en una fila reconstruida. */
+  it('la GOLEADA se sigue emitiendo', () => {
+    const [h] = deriveHeadlines([reconstruida({ homeScore: 5, awayScore: 0 })]);
+    expect(h.kind).toBe('rout');
+    expect(h.detail).toBe('5 goles de diferencia');
+  });
+
+  /** El alargue y la tanda también son datos reales. */
+  it('la definición se sigue emitiendo', () => {
+    const [penales] = deriveHeadlines([
+      reconstruida({ homeScore: 1, awayScore: 1, penalties: { homeScore: 4, awayScore: 2 } }),
+    ]);
+    expect(penales.label).toBe('PENALES');
+
+    const [alargue] = deriveHeadlines([reconstruida({ wentToExtraTime: true })]);
+    expect(alargue.label).toBe('ALARGUE');
+  });
+
+  /** Las rachas cuentan victorias, no brechas: la marca no las toca. */
+  it('la RACHA se sigue emitiendo', () => {
+    const gana = (rival: string, over: Partial<HeadlineMatch> = {}) =>
+      reconstruida({ awayTeamId: rival, homeScore: 1, awayScore: 0, ...over });
+    const [h] = deriveHeadlines([
+      gana('B'),
+      gana('C'),
+      gana('D'),
+      gana('E'),
+      gana('F', { homeScore: 0, awayScore: 1 }),
+    ]);
+    expect(h.kind).toBe('streak');
+    expect(h.subjectTeamId).toBe('bol');
+  });
 });
 
 describe('deriveHeadlines — selección', () => {

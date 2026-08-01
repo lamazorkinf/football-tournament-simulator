@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from '../lib/supabase';
 import { db } from '../lib/supabaseNormalized';
+import { bumpHistoryRevision } from '../store/useHistoryRevisionStore';
 import type { WorldCupGroup, Match, KnockoutMatch } from '../types';
 
 /**
@@ -415,6 +416,11 @@ export const normalizedWorldCupService = {
         .eq('stage', 'world-cup-knockout');
 
       if (historyError) throw historyError;
+
+      // Regenerar el bracket borra partidos de `match_history`: el historial
+      // cambió y quien lo lee tiene que enterarse, igual que con un insert. Sin
+      // esto la portada del Hub sigue titulando un octavos que ya no existe.
+      bumpHistoryRevision();
 
       console.log(`Deleted knockout data for tournament ${tournamentId}`);
     } catch (error) {
