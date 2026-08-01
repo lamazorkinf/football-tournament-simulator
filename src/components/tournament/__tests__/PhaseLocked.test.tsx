@@ -23,11 +23,11 @@ describe('Fase bloqueada', () => {
     // tiene por qué romper el test cada vez.
     expect(screen.getByText(/copa confederaciones bloqueada/i)).toBeInTheDocument();
 
-    // A Progreso, que es donde vive el sorteo de confederaciones. Mandar a
+    // Al inicio, que es donde vive el sorteo de confederaciones. Mandar a
     // Continental deja al usuario en una llave ya jugada apenas esa fase
     // termina, que es justo cuando más probable es que entre acá.
-    await userEvent.click(screen.getByRole('button', { name: /ir a progreso/i }));
-    expect(onNavigate).toHaveBeenCalledWith('wizard');
+    await userEvent.click(screen.getByRole('button', { name: /ir al inicio/i }));
+    expect(onNavigate).toHaveBeenCalledWith('hub');
   });
 
   it('explica el desbloqueo cuando los continentales no fueron sorteados', async () => {
@@ -48,8 +48,8 @@ describe('Fase bloqueada', () => {
 
     expect(screen.getByText(/sortear/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /ir a progreso/i }));
-    expect(onNavigate).toHaveBeenCalledWith('wizard');
+    await userEvent.click(screen.getByRole('button', { name: /ir al inicio/i }));
+    expect(onNavigate).toHaveBeenCalledWith('hub');
   });
 
   it('explica el bloqueo cuando las clasificatorias todavía no se sortearon', async () => {
@@ -62,8 +62,8 @@ describe('Fase bloqueada', () => {
 
     expect(screen.getByText(/clasificatorias sin sortear/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /ir a progreso/i }));
-    expect(onNavigate).toHaveBeenCalledWith('wizard');
+    await userEvent.click(screen.getByRole('button', { name: /ir al inicio/i }));
+    expect(onNavigate).toHaveBeenCalledWith('hub');
   });
 
   it('NO tapa las clasificatorias ya sorteadas', () => {
@@ -109,6 +109,6 @@ describe('Fase bloqueada', () => {
 
     render(<ContinentalView cycle={cycle} teams={teams} onNavigate={vi.fn()} />);
 
-    expect(screen.queryByRole('button', { name: /ir a progreso/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ir al inicio/i })).not.toBeInTheDocument();
   });
 });

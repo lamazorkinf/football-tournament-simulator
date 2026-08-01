@@ -8,7 +8,7 @@ describe('Sidebar', () => {
   it('incluye entradas Continental y Confederaciones y navega al hacer click', async () => {
     useTournamentStore.setState({ tournaments: [], currentTournamentId: null });
     const onViewChange = vi.fn();
-    render(<Sidebar currentView="wizard" onViewChange={onViewChange} tournamentYear={2026} />);
+    render(<Sidebar currentView="hub" onViewChange={onViewChange} tournamentYear={2026} />);
 
     await userEvent.click(screen.getByRole('button', { name: /continental/i }));
     expect(onViewChange).toHaveBeenCalledWith('continental');
@@ -19,7 +19,7 @@ describe('Sidebar', () => {
 
   it('agrupa los ítems en secciones', () => {
     useTournamentStore.setState({ tournaments: [], currentTournamentId: null });
-    render(<Sidebar currentView="wizard" onViewChange={vi.fn()} tournamentYear={2026} />);
+    render(<Sidebar currentView="hub" onViewChange={vi.fn()} tournamentYear={2026} />);
 
     expect(screen.getByText('Ciclo actual')).toBeInTheDocument();
     expect(screen.getByText('Datos')).toBeInTheDocument();
@@ -39,7 +39,7 @@ describe('Sidebar', () => {
       } as never,
     });
     const onViewChange = vi.fn();
-    render(<Sidebar currentView="wizard" onViewChange={onViewChange} tournamentYear={2026} />);
+    render(<Sidebar currentView="hub" onViewChange={onViewChange} tournamentYear={2026} />);
 
     const confed = screen.getByRole('button', { name: /confederaciones/i });
     expect(confed).not.toBeDisabled();

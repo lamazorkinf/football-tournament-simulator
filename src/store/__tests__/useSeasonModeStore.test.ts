@@ -263,8 +263,10 @@ describe('useSeasonModeStore — la temporada villamariense, dirigida por el des
       requestedTab: 'season',
       runningCompetitionIds: tournaments.map((t) => t.competitionId),
     });
+    // El Hub encabeza la sección en todos los modos; abajo, un item por torneo
+    // creado, en el orden del descriptor.
     expect(nav.sections[0].items.map((i) => i.label)).toEqual([
-      'Liga A', 'Liga B', 'Copa', 'Temporada', 'Escudos',
+      'Inicio', 'Liga A', 'Liga B', 'Copa', 'Temporada', 'Escudos',
     ]);
     expect(nav.tab).toBe('season');
   });

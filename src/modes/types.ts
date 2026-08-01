@@ -165,3 +165,36 @@ export interface ModeDescriptor {
   archiveTabs: View[];
   engine: ModeEngine;
 }
+
+/**
+ * ¿ESTE modo puede cerrar su temporada? Es la mitad declarativa del guard de
+ * `closeSeason`: cerrar aplica la escalera de ascensos y descensos, así que el
+ * modo tiene que declararla (`promotion`), tener al menos dos divisiones entre
+ * las que mover equipos, y correr una liga por división — la tabla de la que
+ * salen los que suben y los que bajan.
+ *
+ * La otra mitad —que esas ligas ya estén terminadas— es estado y no
+ * configuración, así que la sigue mirando el store.
+ *
+ * Vive acá, con el descriptor, porque son tres los que la preguntan: el store
+ * (que lo prohíbe), `deriveNextAction` (que si no ofrece "CERRAR TEMPORADA" a
+ * un modo donde jamás va a funcionar) y `deriveHubHeader` (que lo explica). Un
+ * "Mundial de Clubes" —sin divisiones y sin ascensos— es exactamente el modo
+ * que quedaba con ese botón muerto.
+ *
+ * Va como type predicate y no como `boolean` para que el store no tenga que
+ * repetir el chequeo de `promotion` sólo para convencer a TypeScript.
+ */
+export function canCloseSeason(
+  descriptor: ModeDescriptor,
+): descriptor is ModeDescriptor & { promotion: { count: number } } {
+  if (!descriptor.promotion || descriptor.divisions.length < 2) return false;
+  return descriptor.divisions.every((division) =>
+    descriptor.competitions.some(
+      (c) =>
+        c.format === 'liga' &&
+        c.entrants.from === 'division' &&
+        c.entrants.division === division,
+    ),
+  );
+}

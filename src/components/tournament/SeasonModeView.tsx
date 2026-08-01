@@ -1,9 +1,7 @@
-import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { Trophy, Play, Hammer, Shield } from 'lucide-react';
+import { Trophy, Hammer } from 'lucide-react';
 import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { useModeNav } from '../../hooks/useModeNav';
-import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useModeJornada } from '../../hooks/useModeJornada';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -21,7 +19,6 @@ import type {
   ModeTournament,
   EliminacionTournament,
 } from '../../core/formats/modeTournament';
-import { descriptorForMode } from '../../modes/registry';
 import type { Competition } from '../../modes/types';
 import type { Match, Team } from '../../types';
 
@@ -39,10 +36,8 @@ function teamName(teams: Team[], id: string | null): string {
  * según su `format`, así que un modo nuevo no agrega componentes. La simulación
  * y la persistencia viven en useSeasonModeStore.
  */
-export function SeasonModeView() {
-  const activeModeId = useModeStore((s) => s.activeModeId);
-  const activeMode = useModeStore((s) => s.activeMode());
-  const { status, year, currentYear, descriptor, tournaments, busy, startSeason, setActiveTab } =
+export function SeasonModeView({ onNavigate }: { onNavigate?: (view: string) => void } = {}) {
+  const { status, year, currentYear, descriptor, tournaments, setActiveTab } =
     useSeasonModeStore();
   // Sólo el año en curso se juega. Los viejos se miran: el store no deja
   // simular, iniciar ni cerrar desde ahí, y acá no se ofrecen los botones.
@@ -51,13 +46,10 @@ export function SeasonModeView() {
   // pestañas queda para mobile y las dos no se pueden desincronizar.
   const nav = useModeNav('league');
 
-  // (Re)cargar la temporada cada vez que cambia el modo activo.
-  useEffect(() => {
-    if (activeMode && descriptorForMode(activeMode).engine === 'season') {
-      useSeasonModeStore.getState().loadForMode(activeMode);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeModeId]);
+  // La carga de la temporada NO vive acá: es del modo, no de esta pantalla, y
+  // atarla a que monte esta vista fue justamente lo que dejó a los modos de
+  // temporada colgados en "Cargando…" cuando el Hub pasó a ser la raíz. La
+  // dispara `App.tsx` al volverse activo el modo, valga la vista que valga.
 
   if (status === 'loading' || status === 'idle') {
     return <Centered>Cargando temporada…</Centered>;
@@ -69,7 +61,12 @@ export function SeasonModeView() {
   const seasonReady = status === 'ready' && tournaments.length > 0;
   const leagues = tournaments.filter((t): t is LigaTournament => t.format === 'liga');
 
-  const tabs = nav.sections.find((s) => s.key === 'competition')?.items ?? [];
+  // Sólo los items que SON pestañas de esta vista: la sección de competición la
+  // encabeza el Hub, que es una vista aparte (su `target` no trae `tab`) y no
+  // tiene nada que hacer en esta barra.
+  const tabs = (nav.sections.find((s) => s.key === 'competition')?.items ?? []).filter(
+    (t) => t.target.tab !== undefined,
+  );
   const activeTab = nav.tab;
   const activeRun = tournaments.find((t) => t.competitionId === activeTab) ?? null;
   const activeCompetition = activeRun
@@ -102,40 +99,17 @@ export function SeasonModeView() {
 
       {activeTab === 'crests' && <CrestManager />}
 
-      {activeTab === 'main' && status === 'needs-seed' && (
-        <Centered>
-          <Shield className="w-12 h-12 text-gold mx-auto mb-4" />
-          <p className="font-arcade text-sm text-gold mb-3">{activeMode?.name} — sin equipos todavía</p>
-          <p className="text-sm text-grass-soft max-w-md">
-            Este modo todavía no tiene sus divisiones cargadas. En cuanto se siembren los clubes
-            (con su división y skill inicial), vas a poder iniciar la temporada {year} acá.
-          </p>
-        </Centered>
-      )}
-
-      {activeTab === 'main' && status === 'ready' && isCurrentSeason && (
-        <Centered>
-          <Trophy className="w-12 h-12 text-gold mx-auto mb-4" />
-          <p className="font-arcade text-sm text-gold mb-4">Temporada {year} lista para arrancar</p>
-          <Button onClick={startSeason} loading={busy} className="gap-2">
-            <Play className="w-4 h-4" /> Iniciar temporada {year}
-          </Button>
-        </Centered>
-      )}
-
-      {activeTab === 'main' && status === 'ready' && !isCurrentSeason && (
-        <Centered>
-          <Trophy className="w-12 h-12 text-grass-soft mx-auto mb-4" />
-          <p className="font-arcade text-sm text-grass-soft">
-            La temporada {year} nunca se jugó
-          </p>
-        </Centered>
-      )}
-
+      {/* La portada del modo —"temporada lista para arrancar", "sin equipos
+          todavía"— vivía acá, en una pestaña `main`. Ahora es el Hub: él dice en
+          qué anda el modo y ofrece la próxima acción, sea empezar la temporada o
+          explicar por qué todavía no se puede. Esta vista quedó siendo lo que
+          dice su nombre: las competiciones del año. */}
       {seasonReady && activeRun && activeCompetition && (
         <CompetitionPanel run={activeRun} competition={activeCompetition} />
       )}
-      {seasonReady && activeTab === 'season' && <SeasonPanel leagues={leagues} />}
+      {seasonReady && activeTab === 'season' && (
+        <SeasonPanel leagues={leagues} onNavigate={onNavigate} />
+      )}
     </div>
   );
 }
@@ -499,7 +473,13 @@ function TieRow({
 // Panel de temporada (ascensos y descensos)
 // ---------------------------------------------------------------------------
 
-function SeasonPanel({ leagues }: { leagues: LigaTournament[] }) {
+function SeasonPanel({
+  leagues,
+  onNavigate,
+}: {
+  leagues: LigaTournament[];
+  onNavigate?: (view: string) => void;
+}) {
   const teams = useTournamentStore((s) => s.teams);
   const { year, currentYear, busy, closeSeason, descriptor } = useSeasonModeStore();
 
@@ -510,6 +490,22 @@ function SeasonPanel({ leagues }: { leagues: LigaTournament[] }) {
   // Una temporada vieja ya aplicó sus ascensos: volver a cerrarla mandaría el
   // modo para atrás. Se muestran las tablas, no el botón.
   const isCurrentSeason = year !== null && year === currentYear;
+
+  /**
+   * Cerrar avanza el año y recarga el modo sin torneos: esta vista se queda sin
+   * competiciones que mostrar y el usuario terminaría mirando la única pestaña
+   * que sobrevive (Escudos). Al inicio, que es donde vive "▶ EMPEZAR TEMPORADA"
+   * del año nuevo.
+   *
+   * Se navega sólo si el año efectivamente avanzó: `closeSeason` no devuelve
+   * nada y tiene varios guards que la abortan en silencio (temporada vieja,
+   * ligas sin terminar, fallo de red), y en esos casos no hay adónde ir.
+   */
+  const handleCloseSeason = async () => {
+    const before = useSeasonModeStore.getState().year;
+    await closeSeason();
+    if (useSeasonModeStore.getState().year !== before) onNavigate?.('hub');
+  };
 
   return (
     <div className="space-y-6">
@@ -525,7 +521,12 @@ function SeasonPanel({ leagues }: { leagues: LigaTournament[] }) {
                 {promotionCount} peores descienden, y arranca la temporada{' '}
                 {year !== null ? year + 1 : ''}.
               </p>
-              <Button onClick={closeSeason} loading={busy} disabled={!allComplete} className="gap-2">
+              <Button
+                onClick={handleCloseSeason}
+                loading={busy}
+                disabled={!allComplete}
+                className="gap-2"
+              >
                 <Hammer className="w-4 h-4" /> Cerrar temporada y aplicar ascensos/descensos
               </Button>
               {!allComplete && (

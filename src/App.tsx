@@ -1,15 +1,16 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTournamentStore } from './store/useTournamentStore';
 import { useModeStore } from './store/useModeStore';
 import { useLiveMatchStore } from './store/useLiveMatchStore';
 import { useLiveMatchdayStore } from './store/useLiveMatchdayStore';
+import { useSeasonModeStore } from './store/useSeasonModeStore';
 import { hydrateSettings } from './lib/hydrateSettings';
 import { useSidebarCollapse } from './hooks/useSidebarCollapse';
 import { TeamProfileProvider } from './hooks/useTeamProfile';
 import { StatsDashboard } from './components/tournament/StatsDashboard';
 import { MatchHistory } from './components/tournament/MatchHistory';
 import { MatchCenter } from './components/tournament/MatchCenter';
-import { TournamentWizard } from './components/tournament/TournamentWizard';
+import { HubView } from './components/hub/HubView';
 import { SettingsHub } from './components/settings/SettingsHub';
 import { TeamComparison } from './components/comparison/TeamComparison';
 import { QualifiersView } from './components/tournament/QualifiersView';
@@ -35,7 +36,11 @@ import { PixelBar } from './components/ui/PixelBar';
 import { SeasonModeView } from './components/tournament/SeasonModeView';
 import { MobileActionProvider } from './hooks/useMobileAction';
 import { useModeNav } from './hooks/useModeNav';
+import { useModeDescriptor } from './hooks/useModeDescriptor';
+import { useNextAction } from './hooks/useNextAction';
 import { themeForMode } from './lib/modeTheme';
+import { deriveHubHeader } from './modes/hubHeader';
+import { descriptorForMode } from './modes/registry';
 import { Trophy } from 'lucide-react';
 import type { View } from './types/view';
 
@@ -51,20 +56,65 @@ function App() {
 
   const { isCollapsed } = useSidebarCollapse();
   const activeMode = useModeStore((s) => s.activeMode());
-  const [currentView, setCurrentView] = useState<View>('wizard');
+  const [currentView, setCurrentView] = useState<View>('hub');
   const [isPauseOpen, setIsPauseOpen] = useState(false);
   const [viewOptions, setViewOptions] = useState<{ region?: string; groupId?: string }>({});
   const nav = useModeNav(currentView);
 
-  // Navigation handler with optional parameters
-  const handleNavigate = (view: string, options?: { region?: string; groupId?: string }) => {
-    setCurrentView(view as View);
-    if (options) {
-      setViewOptions(options);
-    } else {
-      setViewOptions({});
-    }
-  };
+  // Navigation handler with optional parameters. Estable (sólo usa setters de
+  // estado, que React garantiza estables): así las vistas que lo reciben como
+  // prop no se re-renderizan de gusto, y `navigateTo` puede memoizarse.
+  const handleNavigate = useCallback(
+    (view: string, options?: { region?: string; groupId?: string }) => {
+      setCurrentView(view as View);
+      if (options) {
+        setViewOptions(options);
+      } else {
+        setViewOptions({});
+      }
+    },
+    [],
+  );
+
+  // ---------------------------------------------------------------------------
+  // Estado del Hub. TODOS estos hooks van ANTES de los `return` condicionales de
+  // más abajo (initStatus y !currentTournament): si cambia la cantidad de hooks
+  // ejecutados entre renders, React lanza "Rendered more hooks than during the
+  // previous render".
+  // ---------------------------------------------------------------------------
+  // El adaptador descarta a propósito un eventual segundo argumento:
+  // `handleNavigate` lo usa para opciones de vista (región, grupo) y `Nav` lo
+  // tiene tipado como sub-pestaña, dos cosas distintas. `deriveNextAction` nunca
+  // pasa el segundo argumento. Va memoizado porque es dependencia del `useMemo`
+  // de `useNextAction`: con una función nueva por render no acertaría nunca.
+  const navigateTo = useCallback((view: View) => handleNavigate(view), [handleNavigate]);
+  const nextAction = useNextAction(navigateTo);
+  // Suscripción, no getState(): el Hub tiene que re-renderizar cuando la lista
+  // de modos termina de cargar.
+  const modesLoaded = useModeStore((s) => s.isLoaded);
+  const seasonStatus = useSeasonModeStore((s) => s.status);
+  const seasonYear = useSeasonModeStore((s) => s.year);
+  const seasonCurrentYear = useSeasonModeStore((s) => s.currentYear);
+  const seasonTournaments = useSeasonModeStore((s) => s.tournaments);
+  const hubDescriptor = useModeDescriptor();
+
+  // Cabecera del Hub (título, fase, progreso, motivo de cierre): derivación pura
+  // en `modes/`, igual que la navegación y la próxima acción. Acá sólo se leen
+  // los stores.
+  const hub = useMemo(
+    () =>
+      deriveHubHeader({
+        descriptor: hubDescriptor,
+        cycle: currentTournament,
+        season: {
+          status: seasonStatus,
+          tournaments: seasonTournaments,
+          year: seasonYear,
+          currentYear: seasonCurrentYear,
+        },
+      }),
+    [hubDescriptor, currentTournament, seasonStatus, seasonTournaments, seasonYear, seasonCurrentYear],
+  );
 
   const handleTabChange = (view: View) => {
     setCurrentView(view);
@@ -86,6 +136,31 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = themeForMode(activeMode);
   }, [activeMode]);
+
+  /**
+   * Cargar la temporada del modo activo.
+   *
+   * Vive acá, con las demás cargas de arranque, y NO adentro de una vista: la
+   * temporada es del MODO, no de una pantalla. Cuando la disparaba
+   * `SeasonModeView` alcanzaba de casualidad, porque la raíz de un modo de
+   * temporada era `'league'` y esa vista montaba al entrar; con el Hub como raíz
+   * única, entrar al modo dejaba la temporada sin cargar para siempre ("Cargando…"
+   * eterno, sin año y sin competiciones).
+   *
+   * La dependencia es el ID y no el objeto del modo: `loadForMode` no tiene guard
+   * de reentrada, y el objeto se reemplaza por identidad cada vez que se reescribe
+   * la lista de modos (`closeSeason`, por ejemplo, que además ya recarga sola).
+   * Así se carga exactamente una vez por modo al que se entra —incluso si la lista
+   * de modos resuelve después que el id, porque ahí el id efectivo pasa de null al
+   * del modo— y se vuelve a cargar al cambiar de modo con la app abierta.
+   */
+  const seasonModeId =
+    activeMode && descriptorForMode(activeMode).engine === 'season' ? activeMode.id : null;
+  useEffect(() => {
+    if (!seasonModeId) return;
+    const mode = useModeStore.getState().activeMode();
+    if (mode) useSeasonModeStore.getState().loadForMode(mode);
+  }, [seasonModeId]);
 
   useEffect(() => {
     loadTeamsFromDatabase();
@@ -165,19 +240,52 @@ function App() {
    */
   function renderView(): ReactNode {
     const shared: Partial<Record<View, ReactNode>> = {
+      // El Hub va acá y no en `cycleViews` porque aplica a los dos motores y no
+      // necesita `currentTournament`: un modo de temporada nunca tiene uno.
+      hub: (
+        <HubView
+          title={hub.title}
+          phaseLabel={hub.phaseLabel}
+          progress={hub.progress}
+          nextAction={nextAction}
+          ladder={nav.sections.find((s) => s.key === 'competition')?.items ?? []}
+          currentView={currentView}
+          onSelectStep={(item) => {
+            if (item.target.tab !== undefined) {
+              useSeasonModeStore.getState().setActiveTab(item.target.tab);
+            }
+            handleNavigate(item.target.view);
+          }}
+          // Sin último resultado por ahora, a propósito: `useMatchResultsStore`
+          // no es un historial sino el búfer del modal de resultados —
+          // `showResults` setea la lista Y abre el modal, y `close()` vacía las
+          // dos cosas—, así que leerlo acá daba un bloque que sólo tenía datos
+          // mientras un overlay a pantalla completa tapaba el Hub: invisible
+          // siempre. La etapa 2 lo alimenta desde `match_history`; hasta
+          // entonces, no cablear nada es más honesto que cablear el store
+          // equivocado.
+          lastResult={null}
+          // Mientras la lista de modos no resuelva, el descriptor que tenemos es
+          // el de arranque y la cabecera está describiendo un modo que capaz no
+          // es el activo: eso también es "todavía no sé", no un cierre.
+          idle={modesLoaded ? hub.idle : { kind: 'loading' }}
+          onNewTournament={
+            nav.engine === 'national-cycle' ? () => handleNavigate('tournaments') : undefined
+          }
+        />
+      ),
       settings: <SettingsHub />,
       history: <MatchHistory teams={teams} />,
       comparison: <TeamComparison />,
       favorites: <FavoritesView />,
       tournaments: <TournamentHistory />,
       champions: <ChampionsHistory onNavigate={handleNavigate} />,
-      league: <SeasonModeView />,
+      league: <SeasonModeView onNavigate={handleNavigate} />,
     };
     if (shared[currentView]) return shared[currentView];
-    if (!currentTournament) return <SeasonModeView />;
+    if (!currentTournament) return <SeasonModeView onNavigate={handleNavigate} />;
 
     const cycleViews: Partial<Record<View, ReactNode>> = {
-      wizard: <TournamentWizard onNavigate={handleNavigate} />,
       matches: <MatchCenter tournament={currentTournament} teams={teams} onNavigate={handleNavigate} />,
       stats: <StatsDashboard tournament={currentTournament} teams={teams} />,
       worldcup: <WorldCupViewEnhanced onNavigate={handleNavigate} />,

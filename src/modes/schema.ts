@@ -269,7 +269,7 @@ function parseCompetition(e: Errors, path: string, v: unknown): Competition | nu
 }
 
 const VIEWS = new Set([
-  'wizard', 'qualifiers', 'worldcup', 'stats', 'settings', 'history', 'matches',
+  'hub', 'qualifiers', 'worldcup', 'stats', 'settings', 'history', 'matches',
   'comparison', 'tournaments', 'champions', 'continental', 'confederations',
   'favorites', 'league',
 ]);

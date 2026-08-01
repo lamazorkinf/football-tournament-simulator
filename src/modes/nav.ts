@@ -65,7 +65,7 @@ export interface ModeNav {
  * lado.
  */
 const VIEW_META: Record<View, { label: string; shortLabel: string; icon: IconKey }> = {
-  wizard: { label: 'Progreso', shortLabel: 'INICIO', icon: 'flow' },
+  hub: { label: 'Inicio', shortLabel: 'INICIO', icon: 'home' },
   matches: { label: 'Centro de Partidos', shortLabel: 'FECHA', icon: 'calendar' },
   continental: { label: 'Continental', shortLabel: 'CONTI', icon: 'globe' },
   confederations: { label: 'Confederaciones', shortLabel: 'CONFED', icon: 'shield' },
@@ -78,6 +78,10 @@ const VIEW_META: Record<View, { label: string; shortLabel: string; icon: IconKey
   history: { label: 'Historial', shortLabel: 'DIARIO', icon: 'history' },
   tournaments: { label: 'Torneos', shortLabel: 'ARCHIVO', icon: 'archive' },
   settings: { label: 'Ajustes', shortLabel: 'AJUSTES', icon: 'settings' },
+  // `league` dejó de ser la raíz de los modos de temporada (lo es el Hub):
+  // quedó como contenedor de sus pestañas de competición, y cada pestaña trae
+  // su propio rótulo del descriptor. Estos valores sólo se usarían si un modo
+  // declarara `league` en sus `dataTabs`/`archiveTabs`, cosa que ninguno hace.
   league: { label: 'Inicio', shortLabel: 'INICIO', icon: 'home' },
 };
 
@@ -132,7 +136,10 @@ export function deriveModeNav(input: DeriveNavInput): ModeNav {
   items.push(viewItem('settings', 'footer', false));
 
   const allowed = [...new Set(items.map((i) => i.target.view))];
-  const root: View = descriptor.engine === 'season' ? 'league' : 'wizard';
+  // Una sola raíz para los dos motores: el Hub. Las dos pantallas de inicio que
+  // había (el progreso del ciclo y la portada del modo de temporada) son ahora
+  // la misma, así que acá no queda ninguna rama por motor.
+  const root: View = 'hub';
   const view = allowed.includes(currentView) ? currentView : root;
 
   // Pestaña efectiva: la pedida si sigue siendo válida, si no la primera del modo.
@@ -172,7 +179,7 @@ function nationalCompetitionItems(
   isLocked: (v: View) => boolean,
 ): NavItem[] {
   const items: NavItem[] = [
-    viewItem('wizard', 'competition', false),
+    viewItem('hub', 'competition', false),
     viewItem('matches', 'competition', false),
   ];
 
@@ -193,12 +200,17 @@ function nationalCompetitionItems(
 }
 
 /**
- * Modo de temporada: una entrada por competición con torneo corriendo, más las
- * pestañas propias del modo. Todas apuntan a la vista raíz `league` y se
- * distinguen por `tab`.
+ * Modo de temporada: el Hub adelante, después una entrada por competición con
+ * torneo corriendo y las pestañas propias del modo. Esas apuntan todas a la
+ * vista `league` —que dejó de ser la raíz, pero sigue siendo su contenedor— y
+ * se distinguen por `tab`.
+ *
+ * El Hub encabeza la lista en los dos motores: es la raíz y el primer casillero
+ * de la barra mobile, y `pickPrimary` lo busca acá adentro.
  */
 function seasonCompetitionItems(descriptor: ModeDescriptor, running: string[]): NavItem[] {
   const runningIds = new Set(running);
+  const hub = viewItem('hub', 'competition', false);
   const extras = descriptor.extraTabs.map(
     (key): NavItem => ({
       key,
@@ -209,13 +221,11 @@ function seasonCompetitionItems(descriptor: ModeDescriptor, running: string[]): 
     }),
   );
 
-  // Sin temporada arrancada sólo hay la pantalla de inicio (y los escudos, que
-  // se pueden cargar antes de que haya un solo partido).
+  // Sin temporada arrancada no hay competiciones que listar: sólo el Hub —que
+  // es el que ofrece arrancarla— y los escudos, que se pueden cargar antes de
+  // que haya un solo partido.
   if (runningIds.size === 0) {
-    return [
-      { key: 'main', ...VIEW_META.league, target: { view: 'league', tab: 'main' }, locked: false, section: 'competition' },
-      ...extras.filter((t) => t.key === 'crests'),
-    ];
+    return [hub, ...extras.filter((t) => t.key === 'crests')];
   }
 
   const competitions = [...descriptor.competitions]
@@ -233,7 +243,7 @@ function seasonCompetitionItems(descriptor: ModeDescriptor, running: string[]): 
       }),
     );
 
-  return [...competitions, ...extras];
+  return [hub, ...competitions, ...extras];
 }
 
 /**
@@ -251,15 +261,12 @@ function pickPrimary(descriptor: ModeDescriptor, items: NavItem[], root: View): 
     if (item && out.length < 4 && !out.some((i) => i.key === item.key)) out.push(item);
   };
 
-  if (descriptor.engine === 'national-cycle') {
-    push(items.find((i) => i.key === 'wizard'));
-    push(items.find((i) => i.key === 'matches'));
-  } else {
-    // La raíz del modo de temporada, con el rótulo de la vista y no el de una
-    // competición: su sub-navegación vive en la barra del contenido.
-    const first = items.find((i) => i.target.view === root);
-    if (first) push({ ...first, key: root, ...VIEW_META[root], target: { view: root } });
-  }
+  // La raíz abre la barra en los dos motores: con el Hub como raíz única, el
+  // item ya está en la lista y no hay que reconstruirlo con el rótulo de la
+  // vista. El ciclo suma después su Centro de Partidos, la otra pantalla que
+  // no es una competición.
+  push(items.find((i) => i.target.view === root));
+  if (descriptor.engine === 'national-cycle') push(items.find((i) => i.key === 'matches'));
 
   for (const item of items) if (flagged.has(item.key)) push(item);
   for (const item of items) if (item.section === 'data') push(item);

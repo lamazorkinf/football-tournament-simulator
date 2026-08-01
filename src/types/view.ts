@@ -3,13 +3,16 @@
  * duplicada como unión literal en App/Sidebar/GameTabBar/PauseMenu; se centraliza
  * acá para no desincronizarse.
  *
- * `'league'` es la vista raíz de los modos de temporada: su sub-navegación —una
- * pestaña por competición del descriptor, más Temporada y Escudos— la derivan
- * `modes/nav.ts` y `useSeasonModeStore.activeTab`. Qué vistas alcanza cada modo
- * NO se decide acá sino en el descriptor (`dataTabs` / `archiveTabs`).
+ * `'hub'` es la vista raíz de TODOS los modos: la pantalla de inicio única que
+ * reemplazó a las dos que había (una por motor). `'league'` dejó de ser raíz
+ * pero sigue siendo el contenedor de las pestañas de competición de los modos
+ * de temporada: su sub-navegación —una pestaña por competición del descriptor,
+ * más Temporada y Escudos— la derivan `modes/nav.ts` y
+ * `useSeasonModeStore.activeTab`. Qué vistas alcanza cada modo NO se decide acá
+ * sino en el descriptor (`dataTabs` / `archiveTabs`).
  */
 export type View =
-  | 'wizard'
+  | 'hub'
   | 'qualifiers'
   | 'worldcup'
   | 'stats'

@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
-import { Trophy, Award, Users, Zap, RefreshCw, Lock } from 'lucide-react';
+import { Trophy, Award, Users, Zap, RefreshCw, Lock, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { WorldCupGridView } from './WorldCupGridView';
 import { KnockoutView } from './KnockoutView';
+import { DrawSimulator } from './DrawSimulator';
 import { areGroupsComplete } from '../../core/knockout';
+import { sortStandings, getBestRunnersUp } from '../../core/scheduler';
+import { canAdvanceToWorldCup } from '../../utils/tournamentProgress';
 import { toast } from 'sonner';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -13,6 +17,7 @@ import { JornadaSimActions } from '../ui/SimActions';
 import { Tabs } from '../ui/Tabs';
 import { ViewHeader } from '../ui/ViewHeader';
 import { useCycleJornada } from '../../hooks/useCycleJornada';
+import type { WorldCupGroup, Group, Region, Team } from '../../types';
 
 type WorldCupTab = 'groups' | 'playoffs';
 
@@ -21,17 +26,90 @@ interface WorldCupViewEnhancedProps {
 }
 
 export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps = {}) {
-  const { currentTournament, teams, advanceToKnockout, regenerateKnockoutStage, simulateMatch } = useTournamentStore();
+  const {
+    currentTournament,
+    teams,
+    advanceToKnockout,
+    advanceToWorldCupWithManualDraw,
+    regenerateWorldCupDrawAndFixtures,
+    regenerateKnockoutStage,
+    simulateMatch,
+  } = useTournamentStore();
   const jornadaSim = useCycleJornada(currentTournament, teams);
   const [activeTab, setActiveTab] = useState<WorldCupTab>('groups');
   const [confirmRegenKnockout, setConfirmRegenKnockout] = useState(false);
+  const [showDrawSimulator, setShowDrawSimulator] = useState(false);
+  const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
+  const [confirmRegenWorldCup, setConfirmRegenWorldCup] = useState(false);
 
   if (!currentTournament) {
     return null;
   }
 
+  const handleManualDraw = () => {
+    // Calculate qualified teams (same logic as advanceToWorldCup)
+    const qualifiedTeamIds: string[] = [];
+
+    // Collect all groups from all regions
+    const allGroups: Group[] = [];
+    for (const region in currentTournament.qualifiers) {
+      const groups = currentTournament.qualifiers[region as Region];
+      allGroups.push(...groups);
+    }
+
+    // Get all first-place teams (42 teams from 42 groups)
+    for (const region in currentTournament.qualifiers) {
+      const groups = currentTournament.qualifiers[region as Region];
+      groups.forEach((group) => {
+        const sorted = sortStandings(group.standings, teams, group.matches);
+        if (sorted.length > 0) {
+          const firstPlace = sorted[0].teamId;
+          qualifiedTeamIds.push(firstPlace);
+        }
+      });
+    }
+
+    // Get the 22 best second-place teams across all regions (42 + 22 = 64 total)
+    const bestRunnersUp = getBestRunnersUp(allGroups, 22, teams);
+    qualifiedTeamIds.push(...bestRunnersUp);
+
+    console.log(`✅ Qualified teams for manual draw: ${qualifiedTeamIds.length} (42 winners + 22 best runners-up)`);
+
+    if (qualifiedTeamIds.length !== 64) {
+      toast.error(`Error: Solo ${qualifiedTeamIds.length} equipos clasificados en lugar de 64.`);
+      return;
+    }
+
+    // Get qualified Team objects with all their data
+    const qualifiedTeams = teams.filter((team) => qualifiedTeamIds.includes(team.id));
+    setQualifiedTeamsForDraw(qualifiedTeams);
+    setShowDrawSimulator(true);
+  };
+
+  const handleDrawSimulatorComplete = (groups: WorldCupGroup[]) => {
+    console.log('Draw completed with groups:', groups);
+    const completed = advanceToWorldCupWithManualDraw(groups);
+    // Si el guard rechaza (p. ej. el Mundial ya se sorteó mientras el
+    // simulador estaba abierto), el store ya avisó el motivo con su propio
+    // toast. Acá no hay que descartar el sorteo manual que el usuario armó a
+    // mano: el simulador se queda abierto en vez de cerrarse como si hubiera
+    // funcionado.
+    if (!completed) return;
+    setShowDrawSimulator(false);
+    toast.success('🏆 ¡Sorteo manual completado y guardado exitosamente!');
+  };
+
+  const handleDrawSimulatorCancel = () => {
+    setShowDrawSimulator(false);
+    toast.info('Sorteo manual cancelado');
+  };
+
   // Fallback cuando no hay datos del Mundial
   if (!currentTournament.worldCup) {
+    // Mismo guard que habilita "▶ AVANZAR AL MUNDIAL" en el Hub: clasificatorias
+    // completas y Mundial todavía sin crear. Sin esto, el botón de sorteo
+    // manual quedaría visible incluso con las clasificatorias a medio jugar.
+    const canStartWorldCup = canAdvanceToWorldCup(currentTournament);
     return (
       <div className="space-y-6">
         {/* Header */}
@@ -57,16 +135,53 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
                 La fase de Copa del Mundo estará disponible una vez que se completen
                 las clasificatorias regionales y se genere el sorteo del Mundial.
               </p>
-              <div className="bg-grass/30 border-2 border-grass p-4">
-                <p className="text-sm text-white">
-                  <strong className="text-gold">Paso siguiente:</strong> Completa todos los partidos de las
-                  clasificatorias y luego avanza a la Copa del Mundo desde la pestaña
-                  "Progreso".
-                </p>
-              </div>
+              {canStartWorldCup ? (
+                // Con las clasificatorias completas, el "Paso siguiente" de abajo
+                // (que manda de vuelta al Inicio) ya no aplica: acá mismo se
+                // puede armar el sorteo a mano.
+                <Button variant="secondary" size="sm" onClick={handleManualDraw} className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Sorteo Manual (Simulador)
+                </Button>
+              ) : (
+                <div className="bg-grass/30 border-2 border-grass p-4">
+                  <p className="text-sm text-white">
+                    <strong className="text-gold">Paso siguiente:</strong> Completá todos los partidos de las
+                    clasificatorias y después avanzá a la Copa del Mundo desde Inicio.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </Card>
+
+        {/* Draw Simulator Modal */}
+        <AnimatePresence>
+          {showDrawSimulator && canStartWorldCup && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-[95vw] w-full max-h-[95vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6">
+                  <DrawSimulator
+                    qualifiedTeams={qualifiedTeamsForDraw}
+                    onComplete={handleDrawSimulatorComplete}
+                    onCancel={handleDrawSimulatorCancel}
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -121,6 +236,22 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
   };
 
   const handleRegenerateKnockout = () => setConfirmRegenKnockout(true);
+
+  // Regenerar sólo mientras el Mundial no tenga ningún partido jugado, ni de
+  // grupos ni de playoffs: con algo jugado, volver a sortear borraría
+  // resultados reales. Ya no hace falta el `currentTournament.worldCup &&` que
+  // llevaba adelante en la vieja pantalla de progreso: acá abajo del fallback
+  // de arriba, `worldCup` ya está garantizado.
+  const canRegenerateWorldCup =
+    !worldCup.groups.some(group => group.matches.some(m => m.isPlayed)) &&
+    !worldCup.knockout.roundOf32.some(m => m.isPlayed) &&
+    !worldCup.knockout.roundOf16.some(m => m.isPlayed) &&
+    !worldCup.knockout.quarterFinals.some(m => m.isPlayed) &&
+    !worldCup.knockout.semiFinals.some(m => m.isPlayed) &&
+    !worldCup.knockout.thirdPlace?.isPlayed &&
+    !worldCup.knockout.final?.isPlayed;
+
+  const handleRegenerateWorldCupDraw = () => setConfirmRegenWorldCup(true);
 
   return (
     <div className="space-y-6">
@@ -194,6 +325,19 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
                 busy={jornadaSim.isBusy}
                 hint="se juega entera, en los ocho grupos."
               />
+            )}
+
+            {/* Regenerate World Cup Draw Button - Only show if no matches played */}
+            {canRegenerateWorldCup && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateWorldCupDraw}
+                className="gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                Regenerar Sorteo & Fixtures
+              </Button>
             )}
 
             {/* Advance to Knockout Button */}
@@ -271,7 +415,7 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
             thirdPlaceId={worldCup.thirdPlace}
             fourthPlaceId={worldCup.fourthPlace}
             onBack={() => setActiveTab('groups')}
-            onNewTournament={onNavigate ? () => onNavigate('wizard') : undefined}
+            onNewTournament={onNavigate ? () => onNavigate('hub') : undefined}
           />
         )}
 
@@ -309,6 +453,32 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
           // la acción destructiva hubiera funcionado.
           if (!completed) throw new Error('No se pudieron regenerar los playoffs.');
           toast.success('Playoffs regenerados');
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmRegenWorldCup}
+        onOpenChange={setConfirmRegenWorldCup}
+        variant="danger"
+        title="Regenerar sorteo del Mundial"
+        confirmLabel="Regenerar"
+        description={
+          <>
+            <p>Se eliminan todos los partidos actuales del Mundial (grupos y playoffs) y se crean grupos nuevos con los mismos 64 equipos clasificados.</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </>
+        }
+        onConfirm={async () => {
+          const completed = await regenerateWorldCupDrawAndFixtures();
+          // El store ya avisó el motivo del rechazo con su propio toast.
+          // Lanzar acá (en vez de sólo retornar) es lo que hace que
+          // ConfirmDialog deje el diálogo abierto en vez de cerrarlo como si
+          // la acción destructiva hubiera funcionado — mismo patrón que
+          // handleRedrawQualifiers en QualifiersView. Los errores de base que
+          // el store relanza (borrado o guardado fallidos) llegan tal cual:
+          // no hace falta atraparlos acá.
+          if (!completed) throw new Error('No se pudo regenerar el sorteo del Mundial.');
+          toast.success('Sorteo del Mundial regenerado');
         }}
       />
     </div>
