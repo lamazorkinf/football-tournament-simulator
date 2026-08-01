@@ -124,7 +124,12 @@ describe('useRecentHeadlines', () => {
 
   /**
    * Una fecha de temporada persiste partido por partido: diez `createMatch` en
-   * paralelo son diez bumps. Sin debounce serían diez consultas.
+   * paralelo son diez bumps, pero no en el mismo tick — cada `INSERT` resuelve
+   * en su propio momento. Por eso los bumps de este test van espaciados por
+   * menos que `HEADLINES_DEBOUNCE_MS` (no todos dentro de un mismo `act()`
+   * síncrono, que el auto-batching de React ya colapsaría en un solo
+   * re-render sin que el debounce entre en juego). Sin debounce, cada bump
+   * dispararía su propia consulta.
    */
   it('diez bumps seguidos hacen una sola consulta', async () => {
     const spy = vi.spyOn(matchHistoryService, 'getMatchesPage').mockResolvedValue(page([]));
@@ -132,9 +137,14 @@ describe('useRecentHeadlines', () => {
     await flush();
     expect(spy).toHaveBeenCalledTimes(1);
 
-    act(() => {
-      for (let i = 0; i < 10; i++) useHistoryRevisionStore.getState().bump();
-    });
+    for (let i = 0; i < 10; i++) {
+      act(() => {
+        useHistoryRevisionStore.getState().bump();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(50);
+      });
+    }
     await flush();
 
     expect(spy).toHaveBeenCalledTimes(2);
