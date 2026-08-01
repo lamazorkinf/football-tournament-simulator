@@ -51,7 +51,7 @@ export interface ModeActions {
 
 export type Nav = (view: View, tab?: string) => void;
 
-/** Estado de la temporada que la rama `season` necesita. La completa la Task 2. */
+/** Estado de la temporada que necesita la rama `season`. */
 export interface SeasonView {
   status: SeasonModeStatus;
   tournaments: ModeTournament[];
@@ -61,7 +61,7 @@ export interface DeriveNextActionInput {
   engine: ModeEngine;
   /** `national-cycle`: el ciclo activo. */
   cycle: Cycle | null;
-  /** `season`: estado de la temporada en curso. Lo completa la rama de temporada. */
+  /** `season`: estado de la temporada en curso. */
   season: SeasonView | null;
   /** Sorteo o batch en curso: la acción se ofrece deshabilitada. */
   busy: boolean;
@@ -123,8 +123,17 @@ function cycleNextAction(cycle: Cycle, nav: Nav, actions: ModeActions): MobileAc
     return {
       label: '▶ EMPEZAR',
       onPress: async () => {
+        // Se lee ANTES del sorteo: si el ciclo ya traía un snapshot de
+        // habilidades (Mundial cargado desde una base curada), el sorteo no
+        // lo toca, así que el toast puede distinguir ese caso del genérico.
+        const hasOriginalSkills =
+          cycle.originalSkills && Object.keys(cycle.originalSkills).length > 0;
         if (!(await actions.generateDrawAndFixtures())) return;
-        toast.success('Sorteo y fixtures generados');
+        toast.success(
+          hasOriginalSkills
+            ? 'Sorteo generado — habilidades en la base de este Mundial'
+            : 'Sorteo y fixtures generados'
+        );
         nav('qualifiers');
       },
     };
