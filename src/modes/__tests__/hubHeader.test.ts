@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { deriveHubHeader, type SeasonHeaderInput } from '../hubHeader';
 import { toCycle } from '../../core/cycle';
 import { baseTournament } from '../../test/fixtures/cycle';
-import type { Cycle, KnockoutMatch } from '../../types';
+import type { Cycle, KnockoutBracket, KnockoutMatch } from '../../types';
+import type { RoundKey } from '../../core/formats/rounds';
 import type { LigaTournament, ModeTournament } from '../../core/formats/modeTournament';
 
 function cycleHeader(cycle: Cycle | null) {
@@ -22,7 +23,7 @@ function seasonHeader(season: Partial<SeasonHeaderInput> = {}) {
 }
 
 /** Un partido de llave, jugado o no. */
-function koMatch(id: string, isPlayed: boolean): KnockoutMatch {
+function koMatch(id: string, isPlayed: boolean, round: RoundKey = 'round-of-32'): KnockoutMatch {
   return {
     id,
     homeTeamId: 'a',
@@ -30,7 +31,27 @@ function koMatch(id: string, isPlayed: boolean): KnockoutMatch {
     homeScore: isPlayed ? 1 : null,
     awayScore: isPlayed ? 0 : null,
     isPlayed,
-    round: 'round-of-32',
+    round,
+  };
+}
+
+/** Una ronda entera, jugada. */
+function playedRound(round: RoundKey, ties: number): KnockoutMatch[] {
+  return Array.from({ length: ties }, (_, i) => koMatch(`${round}-${i}`, true, round));
+}
+
+/**
+ * La llave del Mundial completa y jugada, con la forma real: 32 clasificados
+ * ⇒ 16 cruces en dieciseisavos, 8, 4, 2, más 3er puesto y final.
+ */
+function fullKnockout(): KnockoutBracket {
+  return {
+    roundOf32: playedRound('round-of-32', 16),
+    roundOf16: playedRound('round-of-16', 8),
+    quarterFinals: playedRound('quarter', 4),
+    semiFinals: playedRound('semi', 2),
+    thirdPlace: koMatch('third', true, 'third-place'),
+    final: koMatch('final', true, 'final'),
   };
 }
 
@@ -39,11 +60,11 @@ function koMatch(id: string, isPlayed: boolean): KnockoutMatch {
  * el estado que pida el caller. Las fases previas quedan vacías a propósito, así
  * la cuenta del progreso es legible a mano.
  */
-function cycleWithWorldCup(roundOf32: KnockoutMatch[]): Cycle {
+function cycleWithWorldCup(knockout: Partial<KnockoutBracket>): Cycle {
   const base = toCycle(baseTournament());
   return {
     ...base,
-    calendar: { phase: roundOf32.length > 0 ? 'wc-knockout' : 'wc-groups', matchday: 1 },
+    calendar: { phase: (knockout.roundOf32?.length ?? 0) > 0 ? 'wc-knockout' : 'wc-groups', matchday: 1 },
     worldCup: {
       groups: [
         {
@@ -57,8 +78,8 @@ function cycleWithWorldCup(roundOf32: KnockoutMatch[]): Cycle {
         },
       ],
       knockout: {
-        roundOf32,
-        roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null,
+        roundOf32: [], roundOf16: [], quarterFinals: [], semiFinals: [], thirdPlace: null, final: null,
+        ...knockout,
       },
       qualifiedTeamIds: [],
     },
@@ -120,22 +141,35 @@ describe('deriveHubHeader — ciclo mundialista', () => {
    * 100% al lado del rótulo "Mundial · Playoffs".
    */
   it('durante los playoffs la barra NO marca 100%', () => {
-    const header = cycleHeader(cycleWithWorldCup([koMatch('ko-1', false)]));
+    const header = cycleHeader(cycleWithWorldCup({ roundOf32: [koMatch('ko-1', false)] }));
     expect(header.phaseLabel).toBe('Mundial · Playoffs');
-    // 1 partido de grupos jugado sobre 1 de grupos + los 62 de la llave.
-    expect(header.progress).toBeCloseTo(1 / 63, 5);
+    // 1 partido de grupos jugado sobre 1 de grupos + los 32 de la llave.
+    expect(header.progress).toBeCloseTo(1 / 33, 5);
   });
 
   it('jugar la llave hace avanzar la barra', () => {
-    const antes = cycleHeader(cycleWithWorldCup([koMatch('ko-1', false), koMatch('ko-2', false)]));
-    const despues = cycleHeader(cycleWithWorldCup([koMatch('ko-1', true), koMatch('ko-2', false)]));
+    const sinJugar = [koMatch('ko-1', false), koMatch('ko-2', false)];
+    const antes = cycleHeader(cycleWithWorldCup({ roundOf32: sinJugar }));
+    const despues = cycleHeader(
+      cycleWithWorldCup({ roundOf32: [koMatch('ko-1', true), koMatch('ko-2', false)] }),
+    );
     expect(despues.progress).toBeGreaterThan(antes.progress);
-    expect(despues.progress).toBeCloseTo(2 / 63, 5);
+    expect(despues.progress).toBeCloseTo(2 / 33, 5);
+  });
+
+  /**
+   * El contraste del test de arriba, y el que fija el TAMAÑO de la llave: con la
+   * constante pasada de largo el denominador arrastra partidos fantasma y la
+   * barra no puede cerrar nunca; con la constante corta, cierra antes de tiempo.
+   * Sólo da 1 si vale exactamente lo que mide un cuadro real.
+   */
+  it('con el Mundial entero jugado la barra cierra en 100%', () => {
+    expect(cycleHeader(cycleWithWorldCup(fullKnockout())).progress).toBe(1);
   });
 
   it('sin Mundial sorteado la llave todavía no pesa en la cuenta', () => {
     // Ciclo nuevo: sin partidos en ningún lado, la barra arranca en 0 y no
-    // dividiendo por los 62 de una llave que no existe.
+    // dividiendo por los 32 de una llave que no existe.
     expect(cycleHeader(toCycle(baseTournament())).progress).toBe(0);
   });
 });

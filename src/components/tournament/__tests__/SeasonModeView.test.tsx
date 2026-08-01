@@ -96,12 +96,22 @@ describe('SeasonModeView — cerrar la temporada', () => {
     expect(onNavigate).not.toHaveBeenCalled();
   });
 
-  it('la portada del modo ya no vive acá: es el Hub', () => {
+  /**
+   * Afirmar que los bloques de la portada no se rinden sería vacuo: eran
+   * inalcanzables incluso antes de borrarlos, porque `nav.tab` nunca vale
+   * 'main'. Lo que sí se puede romper —y es la causa de aquello— es que la
+   * portada vuelva a ser una PESTAÑA de esta vista: alcanza con reponer el
+   * pseudo-item `main` en `nav.ts`, o con dejar de filtrar el item del Hub acá.
+   * Las dos regresiones hacen aparecer un botón "Inicio" en esta barra.
+   */
+  it('la portada del modo dejó de ser una pestaña de esta vista', () => {
     seedSeasonReadyToClose(async () => {});
-    useSeasonModeStore.setState({ tournaments: [], status: 'needs-seed' });
+    useSeasonModeStore.setState({ tournaments: [] });
     render(<SeasonModeView />);
 
-    expect(screen.queryByText(/lista para arrancar/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/no tiene sus divisiones cargadas/i)).not.toBeInTheDocument();
+    // Sin temporada arrancada queda una sola pestaña, Escudos: el inicio es el
+    // Hub, una vista aparte.
+    expect(screen.getByRole('button', { name: 'Escudos' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Inicio' })).not.toBeInTheDocument();
   });
 });

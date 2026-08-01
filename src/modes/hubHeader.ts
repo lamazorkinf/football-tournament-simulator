@@ -56,13 +56,19 @@ const CYCLE_PHASE_LABEL: Record<string, string> = {
 };
 
 /**
- * Partidos de los playoffs del Mundial: R32 + octavos + cuartos + semis + 3er
- * puesto + final. Va como constante —y no contando los que existen— porque la
- * llave genera cada ronda recién cuando termina la anterior: contar sólo lo
- * generado deja la barra en 100% durante todos los playoffs (cada ronda está
- * completa justo antes de que aparezca la siguiente).
+ * Partidos de los playoffs del Mundial.
+ *
+ * OJO con la aritmética: `round-of-N` es la ronda de N EQUIPOS, o sea N/2
+ * cruces (la convención está escrita en `core/formats/rounds.ts`). Entran 32
+ * clasificados, así que son 16 cruces en dieciseisavos, 8 en octavos, 4 en
+ * cuartos, 2 en semis, más el 3er puesto y la final: 32 partidos, no 62.
+ *
+ * Va como constante —y no contando los que existen— porque la llave genera cada
+ * ronda recién cuando termina la anterior: contar sólo lo generado deja la barra
+ * en 100% durante todos los playoffs (cada ronda está completa justo antes de
+ * que aparezca la siguiente).
  */
-const WORLD_CUP_KNOCKOUT_MATCHES = 32 + 16 + 8 + 4 + 1 + 1;
+const WORLD_CUP_KNOCKOUT_MATCHES = 16 + 8 + 4 + 2 + 1 + 1;
 
 interface Counted {
   playedMatches: number;
