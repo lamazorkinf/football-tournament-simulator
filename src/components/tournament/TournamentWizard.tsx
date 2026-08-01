@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
 import {
@@ -22,10 +22,8 @@ import {
   getQualifiersDrawStatus,
   isQualifiersDrawn,
 } from '../../utils/cycleProgress';
-import { sortStandings, getBestRunnersUp } from '../../core/scheduler';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Card';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
 import {
   CheckCircle2,
   Circle,
@@ -36,28 +34,19 @@ import {
   Zap,
   Sparkles,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { DrawSimulator } from './DrawSimulator';
-import type { WorldCupGroup, Group, Region, Team } from '../../types';
 
 export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const {
     currentTournament,
-    teams,
     advanceToWorldCup,
-    advanceToWorldCupWithManualDraw,
     advanceToKnockout,
     generateDrawAndFixtures,
-    regenerateWorldCupDrawAndFixtures,
     drawContinental,
     drawConfederations,
     advanceToQualifiers,
   } = useTournamentStore();
-
-  const [showDrawSimulator, setShowDrawSimulator] = useState(false);
-  const [qualifiedTeamsForDraw, setQualifiedTeamsForDraw] = useState<Team[]>([]);
-  const [confirmRegenWorldCup, setConfirmRegenWorldCup] = useState(false);
 
   const handleGenerateDraw = async () => {
     if (!currentTournament) return;
@@ -167,17 +156,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
   // guard del store lo permite.
   const canRedrawQualifiers = qualifiersDrawn && !currentTournament.hasAnyMatchPlayed;
   const canStartWorldCup = canAdvanceToWorldCup(currentTournament);
-  const canRegenerateWorldCup =
-    currentTournament.worldCup &&
-    !currentTournament.worldCup.groups.some(group =>
-      group.matches.some(m => m.isPlayed)
-    ) &&
-    !currentTournament.worldCup.knockout.roundOf32.some(m => m.isPlayed) &&
-    !currentTournament.worldCup.knockout.roundOf16.some(m => m.isPlayed) &&
-    !currentTournament.worldCup.knockout.quarterFinals.some(m => m.isPlayed) &&
-    !currentTournament.worldCup.knockout.semiFinals.some(m => m.isPlayed) &&
-    !currentTournament.worldCup.knockout.thirdPlace?.isPlayed &&
-    !currentTournament.worldCup.knockout.final?.isPlayed;
   // Solo mientras los dieciseisavos NO estén generados: sin este guard el
   // botón "Generar Dieciseisavos" queda visible para siempre (incluso con el
   // torneo terminado) y permite re-generar la ronda. Una vez generado, el
@@ -195,66 +173,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
     if (!completed) return;
     toast.success('Avanzado a Copa del Mundo con 64 equipos clasificados');
   };
-
-  const handleManualDraw = () => {
-    // Calculate qualified teams (same logic as advanceToWorldCup)
-    const qualifiedTeamIds: string[] = [];
-
-    // Collect all groups from all regions
-    const allGroups: Group[] = [];
-    for (const region in currentTournament.qualifiers) {
-      const groups = currentTournament.qualifiers[region as Region];
-      allGroups.push(...groups);
-    }
-
-    // Get all first-place teams (42 teams from 42 groups)
-    for (const region in currentTournament.qualifiers) {
-      const groups = currentTournament.qualifiers[region as Region];
-      groups.forEach((group) => {
-        const sorted = sortStandings(group.standings, teams, group.matches);
-        if (sorted.length > 0) {
-          const firstPlace = sorted[0].teamId;
-          qualifiedTeamIds.push(firstPlace);
-        }
-      });
-    }
-
-    // Get the 22 best second-place teams across all regions (42 + 22 = 64 total)
-    const bestRunnersUp = getBestRunnersUp(allGroups, 22, teams);
-    qualifiedTeamIds.push(...bestRunnersUp);
-
-    console.log(`✅ Qualified teams for manual draw: ${qualifiedTeamIds.length} (42 winners + 22 best runners-up)`);
-
-    if (qualifiedTeamIds.length !== 64) {
-      toast.error(`Error: Solo ${qualifiedTeamIds.length} equipos clasificados en lugar de 64.`);
-      return;
-    }
-
-    // Get qualified Team objects with all their data
-    const qualifiedTeams = teams.filter((team) => qualifiedTeamIds.includes(team.id));
-    setQualifiedTeamsForDraw(qualifiedTeams);
-    setShowDrawSimulator(true);
-  };
-
-  const handleDrawSimulatorComplete = (groups: WorldCupGroup[]) => {
-    console.log('Draw completed with groups:', groups);
-    const completed = advanceToWorldCupWithManualDraw(groups);
-    // Si el guard rechaza (p. ej. el Mundial ya se sorteó mientras el
-    // simulador estaba abierto), el store ya avisó el motivo con su propio
-    // toast. Acá no hay que descartar el sorteo manual que el usuario armó a
-    // mano: el simulador se queda abierto en vez de cerrarse como si hubiera
-    // funcionado.
-    if (!completed) return;
-    setShowDrawSimulator(false);
-    toast.success('🏆 ¡Sorteo manual completado y guardado exitosamente!');
-  };
-
-  const handleDrawSimulatorCancel = () => {
-    setShowDrawSimulator(false);
-    toast.info('Sorteo manual cancelado');
-  };
-
-  const handleRegenerateWorldCupDraw = () => setConfirmRegenWorldCup(true);
 
   const handleAdvanceToKnockout = async () => {
     const completed = await advanceToKnockout();
@@ -460,35 +378,14 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
             }
             actions={
               canStartWorldCup ? (
-                <div className="flex gap-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleAdvanceToWorldCup}
-                    className="gap-2"
-                  >
-                    <Zap className="w-4 h-4" />
-                    Sorteo Automático
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleManualDraw}
-                    className="gap-2"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Sorteo Manual (Simulador)
-                  </Button>
-                </div>
-              ) : canRegenerateWorldCup ? (
                 <Button
-                  variant="outline"
+                  variant="primary"
                   size="sm"
-                  onClick={handleRegenerateWorldCupDraw}
+                  onClick={handleAdvanceToWorldCup}
                   className="gap-2"
                 >
                   <Zap className="w-4 h-4" />
-                  Regenerar Sorteo & Fixtures
+                  Sorteo Automático
                 </Button>
               ) : worldCupProgress && worldCupProgress.playedMatches > 0 && !worldCupProgress.isComplete ? (
                 <Button variant="secondary" size="sm" onClick={() => onNavigate?.('worldcup')} className="gap-2">
@@ -571,60 +468,6 @@ export function TournamentWizard({ onNavigate }: { onNavigate?: (view: string) =
           )}
         </div>
       </Card>
-
-      {/* Draw Simulator Modal */}
-      <AnimatePresence>
-        {showDrawSimulator && canStartWorldCup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-grass-dark border-4 border-line shadow-hard-panel max-w-[95vw] w-full max-h-[95vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6">
-                <DrawSimulator
-                  qualifiedTeams={qualifiedTeamsForDraw}
-                  onComplete={handleDrawSimulatorComplete}
-                  onCancel={handleDrawSimulatorCancel}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <ConfirmDialog
-        open={confirmRegenWorldCup}
-        onOpenChange={setConfirmRegenWorldCup}
-        variant="danger"
-        title="Regenerar sorteo del Mundial"
-        confirmLabel="Regenerar"
-        description={
-          <>
-            <p>Se eliminan todos los partidos actuales del Mundial (grupos y playoffs) y se crean grupos nuevos con los mismos 64 equipos clasificados.</p>
-            <p>Esta acción no se puede deshacer.</p>
-          </>
-        }
-        onConfirm={async () => {
-          const completed = await regenerateWorldCupDrawAndFixtures();
-          // El store ya avisó el motivo del rechazo con su propio toast.
-          // Lanzar acá (en vez de sólo retornar) es lo que hace que
-          // ConfirmDialog deje el diálogo abierto en vez de cerrarlo como si
-          // la acción destructiva hubiera funcionado — mismo patrón que
-          // handleRedrawQualifiers. Los errores de base que el store relanza
-          // (borrado o guardado fallidos) llegan tal cual: no hace falta
-          // atraparlos acá.
-          if (!completed) throw new Error('No se pudo regenerar el sorteo del Mundial.');
-          toast.success('Sorteo del Mundial regenerado');
-        }}
-      />
     </div>
   );
 }
