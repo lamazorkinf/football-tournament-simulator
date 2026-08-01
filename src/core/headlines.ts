@@ -69,6 +69,8 @@ const GAP_FULL = 40;
 const UPSET_MIN_GAP = 6;
 const HOLD_MIN_GAP = 12;
 const ROUT_MIN_DIFF = 4;
+/** Victorias consecutivas a partir de las cuales una racha es noticia. */
+const STREAK_MIN = 4;
 
 /**
  * Un batacazo en una eliminación directa vale más que en una fecha de liga.
@@ -193,6 +195,63 @@ function rank(candidate: Candidate, m: HeadlineMatch, index: number): Ranked {
   };
 }
 
+/** Lo que se sabe de un equipo mientras se recorre la ventana hacia atrás. */
+interface TeamRun {
+  wins: number;
+  /** Ya se vio el partido que cortó la racha: recién ahí el número es confiable. */
+  bounded: boolean;
+  /** Antigüedad del partido más reciente de la racha. */
+  index: number;
+  match: HeadlineMatch;
+}
+
+/**
+ * Rachas vigentes, contadas hacia atrás desde el partido más reciente de cada
+ * equipo. Sólo se emiten las ACOTADAS: si todos los partidos del equipo en la
+ * ventana son victorias, la racha puede ser más larga de lo que se ve y decir el
+ * número visible sería subestimar. Se prefiere callar.
+ */
+function streakCandidates(matches: HeadlineMatch[]): Ranked[] {
+  const runs = new Map<string, TeamRun>();
+
+  const note = (teamId: string, won: boolean, m: HeadlineMatch, index: number) => {
+    const run = runs.get(teamId);
+    if (run?.bounded) return; // ya se cerró: lo de más atrás no cambia nada
+    if (!won) {
+      runs.set(teamId, run
+        ? { ...run, bounded: true }
+        : { wins: 0, bounded: true, index, match: m });
+      return;
+    }
+    if (run) runs.set(teamId, { ...run, wins: run.wins + 1 });
+    else runs.set(teamId, { wins: 1, bounded: false, index, match: m });
+  };
+
+  matches.forEach((m, index) => {
+    note(m.homeTeamId, m.homeScore > m.awayScore, m, index);
+    note(m.awayTeamId, m.awayScore > m.homeScore, m, index);
+  });
+
+  const out: Ranked[] = [];
+  for (const [teamId, run] of runs) {
+    if (!run.bounded || run.wins < STREAK_MIN) continue;
+    out.push(
+      rank(
+        {
+          kind: 'streak',
+          label: 'RACHA',
+          detail: `${run.wins} victorias al hilo`,
+          subjectTeamId: teamId,
+          base: Math.min((run.wins - 3) / 5, 1),
+        },
+        run.match,
+        run.index,
+      ),
+    );
+  }
+  return out;
+}
+
 /**
  * @param matches Ordenados del más nuevo al más viejo — el orden que devuelve
  *   `getMatchesPage`. El índice de cada partido ES su antigüedad.
@@ -206,6 +265,10 @@ export function deriveHeadlines(
     const best = pickBest(candidatesFor(m));
     if (best) ranked.push(rank(best, m, index));
   });
+  // Las rachas son por equipo, no por partido, así que se calculan aparte y
+  // compiten en la misma tabla. La regla de "un equipo no aparece dos veces" es
+  // la que evita "BATACAZO: Ben Hur" + "RACHA: Ben Hur, 6 al hilo".
+  ranked.push(...streakCandidates(matches));
 
   const ordered = ranked
     .filter((r) => r.headline.score >= MIN_SCORE)

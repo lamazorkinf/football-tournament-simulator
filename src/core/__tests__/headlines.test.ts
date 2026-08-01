@@ -185,3 +185,76 @@ describe('deriveHeadlines — selección', () => {
     for (const h of res) expect(h.label).toMatch(/^[A-Z]+$/);
   });
 });
+
+describe('deriveHeadlines — racha', () => {
+  /** Cuatro victorias de A, y después el partido que cortó la racha anterior. */
+  const rachaAcotada = (corte: Partial<HeadlineMatch>): HeadlineMatch[] => [
+    match({ homeTeamId: 'A', awayTeamId: 'B' }),
+    match({ homeTeamId: 'A', awayTeamId: 'C' }),
+    match({ homeTeamId: 'A', awayTeamId: 'D' }),
+    match({ homeTeamId: 'A', awayTeamId: 'E' }),
+    match({ homeTeamId: 'A', awayTeamId: 'F', ...corte }),
+  ];
+
+  it('cuatro al hilo, con el corte a la vista, son titular', () => {
+    const [h] = deriveHeadlines(rachaAcotada({ homeScore: 0, awayScore: 1 }));
+    expect(h.kind).toBe('streak');
+    expect(h.label).toBe('RACHA');
+    expect(h.subjectTeamId).toBe('A');
+    expect(h.detail).toBe('4 victorias al hilo');
+  });
+
+  it('un empate también corta la racha', () => {
+    const [h] = deriveHeadlines(rachaAcotada({ homeScore: 1, awayScore: 1 }));
+    expect(h.detail).toBe('4 victorias al hilo');
+  });
+
+  /**
+   * La regla de honestidad. Sin el partido que la corta, la racha podría ser de
+   * 4 o de 12 y no hay forma de saberlo: se calla. Si este test se cae porque
+   * alguien "arregló" el borde emitiendo el número que ve, la app pasa a mentir.
+   */
+  it('una racha que llega al borde de la ventana NO se emite', () => {
+    expect(deriveHeadlines(rachaAcotada({}).slice(0, 4))).toEqual([]);
+  });
+
+  it('tres al hilo no alcanzan', () => {
+    expect(deriveHeadlines(rachaAcotada({}).slice(0, 3).concat(
+      match({ homeTeamId: 'A', awayTeamId: 'F', homeScore: 0, awayScore: 1 }),
+    ))).toEqual([]);
+  });
+
+  it('la racha se cuenta desde el partido más reciente, no desde el más largo', () => {
+    // A gana 2, empata, y antes había ganado 4: la racha vigente es de 2.
+    const res = deriveHeadlines([
+      match({ homeTeamId: 'A', awayTeamId: 'B' }),
+      match({ homeTeamId: 'A', awayTeamId: 'C' }),
+      match({ homeTeamId: 'A', awayTeamId: 'D', homeScore: 1, awayScore: 1 }),
+      match({ homeTeamId: 'A', awayTeamId: 'E' }),
+      match({ homeTeamId: 'A', awayTeamId: 'F' }),
+      match({ homeTeamId: 'A', awayTeamId: 'G' }),
+      match({ homeTeamId: 'A', awayTeamId: 'H' }),
+      match({ homeTeamId: 'A', awayTeamId: 'I', homeScore: 0, awayScore: 1 }),
+    ]);
+    expect(res).toEqual([]);
+  });
+
+  it('el partido que ilustra la racha es el más reciente', () => {
+    const [h] = deriveHeadlines(rachaAcotada({ homeScore: 0, awayScore: 1 }));
+    expect(h.match.awayTeamId).toBe('B');
+  });
+
+  it('las victorias de visitante también cuentan', () => {
+    const visitante = (rival: string, over: Partial<HeadlineMatch> = {}) =>
+      match({ homeTeamId: rival, awayTeamId: 'A', homeScore: 0, awayScore: 1, ...over });
+    const [h] = deriveHeadlines([
+      visitante('B'),
+      visitante('C'),
+      visitante('D'),
+      visitante('E'),
+      visitante('F', { homeScore: 2, awayScore: 0 }),
+    ]);
+    expect(h.kind).toBe('streak');
+    expect(h.subjectTeamId).toBe('A');
+  });
+});
