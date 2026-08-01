@@ -64,7 +64,7 @@ import { useModeStore } from './useModeStore';
  * rating de los equipos SÍ evoluciona y persiste año a año.
  */
 
-type SeasonModeStatus = 'idle' | 'loading' | 'ready' | 'needs-seed' | 'error';
+export type SeasonModeStatus = 'idle' | 'loading' | 'ready' | 'needs-seed' | 'error';
 
 /**
  * La navegación del modo (qué pestañas hay y cuál está activa) NO vive acá:
