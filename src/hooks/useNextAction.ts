@@ -22,13 +22,23 @@ export function useNextAction(nav: Nav): MobileAction | null {
   const seasonStatus = useSeasonModeStore((s) => s.status);
   const seasonTournaments = useSeasonModeStore((s) => s.tournaments);
   const seasonBusy = useSeasonModeStore((s) => s.busy);
+  // El año mirado y el año en curso: mirar una temporada vieja es de sólo
+  // lectura, y ofrecer ahí una acción sería un botón muerto (el store la aborta
+  // sin decir nada).
+  const seasonYear = useSeasonModeStore((s) => s.year);
+  const seasonCurrentYear = useSeasonModeStore((s) => s.currentYear);
 
   return useMemo(
     () =>
       deriveNextAction({
-        engine: descriptor.engine,
+        descriptor,
         cycle,
-        season: { status: seasonStatus, tournaments: seasonTournaments },
+        season: {
+          status: seasonStatus,
+          tournaments: seasonTournaments,
+          year: seasonYear,
+          currentYear: seasonCurrentYear,
+        },
         busy: descriptor.engine === 'season' ? seasonBusy : cycleBusy,
         nav,
         actions: {
@@ -48,6 +58,16 @@ export function useNextAction(nav: Nav): MobileAction | null {
           },
         },
       }),
-    [descriptor.engine, cycle, cycleBusy, seasonStatus, seasonTournaments, seasonBusy, nav],
+    [
+      descriptor,
+      cycle,
+      cycleBusy,
+      seasonStatus,
+      seasonTournaments,
+      seasonBusy,
+      seasonYear,
+      seasonCurrentYear,
+      nav,
+    ],
   );
 }

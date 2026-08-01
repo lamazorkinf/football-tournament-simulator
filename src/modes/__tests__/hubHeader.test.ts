@@ -1,24 +1,33 @@
 import { describe, it, expect } from 'vitest';
 import { deriveHubHeader, type SeasonHeaderInput } from '../hubHeader';
+import { SELECCIONES_DESCRIPTOR, VILLAMARIENSE_DESCRIPTOR } from '../registry';
 import { toCycle } from '../../core/cycle';
 import { baseTournament } from '../../test/fixtures/cycle';
 import type { Cycle, KnockoutBracket, KnockoutMatch } from '../../types';
+import type { ModeDescriptor } from '../types';
 import type { RoundKey } from '../../core/formats/rounds';
-import type { LigaTournament, ModeTournament } from '../../core/formats/modeTournament';
+import type {
+  GruposEliminacionTournament,
+  LigaTournament,
+  ModeTournament,
+} from '../../core/formats/modeTournament';
 
 function cycleHeader(cycle: Cycle | null) {
   return deriveHubHeader({
-    engine: 'national-cycle',
+    descriptor: SELECCIONES_DESCRIPTOR,
     cycle,
-    season: { status: 'idle', tournaments: [], year: null },
+    season: { status: 'idle', tournaments: [], year: null, currentYear: null },
   });
 }
 
-function seasonHeader(season: Partial<SeasonHeaderInput> = {}) {
+function seasonHeader(
+  season: Partial<SeasonHeaderInput> = {},
+  descriptor: ModeDescriptor = VILLAMARIENSE_DESCRIPTOR,
+) {
   return deriveHubHeader({
-    engine: 'season',
+    descriptor,
     cycle: null,
-    season: { status: 'ready', tournaments: [], year: 2027, ...season },
+    season: { status: 'ready', tournaments: [], year: 2027, currentYear: 2027, ...season },
   });
 }
 
@@ -113,13 +122,76 @@ function liga(id: string, name: string, played: number, total: number): LigaTour
   };
 }
 
+/** Una copa de grupos + eliminación: `total` partidos de grupos, `played` jugados. */
+function copa(
+  id: string,
+  name: string,
+  played: number,
+  total: number,
+): GruposEliminacionTournament {
+  return {
+    id,
+    modeId: 'clubes',
+    competitionId: id,
+    year: 2027,
+    name,
+    status: 'in-progress',
+    division: null,
+    format: 'grupos-eliminacion',
+    state: {
+      groups: {
+        config: {
+          groupCount: 1,
+          groupSize: 2,
+          legs: 1,
+          qualifiersPerGroup: 2,
+          bestRunnersUp: 0,
+          stage: 'cup',
+        },
+        groups: [
+          {
+            id: `${id}-g1`,
+            name: 'Grupo A',
+            teamIds: ['a', 'b'],
+            matches: Array.from({ length: total }, (_, i) => ({
+              id: `${id}-m${i}`,
+              homeTeamId: 'a',
+              awayTeamId: 'b',
+              homeScore: i < played ? 1 : null,
+              awayScore: i < played ? 0 : null,
+              isPlayed: i < played,
+              matchday: i + 1,
+            })),
+            standings: [],
+          },
+        ],
+      },
+      // El cuadro existe y está sin jugar: no tiene que mover la barra.
+      bracket: null,
+    },
+  };
+}
+
+/** El mensaje con el que el modo explica su cierre. Falla si no lo hay. */
+function idleMessage(header: { idle: { kind: string; message?: string } }): string {
+  if (header.idle.kind !== 'blocked') {
+    throw new Error(`se esperaba un cierre explicado, llegó "${header.idle.kind}"`);
+  }
+  return header.idle.message!;
+}
+
 describe('deriveHubHeader — ciclo mundialista', () => {
-  it('sin ciclo cargado avisa que está cargando', () => {
+  it('sin ciclo cargado avisa que está cargando, y no que se terminó', () => {
     expect(cycleHeader(null)).toEqual({
       title: 'Ciclo mundial',
       phaseLabel: 'Cargando…',
       progress: 0,
+      idle: { kind: 'loading' },
     });
+  });
+
+  it('con el ciclo cargado, no tener acción sí es un cierre', () => {
+    expect(cycleHeader(toCycle(baseTournament())).idle).toEqual({ kind: 'done' });
   });
 
   it('el título es el año del ciclo y la fase sale del calendario', () => {
@@ -180,13 +252,16 @@ describe('deriveHubHeader — modo de temporada', () => {
     expect(header.title).toBe('Temporada 2027');
     expect(header.phaseLabel).toBe('Sin clubes sembrados');
     expect(header.progress).toBe(0);
-    expect(header.emptyMessage).toMatch(/no tiene sus divisiones cargadas/i);
-    expect(header.emptyMessage).toMatch(/la temporada 2027/);
+    expect(header.idle.kind).toBe('blocked');
+    expect(idleMessage(header)).toMatch(/no tiene sus divisiones cargadas/i);
+    expect(idleMessage(header)).toMatch(/la temporada 2027/);
   });
 
-  it('los demás estados no traen mensaje de cierre propio', () => {
-    expect(seasonHeader().emptyMessage).toBeUndefined();
-    expect(seasonHeader({ status: 'error' }).emptyMessage).toBeUndefined();
+  it('jugando, no hay nada que explicar', () => {
+    expect(seasonHeader().idle).toEqual({ kind: 'done' });
+    expect(seasonHeader({ tournaments: [liga('league-A', 'Liga A', 0, 2)] }).idle).toEqual({
+      kind: 'done',
+    });
   });
 
   it('sin torneos la temporada figura sin arrancar, no completa', () => {
@@ -208,15 +283,84 @@ describe('deriveHubHeader — modo de temporada', () => {
     expect(header.progress).toBe(1);
   });
 
-  it('sin conexión lo dice en el rótulo', () => {
-    expect(seasonHeader({ status: 'error' }).phaseLabel).toBe('Sin conexión');
+  it('sin conexión lo dice en el rótulo, y no es un cierre del modo', () => {
+    const header = seasonHeader({ status: 'error' });
+    expect(header.phaseLabel).toBe('Sin conexión');
+    expect(idleMessage(header)).toMatch(/conexión/i);
   });
 
-  it('mientras carga no inventa una fase', () => {
+  /**
+   * La regresión del Hub: `loadForMode` pone `status: 'loading'` sincrónico y
+   * hace dos round trips de red. Toda esa ventana el Hub mostraba un trofeo
+   * dorado y "No queda nada por jugar en este modo".
+   */
+  it('mientras carga no inventa una fase NI un cierre', () => {
     expect(seasonHeader({ status: 'loading' }).phaseLabel).toBe('Cargando…');
+    expect(seasonHeader({ status: 'loading' }).idle).toEqual({ kind: 'loading' });
+    expect(seasonHeader({ status: 'idle' }).idle).toEqual({ kind: 'loading' });
   });
 
   it('sin año todavía, el título es genérico', () => {
     expect(seasonHeader({ year: null }).title).toBe('Temporada');
+  });
+});
+
+describe('deriveHubHeader — temporada vieja', () => {
+  const vieja = { year: 2025, currentYear: 2027 } as const;
+
+  it('avisa que es de sólo lectura y adónde volver', () => {
+    const header = seasonHeader({ tournaments: [liga('league-A', 'Liga A', 2, 2)], ...vieja });
+    expect(header.title).toBe('Temporada 2025');
+    expect(header.phaseLabel).toBe('Cerrada · sólo lectura');
+    expect(idleMessage(header)).toMatch(/sólo lectura/i);
+    expect(idleMessage(header)).toMatch(/2027/);
+  });
+
+  it('el año en curso no dice nada de eso', () => {
+    const header = seasonHeader({ tournaments: [liga('league-A', 'Liga A', 2, 2)] });
+    expect(header.phaseLabel).toBe('Temporada completa');
+    expect(header.idle).toEqual({ kind: 'done' });
+  });
+
+  it('la barra sigue mostrando lo que se jugó ese año', () => {
+    expect(seasonHeader({ tournaments: [liga('league-A', 'Liga A', 2, 2)], ...vieja }).progress).toBe(1);
+  });
+});
+
+/**
+ * El criterio de cierre de la unificación en la cabecera: un modo declarado por
+ * JSON, con una sola copa de grupos + eliminación y sin ascensos.
+ */
+describe('deriveHubHeader — un modo de una sola copa', () => {
+  const COPA_UNICA: ModeDescriptor = {
+    ...VILLAMARIENSE_DESCRIPTOR,
+    divisions: [],
+    promotion: null,
+  };
+
+  it('la fase de grupos SÍ cuenta en la barra', () => {
+    // El bug: el progreso sólo sumaba torneos `liga`, así que un modo sin ligas
+    // se quedaba en 0% para siempre. Los grupos tienen total conocido de
+    // entrada, igual que una liga; el cuadro no, y por eso sigue afuera.
+    const header = seasonHeader({ tournaments: [copa('mundialito', 'Mundial de Clubes', 2, 4)] }, COPA_UNICA);
+    expect(header.progress).toBe(0.5);
+  });
+
+  it('el cuadro no entra en la cuenta', () => {
+    // Con los grupos enteros jugados la barra cierra: si el cuadro contara, el
+    // denominador cambiaría cada vez que se genera una ronda.
+    const header = seasonHeader({ tournaments: [copa('mundialito', 'Mundial de Clubes', 4, 4)] }, COPA_UNICA);
+    expect(header.progress).toBe(1);
+  });
+
+  it('jugada entera, explica que no hay temporada siguiente que abrir', () => {
+    const header = seasonHeader({ tournaments: [copa('mundialito', 'Mundial de Clubes', 4, 4)] }, COPA_UNICA);
+    expect(header.phaseLabel).toBe('Temporada completa');
+    expect(idleMessage(header)).toMatch(/no aplica ascensos ni descensos/i);
+  });
+
+  it('un modo que sí puede cerrar no dice nada de eso', () => {
+    const header = seasonHeader({ tournaments: [liga('league-A', 'Liga A', 2, 2)] });
+    expect(header.idle).toEqual({ kind: 'done' });
   });
 });

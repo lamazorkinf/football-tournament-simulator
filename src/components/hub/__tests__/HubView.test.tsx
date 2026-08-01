@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { HubView } from '../HubView';
 import type { NavItem } from '../../../modes/nav';
+import type { HubIdle } from '../../../modes/hubHeader';
 
 const LADDER: NavItem[] = [
   {
@@ -35,6 +36,7 @@ function props(over: Partial<React.ComponentProps<typeof HubView>> = {}) {
     currentView: 'hub' as const,
     onSelectStep: vi.fn(),
     lastResult: null,
+    idle: { kind: 'done' } as HubIdle,
     ...over,
   };
 }
@@ -93,7 +95,7 @@ describe('HubView', () => {
       <HubView
         {...props({
           nextAction: null,
-          emptyMessage: 'Este modo todavía no tiene sus divisiones cargadas.',
+          idle: { kind: 'blocked', message: 'Este modo todavía no tiene sus divisiones cargadas.' },
         })}
       />,
     );
@@ -102,8 +104,18 @@ describe('HubView', () => {
   });
 
   it('cargando no ofrece ninguna acción', () => {
-    render(<HubView {...props({ isLoading: true })} />);
+    render(<HubView {...props({ idle: { kind: 'loading' } })} />);
     expect(screen.queryByRole('button', { name: /SORTEAR/ })).not.toBeInTheDocument();
+  });
+
+  /**
+   * La regresión que arregla el `idle`: mientras la temporada carga no hay
+   * próxima acción, y el Hub deducía de eso que el modo se había terminado.
+   * "Cargando" y "no queda nada" son estados distintos y se dibujan distinto.
+   */
+  it('cargando SIN próxima acción tampoco anuncia un cierre', () => {
+    render(<HubView {...props({ nextAction: null, idle: { kind: 'loading' } })} />);
+    expect(screen.queryByText(/no queda nada por jugar/i)).not.toBeInTheDocument();
   });
 
   it('sin último resultado no rinde ese bloque', () => {

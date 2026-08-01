@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { toast } from 'sonner';
 import { deriveNextAction, type ModeActions } from '../nextAction';
+import { SELECCIONES_DESCRIPTOR } from '../registry';
 import { toCycle } from '../../core/cycle';
 import {
   baseTournament,
@@ -31,7 +32,7 @@ function makeActions(overrides: Partial<ModeActions> = {}): ModeActions {
 
 function actionFor(cycle: Cycle | null, actions = makeActions(), nav = vi.fn(), busy = false) {
   return deriveNextAction({
-    engine: 'national-cycle',
+    descriptor: SELECCIONES_DESCRIPTOR,
     cycle,
     season: null,
     busy,

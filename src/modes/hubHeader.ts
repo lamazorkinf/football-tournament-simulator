@@ -2,8 +2,9 @@ import { getPhaseMatches } from '../core/calendar';
 import { getContinentalProgress, getConfederationsProgress } from '../utils/cycleProgress';
 import { getQualifierProgress, getWorldCupGroupProgress } from '../utils/tournamentProgress';
 import { currentModeJornada } from '../core/formats/modeJornada';
+import { canCloseSeason } from './types';
 import type { Cycle } from '../types';
-import type { ModeEngine } from './types';
+import type { ModeDescriptor } from './types';
 import type { SeasonModeStatus } from '../store/useSeasonModeStore';
 import type { ModeTournament } from '../core/formats/modeTournament';
 
@@ -16,6 +17,23 @@ import type { ModeTournament } from '../core/formats/modeTournament';
  * le pasa lo que ya tiene suscripto, y esto se testea con objetos literales.
  */
 
+/**
+ * QUÉ SIGNIFICA QUE NO HAYA PRÓXIMA ACCIÓN.
+ *
+ * `deriveNextAction` devuelve `null` en dos situaciones que no se parecen en
+ * nada —"todavía no sé" y "no queda nada"— y el Hub no las puede distinguir
+ * solo. Cuando eso quedaba implícito, un modo de temporada mostraba un trofeo
+ * dorado y "No queda nada por jugar" durante los dos round trips que tarda en
+ * cargar. Por eso el motivo es un dato, y no una convención.
+ */
+export type HubIdle =
+  /** El modo todavía no resolvió su estado: esqueleto, ni acción ni cierre. */
+  | { kind: 'loading' }
+  /** No se puede jugar y el modo tiene su propia explicación. */
+  | { kind: 'blocked'; message: string }
+  /** Se puede jugar (o se terminó): el Hub decide con `nextAction`. */
+  | { kind: 'done' };
+
 export interface HubHeader {
   /** Título grande: el ciclo o la temporada en curso. */
   title: string;
@@ -24,23 +42,31 @@ export interface HubHeader {
   /** 0..1, para la `PixelBar`. */
   progress: number;
   /**
-   * Qué decir cuando no hay próxima acción. `undefined` deja el texto genérico
-   * del Hub. Existe porque no todos los cierres son iguales: un ciclo terminado
-   * no es lo mismo que un modo al que todavía no le sembraron los clubes, y
-   * decirle a ese último "no queda nada por jugar" es mentirle.
+   * Por qué no habría nada que apretar. Se lee junto con `deriveNextAction`:
+   * mientras haya acción, esto no se rinde. Existe porque no todos los cierres
+   * son iguales —un ciclo terminado no es lo mismo que un modo al que todavía
+   * no le sembraron los clubes— y porque "cargando" no es un cierre.
    */
-  emptyMessage?: string;
+  idle: HubIdle;
 }
 
 /** Lo que la rama de temporada necesita saber del store. */
 export interface SeasonHeaderInput {
   status: SeasonModeStatus;
   tournaments: ModeTournament[];
+  /** El año que se está mirando. */
   year: number | null;
+  /** El año en curso del modo: los demás son de sólo lectura. */
+  currentYear: number | null;
 }
 
 export interface DeriveHubHeaderInput {
-  engine: ModeEngine;
+  /**
+   * El descriptor del modo activo, entero — igual que en `deriveNextAction`. La
+   * cabecera tiene que explicar cierres que dependen de lo que el modo declara
+   * (una temporada jugada entera en un modo sin ascensos no se puede cerrar).
+   */
+  descriptor: ModeDescriptor;
   /** `national-cycle`: el ciclo activo. `null` mientras carga. */
   cycle: Cycle | null;
   season: SeasonHeaderInput;
@@ -76,7 +102,14 @@ interface Counted {
 }
 
 function cycleHeader(cycle: Cycle | null): HubHeader {
-  if (!cycle) return { title: 'Ciclo mundial', phaseLabel: 'Cargando…', progress: 0 };
+  if (!cycle) {
+    return {
+      title: 'Ciclo mundial',
+      phaseLabel: 'Cargando…',
+      progress: 0,
+      idle: { kind: 'loading' },
+    };
+  }
 
   const parts: Counted[] = [
     getContinentalProgress(cycle),
@@ -101,18 +134,37 @@ function cycleHeader(cycle: Cycle | null): HubHeader {
     title: `Ciclo ${cycle.year}`,
     phaseLabel: CYCLE_PHASE_LABEL[cycle.calendar.phase] ?? 'Ciclo completo',
     progress: total > 0 ? played / total : 0,
+    // El ciclo cargado sí termina: sin próxima acción, se ganó el Mundial y el
+    // Hub ofrece arrancar uno nuevo.
+    idle: { kind: 'done' },
   };
 }
 
-function seasonHeader({ status, tournaments, year }: SeasonHeaderInput): HubHeader {
+/**
+ * Partidos con total conocido de entrada, que son los únicos que pueden estar
+ * en el denominador de la barra: los de una liga y los de una fase de grupos.
+ *
+ * El cuadro de eliminación queda afuera a propósito —genera cada ronda recién
+ * cuando termina la anterior, así que sumarlo haría retroceder el porcentaje—,
+ * pero los grupos NO tenían por qué irse con él: un modo de una sola copa
+ * (grupos + llave) se quedaba con la barra en 0% para siempre.
+ */
+function countableMatches(tournaments: ModeTournament[]) {
+  return tournaments.flatMap((t) => {
+    if (t.format === 'liga') return t.state.matches;
+    if (t.format === 'grupos-eliminacion') return t.state.groups.groups.flatMap((g) => g.matches);
+    return [];
+  });
+}
+
+function seasonHeader(
+  { status, tournaments, year, currentYear }: SeasonHeaderInput,
+  descriptor: ModeDescriptor,
+): HubHeader {
   const title = year !== null ? `Temporada ${year}` : 'Temporada';
   const laTemporada = year !== null ? `la temporada ${year}` : 'la temporada';
 
-  // El progreso suma sólo los torneos `liga` a propósito: son los que tienen un
-  // total de partidos conocido de entrada. Un cuadro de eliminación genera sus
-  // rondas a medida que avanza, así que contarlo daría un porcentaje que
-  // retrocede.
-  const matches = tournaments.flatMap((t) => (t.format === 'liga' ? t.state.matches : []));
+  const matches = countableMatches(tournaments);
   const progress =
     matches.length > 0 ? matches.filter((m) => m.isPlayed).length / matches.length : 0;
 
@@ -125,30 +177,84 @@ function seasonHeader({ status, tournaments, year }: SeasonHeaderInput): HubHead
       // reemplazó: es lo único que explica por qué el modo todavía no se puede
       // jugar. Sin él, el Hub diría "no queda nada por jugar" en un modo que
       // nunca se pudo empezar.
-      emptyMessage:
-        'Este modo todavía no tiene sus divisiones cargadas. En cuanto se siembren los clubes ' +
-        `(con su división y skill inicial), vas a poder iniciar ${laTemporada} acá.`,
+      idle: {
+        kind: 'blocked',
+        message:
+          'Este modo todavía no tiene sus divisiones cargadas. En cuanto se siembren los clubes ' +
+          `(con su división y skill inicial), vas a poder iniciar ${laTemporada} acá.`,
+      },
     };
   }
-  if (status === 'error') return { title, phaseLabel: 'Sin conexión', progress };
-  if (status !== 'ready') return { title, phaseLabel: 'Cargando…', progress };
+  if (status === 'error') {
+    return {
+      title,
+      phaseLabel: 'Sin conexión',
+      progress,
+      // Inalcanzable mientras haya "▶ REINTENTAR", pero el motivo tiene que ser
+      // verdadero igual: sin conexión el modo no está terminado, está caído.
+      idle: { kind: 'blocked', message: 'No se pudo cargar la temporada. Revisá la conexión.' },
+    };
+  }
+  // `idle` y `loading`: el modo todavía no contestó. Es la ventana de los dos
+  // round trips de `loadForMode`, donde el Hub decía "no queda nada por jugar".
+  if (status !== 'ready') {
+    return { title, phaseLabel: 'Cargando…', progress, idle: { kind: 'loading' } };
+  }
+
+  // Un año pasado no se juega: las tres acciones del store lo rechazan en
+  // silencio. El aviso de sólo lectura que tenía la vista de temporada
+  // (`SeasonModeView`) lo da acá el Hub, que ahora es la pantalla de entrada.
+  if (year !== null && currentYear !== null && year !== currentYear) {
+    return {
+      title,
+      phaseLabel: 'Cerrada · sólo lectura',
+      progress,
+      idle: {
+        kind: 'blocked',
+        message:
+          `Estás mirando ${laTemporada}, que ya se cerró: es de sólo lectura. ` +
+          `Elegí la temporada ${currentYear} en el selector para seguir jugando.`,
+      },
+    };
+  }
 
   const pending = tournaments
     .map((t) => ({ t, jornada: currentModeJornada(t) }))
     .find((x) => x.jornada !== null);
   if (pending) {
-    return { title, phaseLabel: `${pending.t.name} · ${pending.jornada!.label}`, progress };
+    return {
+      title,
+      phaseLabel: `${pending.t.name} · ${pending.jornada!.label}`,
+      progress,
+      idle: { kind: 'done' },
+    };
+  }
+
+  // Sin torneos la temporada no arrancó (es donde queda el modo después de
+  // cerrar la anterior); con torneos y sin jornada pendiente, se jugó entera.
+  if (tournaments.length === 0) {
+    return { title, phaseLabel: 'Sin arrancar', progress, idle: { kind: 'done' } };
   }
 
   return {
     title,
-    // Sin torneos la temporada no arrancó (es donde queda el modo después de
-    // cerrar la anterior); con torneos y sin jornada pendiente, se jugó entera.
-    phaseLabel: tournaments.length === 0 ? 'Sin arrancar' : 'Temporada completa',
+    phaseLabel: 'Temporada completa',
     progress,
+    // Jugada entera y sin cierre posible: el modo no declara ascensos, así que
+    // no hay temporada siguiente que abrir y tampoco hay botón que ofrecer.
+    idle: canCloseSeason(descriptor)
+      ? { kind: 'done' }
+      : {
+          kind: 'blocked',
+          message:
+            `Se jugó ${laTemporada} entera. Este modo no aplica ascensos ni descensos, ` +
+            'así que no hay una temporada siguiente para abrir desde acá.',
+        },
   };
 }
 
 export function deriveHubHeader(input: DeriveHubHeaderInput): HubHeader {
-  return input.engine === 'national-cycle' ? cycleHeader(input.cycle) : seasonHeader(input.season);
+  return input.descriptor.engine === 'national-cycle'
+    ? cycleHeader(input.cycle)
+    : seasonHeader(input.season, input.descriptor);
 }

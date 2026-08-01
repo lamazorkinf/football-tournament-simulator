@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { parseModeConfig } from '../schema';
 import { deriveModeNav } from '../nav';
+import { deriveNextAction, type ModeActions, type SeasonView } from '../nextAction';
+import { deriveHubHeader } from '../hubHeader';
 import { useSeasonModeStore } from '../../store/useSeasonModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { isGroupStageComplete } from '../../core/formats/groupStage';
@@ -194,5 +196,120 @@ describe('un modo nuevo, sólo con modes.config', () => {
       'hub', 'league', 'comparison', 'favorites', 'champions', 'history', 'settings',
     ]);
     expect(nav.primary.map((i) => i.shortLabel)).toEqual(['INICIO', 'VERSUS', 'FAVS', 'REYES']);
+  });
+
+  /**
+   * La pantalla raíz de la app —el Hub— también tiene que salir del JSON. Son
+   * otras dos derivaciones puras al lado de la navegación: qué botón se ofrece
+   * (`deriveNextAction`) y qué dice la cabecera (`deriveHubHeader`). Se juega la
+   * temporada entera APRETANDO el botón que ofrece la derivación, sin llamar
+   * ninguna acción del store a mano.
+   */
+  it('se juega desde el inicio, apretando la próxima acción', async () => {
+    const parsed = parseModeConfig(MUNDIAL_DE_CLUBES, 'league-system');
+    if (!parsed.ok) throw new Error('la config no validó');
+    const descriptor = parsed.descriptor;
+
+    useSeasonModeStore.setState({
+      modeId: 'clubes',
+      descriptor,
+      year: 2030,
+      currentYear: 2030,
+      availableYears: [2030],
+      divisions: {},
+      previousDivisions: null,
+      tournaments: [],
+      status: 'ready',
+      busy: false,
+    });
+
+    const rng = seededRng(2030);
+    // Las acciones se inyectan (por eso las derivaciones son puras). Las del
+    // ciclo mundialista no aplican a este modo y explotan si alguien las llama.
+    const noCiclo = () => {
+      throw new Error('un modo de temporada no ejecuta acciones del ciclo mundialista');
+    };
+    // `onPress` devuelve void, así que el store queda corriendo en background:
+    // se guarda la promesa para poder esperarla.
+    let pending: Promise<unknown> = Promise.resolve();
+    const actions: ModeActions = {
+      drawContinental: noCiclo,
+      drawConfederations: noCiclo,
+      advanceToQualifiers: noCiclo,
+      generateDrawAndFixtures: noCiclo,
+      advanceToWorldCup: noCiclo,
+      advanceToKnockout: noCiclo,
+      startSeason: () => (pending = useSeasonModeStore.getState().startSeason()),
+      simulateJornada: (id) => (pending = useSeasonModeStore.getState().simulateJornada(id, rng)),
+      closeSeason: () => (pending = useSeasonModeStore.getState().closeSeason()),
+      reloadMode: async () => {},
+    };
+
+    const seasonView = (): SeasonView => {
+      const s = useSeasonModeStore.getState();
+      return {
+        status: s.status,
+        tournaments: s.tournaments,
+        year: s.year,
+        currentYear: s.currentYear,
+      };
+    };
+    const nextAction = () =>
+      deriveNextAction({ descriptor, cycle: null, season: seasonView(), busy: false, nav: vi.fn(), actions });
+    const header = () => deriveHubHeader({ descriptor, cycle: null, season: seasonView() });
+    /** Aprieta el botón que ofrece el Hub y espera a que el store termine. */
+    const press = async () => {
+      const action = nextAction();
+      if (!action) throw new Error('el Hub no ofrecía ninguna acción');
+      action.onPress();
+      await pending;
+      return action.label;
+    };
+
+    // Sin torneos, el modo nuevo ofrece arrancar y la cabecera no dice que se
+    // terminó nada.
+    expect(nextAction()?.label).toBe('▶ EMPEZAR TEMPORADA');
+    expect(header()).toMatchObject({
+      title: 'Temporada 2030',
+      phaseLabel: 'Sin arrancar',
+      progress: 0,
+      idle: { kind: 'done' },
+    });
+
+    expect(await press()).toBe('▶ EMPEZAR TEMPORADA');
+
+    // Arrancada: la cabecera nombra la competición del JSON y su jornada.
+    expect(header().phaseLabel).toBe('Mundial de Clubes 2030 · Fecha 1');
+    expect(header().progress).toBe(0);
+
+    const jugadas: string[] = [];
+    for (let guard = 0; guard < 20 && nextAction() !== null; guard++) {
+      jugadas.push(await press());
+    }
+
+    // 3 fechas de grupos + las 3 rondas del cuadro, todas ofrecidas por el Hub.
+    expect(jugadas).toEqual([
+      '▶ SIMULAR FECHA 1',
+      '▶ SIMULAR FECHA 2',
+      '▶ SIMULAR FECHA 3',
+      '▶ SIMULAR CUARTOS',
+      '▶ SIMULAR SEMIS',
+      '▶ SIMULAR FINAL Y 3ER PUESTO',
+    ]);
+
+    // La barra llegó a 100% con los 24 partidos de grupos: si el progreso
+    // siguiera contando sólo torneos `liga`, este modo estaría en 0% para
+    // siempre.
+    expect(header().progress).toBe(1);
+
+    // Y terminado NO se ofrece cerrar la temporada: este modo no declara
+    // ascensos, así que `closeSeason` la rechazaría en silencio. El Hub explica
+    // el cierre en vez de mostrar un botón muerto.
+    expect(nextAction()).toBeNull();
+    expect(header().phaseLabel).toBe('Temporada completa');
+    expect(header().idle).toEqual({
+      kind: 'blocked',
+      message: expect.stringMatching(/no aplica ascensos ni descensos/i),
+    });
   });
 });

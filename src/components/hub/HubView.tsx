@@ -7,6 +7,7 @@ import { TeamFlag } from '../ui/TeamFlag';
 import { navIcon } from '../ui/navIcons';
 import { cn } from '../../lib/utils';
 import type { NavItem } from '../../modes/nav';
+import type { HubIdle } from '../../modes/hubHeader';
 import type { MobileAction } from '../../hooks/useMobileAction';
 import type { MatchResult } from '../../store/useMatchResultsStore';
 import type { View } from '../../types/view';
@@ -28,14 +29,13 @@ interface HubViewProps {
   onSelectStep: (item: NavItem) => void;
   lastResult: MatchResult | null;
   /**
-   * Qué decir cuando no hay próxima acción. Por defecto, que el modo se terminó;
-   * un modo puede explicar SU cierre (p. ej. una temporada a la que todavía no
-   * le sembraron los clubes nunca se pudo jugar, así que decirle "no queda nada
-   * por jugar" sería mentirle).
+   * Qué pasa cuando no hay próxima acción. `loading` rinde el esqueleto (el modo
+   * todavía no contestó); `blocked` rinde la explicación del propio modo; `done`
+   * cae en el texto genérico de cierre. No se adivina desde `nextAction === null`:
+   * mientras cargaba, adivinarlo hacía que el Hub dijera que no quedaba nada por
+   * jugar.
    */
-  emptyMessage?: string;
-  /** El modo todavía no resolvió su estado: no se ofrece ninguna acción. */
-  isLoading?: boolean;
+  idle: HubIdle;
   /** Salida cuando el ciclo terminó. Ausente en los modos que no terminan nunca. */
   onNewTournament?: () => void;
 }
@@ -54,8 +54,7 @@ export function HubView({
   currentView,
   onSelectStep,
   lastResult,
-  emptyMessage = 'No queda nada por jugar en este modo.',
-  isLoading = false,
+  idle,
   onNewTournament,
 }: HubViewProps) {
   return (
@@ -63,7 +62,13 @@ export function HubView({
       <Card>
         <CardContent className="space-y-4 py-6">
           <div>
-            <h1 className="font-arcade text-lg text-gold text-shadow-retro">{title}</h1>
+            {/* `text-base` hasta sm, la misma escala que fija `ViewHeader`:
+                Press Start 2P a `text-lg` no entra en móvil con los títulos
+                largos ("Temporada 2028" son 14 caracteres ≈ 252px contra los
+                ~232px útiles de una pantalla de 320px). */}
+            <h1 className="font-arcade text-base sm:text-lg text-gold text-shadow-retro">
+              {title}
+            </h1>
             <p className="text-grass-soft text-sm mt-1">{phaseLabel}</p>
           </div>
           <PixelBar value={Math.round(progress * 100)} max={100} color="led" />
@@ -97,12 +102,16 @@ export function HubView({
         </Card>
       )}
 
-      {isLoading ? (
+      {idle.kind === 'loading' ? (
         <Skeleton className="h-16 w-full" />
       ) : nextAction ? (
+        // `text-xs` sobre `size="lg"`, exactamente como lo rinde el `ActionDock`
+        // de móvil: son las mismas etiquetas, y con el `text-sm` que trae el
+        // tamaño "▶ JUGAR CLASIFICATORIAS" (23 caracteres) se parte en dos
+        // renglones a 320px.
         <Button
           size="lg"
-          className="w-full"
+          className="w-full text-xs"
           onClick={nextAction.onPress}
           disabled={nextAction.disabled}
         >
@@ -112,7 +121,9 @@ export function HubView({
         <Card>
           <CardContent className="py-8 text-center space-y-4">
             <Trophy className="w-12 h-12 text-gold mx-auto" />
-            <p className="text-grass-soft text-sm">{emptyMessage}</p>
+            <p className="text-grass-soft text-sm">
+              {idle.kind === 'blocked' ? idle.message : 'No queda nada por jugar en este modo.'}
+            </p>
             {onNewTournament && (
               <Button variant="secondary" size="sm" onClick={onNewTournament}>
                 Nuevo torneo

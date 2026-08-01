@@ -5,7 +5,7 @@ import { isConfederationsDrawn, isContinentalDrawn } from '../utils/cycleProgres
 /**
  * Lo que el ciclo mundialista tiene y ningún otro motor: un calendario de 4
  * años con fases que se desbloquean en orden, y dos pantallas de maquinaria
- * (Progreso y Centro de Partidos) que no son competiciones.
+ * (Inicio y Centro de Partidos) que no son competiciones.
  *
  * La navegación general (`modes/nav.ts`) es la misma para todos los modos; esto
  * es lo que el motor `national-cycle` le aporta. Aislarlo acá es lo que permite

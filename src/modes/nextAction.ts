@@ -17,7 +17,8 @@ import { currentModeJornada } from '../core/formats/modeJornada';
 import type { Cycle } from '../types';
 import type { View } from '../types/view';
 import type { MobileAction } from '../hooks/useMobileAction';
-import type { ModeEngine } from './types';
+import { canCloseSeason } from './types';
+import type { ModeDescriptor } from './types';
 import type { SeasonModeStatus } from '../store/useSeasonModeStore';
 import type { ModeTournament } from '../core/formats/modeTournament';
 
@@ -31,6 +32,11 @@ import type { ModeTournament } from '../core/formats/modeTournament';
  *
  * Regla transversal: si la acción del store devuelve `false`, el store ya avisó
  * el motivo con su propio toast, así que acá no se festeja ni se navega.
+ *
+ * `null` acá significa sólo "no hay nada que apretar", NO "el modo se terminó":
+ * el POR QUÉ lo dice `deriveHubHeader` con su `idle` (`loading` / `blocked` /
+ * `done`). Las dos derivaciones se leen juntas; si esta devuelve `null` y
+ * aquella dice `loading`, el Hub rinde el esqueleto y no un estado de cierre.
  */
 
 /** Las acciones de store que el Hub puede disparar, inyectadas para que esto quede puro. */
@@ -56,10 +62,30 @@ export type Nav = (view: View, tab?: string) => void;
 export interface SeasonView {
   status: SeasonModeStatus;
   tournaments: ModeTournament[];
+  /** El año que se está mirando. */
+  year: number | null;
+  /**
+   * El año en curso del modo. El único que se puede jugar: las tres acciones de
+   * temporada (`startSeason`, `simulateMatches`, `closeSeason`) abortan en
+   * silencio si `year !== currentYear`, así que ofrecerlas ahí sería un botón
+   * muerto.
+   */
+  currentYear: number | null;
+}
+
+/** ¿Se está mirando una temporada vieja? Ahí el modo es de sólo lectura. */
+export function isReadOnlySeason({ year, currentYear }: SeasonView): boolean {
+  return year !== null && currentYear !== null && year !== currentYear;
 }
 
 export interface DeriveNextActionInput {
-  engine: ModeEngine;
+  /**
+   * El descriptor del modo activo, entero. No alcanza con el motor: hay
+   * acciones que dependen de lo que el modo DECLARA (cerrar la temporada exige
+   * ascensos y divisiones), y estrechar esto a `engine` fue lo que dejó pasar
+   * botones que nunca podían funcionar.
+   */
+  descriptor: ModeDescriptor;
   /** `national-cycle`: el ciclo activo. */
   cycle: Cycle | null;
   /** `season`: estado de la temporada en curso. */
@@ -190,21 +216,32 @@ function cycleNextAction(cycle: Cycle, nav: Nav, actions: ModeActions): MobileAc
 /**
  * Próxima acción de un modo de temporada, por prioridad.
  *
- * No hay caso "temporada cerrada": `closeSeason` aplica ascensos/descensos,
- * avanza el año y recarga, con lo cual el modo vuelve a `ready` sin torneos —
- * o sea, a "empezar temporada" del año siguiente. Un modo de temporada no
- * termina nunca; el único `null` posible es `needs-seed`.
+ * El caso normal es que un modo de temporada NO termine nunca: `closeSeason`
+ * aplica ascensos/descensos, avanza el año y recarga, con lo cual el modo
+ * vuelve a `ready` sin torneos — o sea, a "empezar temporada" del año
+ * siguiente. Los tres cierres posibles son otra cosa: el modo sin clubes
+ * sembrados, la temporada vieja (sólo lectura) y el modo que no puede cerrar
+ * porque no declara ascensos. Los tres los explica `deriveHubHeader`.
  *
  * El rótulo de la jornada sale de `currentModeJornada`, que ya resuelve los
  * tres formatos ("Fecha 4" en una liga o una fase de grupos, "Semifinales
  * (ida)" en un cuadro). No se re-deriva acá.
  */
-function seasonNextAction(season: SeasonView, actions: ModeActions): MobileAction | null {
+function seasonNextAction(
+  season: SeasonView,
+  descriptor: ModeDescriptor,
+  actions: ModeActions,
+): MobileAction | null {
   if (season.status === 'error') {
     return { label: '▶ REINTENTAR', onPress: () => void actions.reloadMode() };
   }
 
   if (season.status !== 'ready') return null;
+
+  // Mirando un año pasado no hay NADA que ofrecer: `startSeason`,
+  // `simulateMatches` y `closeSeason` cortan todas con `year !== currentYear` y
+  // ni siquiera avisan. Cualquier botón acá sería muerto.
+  if (isReadOnlySeason(season)) return null;
 
   if (season.tournaments.length === 0) {
     return { label: '▶ EMPEZAR TEMPORADA', onPress: () => void actions.startSeason() };
@@ -220,19 +257,25 @@ function seasonNextAction(season: SeasonView, actions: ModeActions): MobileActio
     }
   }
 
+  // Cerrar sólo se ofrece si el modo puede: `closeSeason` exige ascensos y al
+  // menos dos divisiones con su liga. Un modo de una sola copa —el "Mundial de
+  // Clubes" del test de modo nuevo— terminaba su torneo y quedaba con este
+  // botón, que no podía funcionar ni una vez.
+  if (!canCloseSeason(descriptor)) return null;
+
   return { label: '▶ CERRAR TEMPORADA', onPress: () => void actions.closeSeason() };
 }
 
 export function deriveNextAction(input: DeriveNextActionInput): MobileAction | null {
-  const { engine, cycle, season, nav, actions, busy } = input;
+  const { descriptor, cycle, season, nav, actions, busy } = input;
 
   const action =
-    engine === 'national-cycle'
+    descriptor.engine === 'national-cycle'
       ? cycle
         ? cycleNextAction(cycle, nav, actions)
         : null
       : season
-        ? seasonNextAction(season, actions)
+        ? seasonNextAction(season, descriptor, actions)
         : null;
 
   return action ? { ...action, disabled: busy } : null;

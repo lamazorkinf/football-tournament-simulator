@@ -36,6 +36,7 @@ import { PixelBar } from './components/ui/PixelBar';
 import { SeasonModeView } from './components/tournament/SeasonModeView';
 import { MobileActionProvider } from './hooks/useMobileAction';
 import { useModeNav } from './hooks/useModeNav';
+import { useModeDescriptor } from './hooks/useModeDescriptor';
 import { useNextAction } from './hooks/useNextAction';
 import { themeForMode } from './lib/modeTheme';
 import { deriveHubHeader } from './modes/hubHeader';
@@ -93,18 +94,26 @@ function App() {
   const modesLoaded = useModeStore((s) => s.isLoaded);
   const seasonStatus = useSeasonModeStore((s) => s.status);
   const seasonYear = useSeasonModeStore((s) => s.year);
+  const seasonCurrentYear = useSeasonModeStore((s) => s.currentYear);
   const seasonTournaments = useSeasonModeStore((s) => s.tournaments);
+  const hubDescriptor = useModeDescriptor();
 
-  // Cabecera del Hub (título, fase, progreso): derivación pura en `modes/`,
-  // igual que la navegación y la próxima acción. Acá sólo se leen los stores.
+  // Cabecera del Hub (título, fase, progreso, motivo de cierre): derivación pura
+  // en `modes/`, igual que la navegación y la próxima acción. Acá sólo se leen
+  // los stores.
   const hub = useMemo(
     () =>
       deriveHubHeader({
-        engine: nav.engine,
+        descriptor: hubDescriptor,
         cycle: currentTournament,
-        season: { status: seasonStatus, tournaments: seasonTournaments, year: seasonYear },
+        season: {
+          status: seasonStatus,
+          tournaments: seasonTournaments,
+          year: seasonYear,
+          currentYear: seasonCurrentYear,
+        },
       }),
-    [nav.engine, currentTournament, seasonStatus, seasonTournaments, seasonYear],
+    [hubDescriptor, currentTournament, seasonStatus, seasonTournaments, seasonYear, seasonCurrentYear],
   );
 
   const handleTabChange = (view: View) => {
@@ -256,8 +265,10 @@ function App() {
           // entonces, no cablear nada es más honesto que cablear el store
           // equivocado.
           lastResult={null}
-          emptyMessage={hub.emptyMessage}
-          isLoading={!modesLoaded}
+          // Mientras la lista de modos no resuelva, el descriptor que tenemos es
+          // el de arranque y la cabecera está describiendo un modo que capaz no
+          // es el activo: eso también es "todavía no sé", no un cierre.
+          idle={modesLoaded ? hub.idle : { kind: 'loading' }}
           onNewTournament={
             nav.engine === 'national-cycle' ? () => handleNavigate('tournaments') : undefined
           }

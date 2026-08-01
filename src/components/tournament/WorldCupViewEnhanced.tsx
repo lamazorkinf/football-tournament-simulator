@@ -137,7 +137,7 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
               </p>
               {canStartWorldCup ? (
                 // Con las clasificatorias completas, el "Paso siguiente" de abajo
-                // (que manda de vuelta a Progreso) ya no aplica: acá mismo se
+                // (que manda de vuelta al Inicio) ya no aplica: acá mismo se
                 // puede armar el sorteo a mano.
                 <Button variant="secondary" size="sm" onClick={handleManualDraw} className="gap-2">
                   <Sparkles className="w-4 h-4" />
@@ -146,9 +146,8 @@ export function WorldCupViewEnhanced({ onNavigate }: WorldCupViewEnhancedProps =
               ) : (
                 <div className="bg-grass/30 border-2 border-grass p-4">
                   <p className="text-sm text-white">
-                    <strong className="text-gold">Paso siguiente:</strong> Completa todos los partidos de las
-                    clasificatorias y luego avanza a la Copa del Mundo desde la pestaña
-                    "Progreso".
+                    <strong className="text-gold">Paso siguiente:</strong> Completá todos los partidos de las
+                    clasificatorias y después avanzá a la Copa del Mundo desde Inicio.
                   </p>
                 </div>
               )}

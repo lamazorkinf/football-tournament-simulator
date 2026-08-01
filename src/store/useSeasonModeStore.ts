@@ -34,6 +34,7 @@ import type {
   ModeTournamentState,
   LigaTournament,
 } from '../core/formats/modeTournament';
+import { canCloseSeason } from '../modes/types';
 import type { Competition, ModeDescriptor } from '../modes/types';
 import { competitionForLegacyRow, descriptorForMode } from '../modes/registry';
 import {
@@ -355,7 +356,10 @@ export const useSeasonModeStore = create<SeasonModeState>((set, get) => ({
     // reescribiría divisiones ya jugadas. La vista de un año pasado no ofrece
     // el botón, pero el guard va acá: es el store el que no puede permitirlo.
     if (year !== currentYear) return;
-    if (!descriptor.promotion || descriptor.divisions.length < 2) return;
+    // Mismo predicado que consultan el Hub y `deriveNextAction` para NO ofrecer
+    // el botón: una sola definición de "este modo puede cerrar" evita que la
+    // pantalla ofrezca lo que el store rechaza.
+    if (!canCloseSeason(descriptor)) return;
 
     // Una tabla por división, en el orden que declara el descriptor. Requiere
     // que la liga de cada división esté terminada.
