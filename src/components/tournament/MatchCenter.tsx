@@ -6,7 +6,7 @@ import { ScoreBug } from '../ui/ScoreBug';
 import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
-import { Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
+import { Filter, Clock, CheckCircle, CalendarX, SearchX, ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
@@ -399,17 +399,47 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 ))}
               </div>
             ) : (
-              <div className="text-center text-grass-soft py-12">
-                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
-                <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Sin partidos próximos</p>
-                <p className="text-sm mt-2">Todos los partidos han sido jugados</p>
-              </div>
+              /* Tres motivos distintos para una lista vacía, y decirlos como si
+                 fueran uno solo miente: sin sorteo todavía no hay fixture, y con
+                 un filtro puesto los partidos existen pero no se están viendo. */
+              (() => {
+                if (allMatches.length === 0) {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <CalendarX className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Sin fixture</p>
+                      <p className="text-sm mt-2">Todavía no se sortearon los partidos de esta fase</p>
+                    </div>
+                  );
+                }
+                if (filteredMatches.length === 0) {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <SearchX className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Nada que mostrar</p>
+                      <p className="text-sm mt-2">Ningún partido coincide con los filtros elegidos</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="text-center text-grass-soft py-12">
+                    <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
+                    <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Sin partidos próximos</p>
+                    <p className="text-sm mt-2">Todos los partidos han sido jugados</p>
+                  </div>
+                );
+              })()
             )}
           </CardContent>
         </Card>
 
-        {/* Right Column: Match Preview (40%) - Desktop Only */}
-        <div className="hidden lg:block">
+        {/* Right Column: Match Preview (40%) - Desktop Only.
+            `sticky` + `self-start`: la columna izquierda puede tener 84 partidos
+            y sin esto la vista previa se queda arriba, dejando media pantalla en
+            negro mientras se scrollea. `self-start` es imprescindible — en un
+            grid el ítem se estira a la altura de la fila y `sticky` no tendría
+            margen donde pegarse. */}
+        <div className="hidden lg:block lg:sticky lg:top-4 lg:self-start">
           {unplayedMatches.length > 0 && (() => {
             const nextMatch = unplayedMatches[0];
             const homeTeam = getTeam(nextMatch.match.homeTeamId);

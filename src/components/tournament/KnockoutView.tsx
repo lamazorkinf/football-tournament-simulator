@@ -429,7 +429,7 @@ export const KnockoutView = ({
           <motion.h3
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 z-10 bg-grass-dark py-2"
           >
             Dieciseisavos
           </motion.h3>
@@ -459,7 +459,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 z-10 bg-grass-dark py-2"
           >
             Octavos
           </motion.h3>
@@ -489,7 +489,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 z-10 bg-grass-dark py-2"
           >
             Cuartos de Final
           </motion.h3>
@@ -519,7 +519,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 z-10 bg-grass-dark py-2"
           >
             Semifinales
           </motion.h3>
@@ -549,7 +549,7 @@ export const KnockoutView = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 bg-grass-dark py-2"
+            className="font-arcade text-[10px] text-gold uppercase text-center sticky top-0 z-10 bg-grass-dark py-2"
           >
             Finales
           </motion.h3>
