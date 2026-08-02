@@ -151,6 +151,23 @@ describe('buildJornadaResults', () => {
     expect(res.awaySkillBefore).toBe(84);
   });
 
+  /**
+   * El mapa de skills se captura antes de ESTA tanda, así que para un partido
+   * que el usuario ya había simulado suelto desde el Centro de Partidos ese
+   * snapshot es POSTERIOR al partido: la brecha que mide el titular ya viene
+   * achicada por los dos deltas de Elo. Sin skill confiable, `undefined`, igual
+   * que `wentToExtraTime`.
+   */
+  it('un partido ya jugado no se estampa con skills posteriores', () => {
+    const m = match('m1', 'bol', 'bra', true); // simulado suelto antes de la tanda
+    const skillBefore = new Map([['bol', 66], ['bra', 84]]);
+
+    const [res] = buildJornadaResults(jornada([ctx(m)]), [], teams, new Set(), skillBefore);
+
+    expect(res.homeSkillBefore).toBeUndefined();
+    expect(res.awaySkillBefore).toBeUndefined();
+  });
+
   it('un equipo que no está en el mapa queda sin skill previo', () => {
     const m = match('m1', 'arg', 'bra');
     const outcomes: MatchdayOutcome[] = [

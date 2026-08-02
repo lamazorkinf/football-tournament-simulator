@@ -46,8 +46,13 @@ export function buildJornadaResults(
       region: ctx.region,
       isFavorite: favoriteTeamIds.has(homeTeam.id) || favoriteTeamIds.has(awayTeam.id),
       penalties,
-      homeSkillBefore: skillBefore.get(homeTeam.id),
-      awaySkillBefore: skillBefore.get(awayTeam.id),
+      // Sólo del partido recién simulado, misma simetría que `wentToExtraTime`:
+      // el mapa se capturó antes de ESTA tanda, así que para un partido que ya
+      // estaba jugado (simulado suelto desde el Centro de Partidos) es un
+      // snapshot POSTERIOR y la brecha que mide el titular vendría achicada por
+      // los deltas de Elo de ese mismo partido.
+      homeSkillBefore: outcome ? skillBefore.get(homeTeam.id) : undefined,
+      awaySkillBefore: outcome ? skillBefore.get(awayTeam.id) : undefined,
       // Sólo se sabe del partido recién simulado: un partido ya jugado no
       // guarda si fue al alargue.
       wentToExtraTime: outcome ? outcome.extraTime !== undefined : undefined,

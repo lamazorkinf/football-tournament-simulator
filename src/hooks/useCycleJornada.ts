@@ -134,7 +134,8 @@ export function useCycleJornada(tournament: Cycle | null, teams: Team[]) {
     const toSimulate = targets();
     if (!jornada || !toSimulate) return;
 
-    // Selección de los ≤12 que se ven en vivo, con skills PRE-simulación.
+    // Selección de los que se ven en vivo (tope `LIVE_MATCH_CAP`), con skills
+    // PRE-simulación.
     const skillMap = new Map(teams.map((t) => [t.id, t.skill]));
     const favorites = new Set(favoriteTeamIds);
     const chosenIds = new Set(
