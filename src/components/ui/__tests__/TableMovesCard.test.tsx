@@ -34,6 +34,21 @@ describe('TableMovesCard', () => {
     expect(screen.getByText('1º → 3º')).toBeInTheDocument();
   });
 
+  it('la flecha de cada movimiento coincide con si subió o bajó en la tabla', () => {
+    render(<TableMovesCard table={table()} />);
+    // Talleres: 7º → 4º. Menor número es mejor posición: bajó el número,
+    // subió en la tabla → flecha hacia arriba, color led.
+    const talleresIcon = screen.getByText('Talleres').closest('p')?.querySelector('svg');
+    expect(talleresIcon).toHaveClass('text-led');
+    expect(talleresIcon).not.toHaveClass('text-grass-soft');
+
+    // Alumni: 1º → 3º. Subió el número, bajó en la tabla (se cayó del
+    // primer puesto) → flecha hacia abajo, color atenuado.
+    const alumniIcon = screen.getByText('Alumni').closest('p')?.querySelector('svg');
+    expect(alumniIcon).toHaveClass('text-grass-soft');
+    expect(alumniIcon).not.toHaveClass('text-led');
+  });
+
   it('sin movimientos rinde igual al puntero', () => {
     render(<TableMovesCard table={table({ moves: [] })} />);
     expect(screen.getByText('Ben Hur')).toBeInTheDocument();
