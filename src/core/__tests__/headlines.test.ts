@@ -431,3 +431,21 @@ describe('deriveHeadlines — opciones', () => {
     expect(res[0].score).toBe(res[1].score);
   });
 });
+
+/**
+ * `candidatesFor` declara los tipos en un orden, y `pickBest` sólo reemplaza al
+ * mejor cuando encuentra uno ESTRICTAMENTE mayor: a igual notabilidad gana el
+ * primero declarado. Es un desempate deliberado y determinista, y sin este test
+ * cambiar el orden de las ramas pasaría inadvertido.
+ */
+describe('deriveHeadlines — desempate entre tipos', () => {
+  it('a igual notabilidad gana el tipo declarado primero', () => {
+    // Brecha 10 ⇒ upset base 10/40 = 0.25. Diferencia de 4 goles ⇒ rout base
+    // (4−3)/4 = 0.25. Empatan, y `upset` se declara antes que `rout`.
+    const [h] = deriveHeadlines([
+      match({ homeScore: 4, awayScore: 0, homeSkillBefore: 65, awaySkillBefore: 75 }),
+    ]);
+    expect(h.kind).toBe('upset');
+    expect(h.label).toBe('BATACAZO');
+  });
+});

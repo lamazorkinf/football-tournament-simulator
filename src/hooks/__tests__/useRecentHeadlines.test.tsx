@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { toHeadlineMatch, useRecentHeadlines } from '../useRecentHeadlines';
+import { HEADLINES_DEBOUNCE_MS, toHeadlineMatch, useRecentHeadlines } from '../useRecentHeadlines';
 import { matchHistoryService, type MatchHistoryEntry } from '../../services/matchHistoryService';
 import { useModeStore } from '../../store/useModeStore';
 import { useTournamentStore } from '../../store/useTournamentStore';
@@ -43,10 +43,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/**
+ * Los dos tiempos del test se derivan de la constante real en vez de
+ * hardcodearse: si alguien baja el debounce, `ENTRE_BUMPS` lo acompaña y el
+ * test sigue midiendo lo que dice medir. Con números fijos, un debounce menor a
+ * 50 ms habría dado una señal equivocada en silencio.
+ */
+/** Menos que la ventana: cada bump reinicia el timer sin que llegue a disparar. */
+const ENTRE_BUMPS = HEADLINES_DEBOUNCE_MS / 2;
+/** Más que la ventana: el timer pendiente dispara y la promesa se resuelve. */
+const PASADA_LA_VENTANA = HEADLINES_DEBOUNCE_MS + 100;
+
 /** Corre el debounce y deja que la promesa del servicio se resuelva. */
 async function flush() {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(400);
+    await vi.advanceTimersByTimeAsync(PASADA_LA_VENTANA);
   });
 }
 
@@ -142,7 +153,7 @@ describe('useRecentHeadlines', () => {
         useHistoryRevisionStore.getState().bump();
       });
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(50);
+        await vi.advanceTimersByTimeAsync(ENTRE_BUMPS);
       });
     }
     await flush();

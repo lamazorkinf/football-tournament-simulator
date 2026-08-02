@@ -37,7 +37,11 @@ export function TableMovesCard({ table }: { table: TableSummaryView }) {
         const subio = move.to < move.from;
         const Icon = subio ? ArrowUp : ArrowDown;
         return (
-          <p key={move.teamId} className="flex items-center gap-2 text-xs min-w-0">
+          <p
+            key={move.teamId}
+            data-testid="table-move"
+            className="flex items-center gap-2 text-xs min-w-0"
+          >
             <Icon
               className={cn('w-3.5 h-3.5 shrink-0', subio ? 'text-led' : 'text-grass-soft')}
               aria-hidden="true"

@@ -55,13 +55,19 @@ describe('TableMovesCard', () => {
     render(<TableMovesCard table={table()} />);
     // Talleres: 7º → 4º. Menor número es mejor posición: bajó el número,
     // subió en la tabla → flecha hacia arriba, color led.
-    const talleresIcon = screen.getByText('Talleres').closest('p')?.querySelector('svg');
+    // Las filas se buscan por `data-testid` y no por `closest('p')`: así el
+    // test no se rompe si la fila deja de ser un <p> o gana un ícono más.
+    const filas = screen.getAllByTestId('table-move');
+    const filaDe = (equipo: string) =>
+      filas.find((f) => f.textContent?.includes(equipo));
+
+    const talleresIcon = filaDe('Talleres')?.querySelector('svg');
     expect(talleresIcon).toHaveClass('text-led');
     expect(talleresIcon).not.toHaveClass('text-grass-soft');
 
     // Alumni: 1º → 3º. Subió el número, bajó en la tabla (se cayó del
     // primer puesto) → flecha hacia abajo, color atenuado.
-    const alumniIcon = screen.getByText('Alumni').closest('p')?.querySelector('svg');
+    const alumniIcon = filaDe('Alumni')?.querySelector('svg');
     expect(alumniIcon).toHaveClass('text-grass-soft');
     expect(alumniIcon).not.toHaveClass('text-led');
   });

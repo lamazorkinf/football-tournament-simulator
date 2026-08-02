@@ -277,7 +277,7 @@ function App() {
       history: <MatchHistory teams={teams} />,
       comparison: <TeamComparison />,
       favorites: <FavoritesView />,
-      tournaments: <TournamentHistory />,
+      tournaments: <TournamentHistory onNavigate={handleNavigate} />,
       champions: <ChampionsHistory onNavigate={handleNavigate} />,
       league: <SeasonModeView onNavigate={handleNavigate} />,
     };

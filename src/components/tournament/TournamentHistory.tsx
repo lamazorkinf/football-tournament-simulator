@@ -8,11 +8,24 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { ViewHeader } from '../ui/ViewHeader';
 import type { Tournament } from '../../types';
+import type { View } from '../../types/view';
 
 type FilterType = 'all' | 'qualifiers' | 'world-cup' | 'completed';
 
-export function TournamentHistory() {
+interface TournamentHistoryProps {
+  /**
+   * Navegación de la app. "Ver" no alcanza con activar el torneo: el usuario
+   * queda mirando la misma lista y parece que el botón no hizo nada.
+   */
+  onNavigate?: (view: View) => void;
+}
+
+export function TournamentHistory({ onNavigate }: TournamentHistoryProps = {}) {
   const { tournaments, selectTournament, deleteTournament, recalculateTournamentPerformances, currentTournamentId } = useTournamentStore();
+  // El campeón se guarda como id (`champion: final.winnerId`), así que hay que
+  // resolverlo contra el pool de equipos — igual que hacen `ContinentalView` y
+  // `ConfederationsCupView`.
+  const teams = useTournamentStore((s) => s.teams);
   const [filter, setFilter] = useState<FilterType>('all');
   const [pendingDelete, setPendingDelete] = useState<Tournament | null>(null);
   const [pendingRecalc, setPendingRecalc] = useState<Tournament | null>(null);
@@ -76,8 +89,14 @@ export function TournamentHistory() {
     return { totalMatches, playedMatches };
   };
 
+  /** Nombre del equipo, o el id si no está en el pool (modo distinto, equipo borrado). */
+  const teamName = (teamId: string) => teams.find((t) => t.id === teamId)?.name ?? teamId;
+
   const handleView = (tournamentId: string) => {
     selectTournament(tournamentId);
+    // Y llevar al usuario al torneo que acaba de elegir: quedarse en la lista
+    // hacía que "Ver" pareciera un botón muerto.
+    onNavigate?.('hub');
   };
 
   const handleDelete = (tournament: Tournament) => {
@@ -205,7 +224,7 @@ export function TournamentHistory() {
                     <div className="flex items-center gap-2 bg-black/40 border border-gold px-3 py-2">
                       <Award className="w-4 h-4 text-gold" />
                       <span className="text-sm text-gold">
-                        Campeón: {tournament.worldCup.champion}
+                        Campeón: {teamName(tournament.worldCup.champion)}
                       </span>
                     </div>
                   )}

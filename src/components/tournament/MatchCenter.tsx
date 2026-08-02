@@ -6,7 +6,7 @@ import { ScoreBug } from '../ui/ScoreBug';
 import { MatchSimActions, JornadaSimActions } from '../ui/SimActions';
 import { MatchDetailModal } from './MatchDetailModal';
 import { MatchPreview } from './MatchPreview';
-import { Filter, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
+import { Filter, Clock, CheckCircle, CalendarX, SearchX, ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
 import { useTournamentStore } from '../../store/useTournamentStore';
 import { useFavoritesStore } from '../../store/useFavoritesStore';
 import { useMobileAction } from '../../hooks/useMobileAction';
@@ -399,17 +399,86 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                 ))}
               </div>
             ) : (
-              <div className="text-center text-grass-soft py-12">
-                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
-                <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Sin partidos próximos</p>
-                <p className="text-sm mt-2">Todos los partidos han sido jugados</p>
-              </div>
+              /* Tres motivos distintos para una lista vacía, y decirlos como si
+                 fueran uno solo miente: sin sorteo todavía no hay fixture, y con
+                 un filtro puesto los partidos existen pero no se están viendo. */
+              (() => {
+                if (allMatches.length === 0) {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <CalendarX className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Sin fixture</p>
+                      <p className="text-sm mt-2">Todavía no se sortearon los partidos de esta fase</p>
+                    </div>
+                  );
+                }
+                if (filteredMatches.length === 0) {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <SearchX className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Nada que mostrar</p>
+                      <p className="text-sm mt-2">Ningún partido coincide con los filtros elegidos</p>
+                    </div>
+                  );
+                }
+                // Lo que se está mirando se jugó entero, pero puede quedar
+                // pendiente en OTRA jornada o fuera del filtro. Es el estado en
+                // el que queda la vista justo después de simular la jornada
+                // mostrada —`selectedJornadaIndex` no sigue al avance, ver el
+                // comentario del centinela más arriba—, así que anunciar ahí
+                // "todos los partidos han sido jugados" es la mentira más
+                // frecuente de las cuatro.
+                const pendientesEnTodo = allMatches.filter((m) => !m.match.isPlayed).length;
+                if (pendientesEnTodo > 0) {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Ya se jugó todo esto</p>
+                      <p className="text-sm mt-2">
+                        {pendientesEnTodo === 1
+                          ? 'Queda 1 partido pendiente fuera de esta selección'
+                          : `Quedan ${pendientesEnTodo} partidos pendientes fuera de esta selección`}
+                      </p>
+                    </div>
+                  );
+                }
+                // Y todavía falta un caso: `collectAllMatches` recorre sólo lo
+                // que EXISTE, así que "no queda nada pendiente" puede querer
+                // decir "no queda nada de lo ya sorteado". Terminar las
+                // clasificatorias con el Mundial sin sortear deja el ciclo
+                // entero por delante y contaba como "todos los partidos han
+                // sido jugados" — el mismo engaño, en el momento por el que
+                // pasa cada ciclo.
+                if (tournament.calendar.phase !== 'completed') {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <CalendarX className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Falta sortear</p>
+                      <p className="text-sm mt-2">
+                        Se jugó todo lo sorteado hasta acá: la próxima fase todavía no tiene fixture
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="text-center text-grass-soft py-12">
+                    <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
+                    <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Ciclo terminado</p>
+                    <p className="text-sm mt-2">Todos los partidos han sido jugados</p>
+                  </div>
+                );
+              })()
             )}
           </CardContent>
         </Card>
 
-        {/* Right Column: Match Preview (40%) - Desktop Only */}
-        <div className="hidden lg:block">
+        {/* Right Column: Match Preview (40%) - Desktop Only.
+            `sticky` + `self-start`: la columna izquierda puede tener 84 partidos
+            y sin esto la vista previa se queda arriba, dejando media pantalla en
+            negro mientras se scrollea. `self-start` es imprescindible — en un
+            grid el ítem se estira a la altura de la fila y `sticky` no tendría
+            margen donde pegarse. */}
+        <div className="hidden lg:block lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           {unplayedMatches.length > 0 && (() => {
             const nextMatch = unplayedMatches[0];
             const homeTeam = getTeam(nextMatch.match.homeTeamId);
