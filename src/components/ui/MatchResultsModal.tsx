@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X, Trophy, Star } from 'lucide-react';
+import { X, Trophy, Star, ChevronDown, ChevronRight } from 'lucide-react';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
 import type { MatchResult } from '../../store/useMatchResultsStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -12,9 +12,9 @@ import { HeadlinesCard } from '../hub/HeadlinesCard';
 import { TableMovesCard } from './TableMovesCard';
 
 /**
- * Por encima de esto la lista de resultados arranca plegada. 12 es el mismo
- * tope que usa la grilla de la jornada en vivo: una fecha de liga (10 partidos)
- * se sigue viendo entera y una de clasificatorias (84) deja de ser un muro.
+ * Por encima de esto la lista de resultados arranca plegada. El corte está
+ * entre los dos tamaños reales de fecha: una de liga son ~10 partidos y se
+ * sigue viendo entera, y una de clasificatorias son ~84 y era un muro.
  */
 const RESULTS_COLLAPSE_THRESHOLD = 12;
 
@@ -134,8 +134,15 @@ export function MatchResultsModal() {
             aria-expanded={showList}
             className="w-full flex items-center gap-2 font-arcade text-[10px] text-grass-soft uppercase hover:text-white transition-colors"
           >
-            <span aria-hidden="true">{showList ? '▾' : '▸'}</span>
-            Los {results.length} resultados
+            {/* Iconos y no '▾'/'▸': Press Start 2P no trae esos glifos y caen
+                al fallback monoespaciado, con otra métrica, al lado de texto
+                arcade. */}
+            {showList ? (
+              <ChevronDown className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            )}
+            {results.length === 1 ? 'El resultado' : `Los ${results.length} resultados`}
           </button>
 
           {showList && (

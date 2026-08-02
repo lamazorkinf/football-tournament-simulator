@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MatchResultsModal } from '../MatchResultsModal';
 import { useMatchResultsStore, type MatchResult } from '../../../store/useMatchResultsStore';
 
@@ -12,8 +12,14 @@ const result = (homeTeam: string, awayTeam: string, isFavorite = false): MatchRe
   isFavorite,
 });
 
+/** Una fecha de `n` partidos, con nombres distintos para poder contarlos. */
+const fecha = (n: number) =>
+  Array.from({ length: n }, (_, i) => result(`Local ${i}`, `Visita ${i}`));
+
 beforeEach(() => {
-  useMatchResultsStore.setState({ isOpen: false, results: [], title: '' });
+  // `table` también: `setState` de zustand es parcial, así que sin resetearla el
+  // primer test que escriba el store a mano hereda la tabla del anterior.
+  useMatchResultsStore.setState({ isOpen: false, results: [], title: '', table: null });
 });
 
 describe('MatchResultsModal', () => {
@@ -176,6 +182,7 @@ const tabla = {
   leaderTeamId: 'a',
   leaderTeamName: 'Ben Hur',
   leaderIsNew: true,
+  hadPreviousTable: true,
   moves: [{ teamId: 'b', teamName: 'Talleres', from: 7, to: 4 }],
 };
 
@@ -244,5 +251,57 @@ describe('MatchResultsModal — resumen de fecha', () => {
     fireEvent.click(screen.getByRole('button', { name: /20 resultados/i }));
 
     expect(screen.getAllByTestId('match-result')).toHaveLength(20);
+  });
+
+  it('con un solo resultado el plegable habla en singular', () => {
+    // La final de una copa del modo de temporada, o la del Mundial: la fecha
+    // más memorable del ciclo no puede decir "los 1 resultados".
+    useMatchResultsStore.getState().showResults([result('Argentina', 'Brasil')], 'Mundial · Final');
+    render(<MatchResultsModal />);
+
+    expect(screen.getByRole('button', { name: /^el resultado$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /1 resultados/i })).not.toBeInTheDocument();
+  });
+
+  it('el plegable usa un icono y no un glifo que la fuente arcade no tiene', () => {
+    useMatchResultsStore.getState().showResults(fecha(20), 'Jornada 3');
+    render(<MatchResultsModal />);
+
+    const plegable = screen.getByRole('button', { name: /20 resultados/i });
+    expect(plegable.querySelector('svg')).toBeInTheDocument();
+    expect(plegable.textContent).not.toMatch(/[▾▸]/);
+  });
+});
+
+/**
+ * EL RESETEO DEL PLEGABLE, sobre la MISMA instancia montada. En la app el modal
+ * vive en `App.tsx` y no se desmonta nunca: entre una fecha y la siguiente sólo
+ * cambian las props. Montar de nuevo con `render()` sólo ejercita el
+ * inicializador de `useState`, y con eso el reseteo se puede borrar entero con
+ * la suite en verde: al volver de una fecha de Villamariense a una de
+ * clasificatorias saldrían las 84 tarjetas de una, el muro que esta feature
+ * existe para eliminar.
+ */
+describe('MatchResultsModal — el plegable se recalcula en cada fecha', () => {
+  it('de una fecha corta a una larga vuelve a plegarse', () => {
+    useMatchResultsStore.getState().showResults(fecha(10), 'Villamariense · Fecha 5');
+    render(<MatchResultsModal />);
+    expect(screen.getAllByTestId('match-result')).toHaveLength(10);
+
+    // Sin desmontar: la misma instancia recibe la fecha siguiente.
+    act(() => useMatchResultsStore.getState().showResults(fecha(84), 'Clasificatorias · Jornada 3'));
+
+    expect(screen.queryAllByTestId('match-result')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: /84 resultados/i })).toBeInTheDocument();
+  });
+
+  it('de una fecha larga a una corta vuelve a abrirse', () => {
+    useMatchResultsStore.getState().showResults(fecha(84), 'Clasificatorias · Jornada 3');
+    render(<MatchResultsModal />);
+    expect(screen.queryAllByTestId('match-result')).toHaveLength(0);
+
+    act(() => useMatchResultsStore.getState().showResults(fecha(10), 'Villamariense · Fecha 5'));
+
+    expect(screen.getAllByTestId('match-result')).toHaveLength(10);
   });
 });
