@@ -54,7 +54,7 @@ export function LiveMatchdayOverlay() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       closeSession();
-      showResults(session.allResults, session.title);
+      showResults(session.allResults, session.title, session.table);
     };
     window.addEventListener('keydown', onKeyDown);
     const previousOverflow = document.body.style.overflow;
@@ -69,7 +69,7 @@ export function LiveMatchdayOverlay() {
 
   const finishAndShowSummary = () => {
     closeSession();
-    showResults(session.allResults, session.title);
+    showResults(session.allResults, session.title, session.table);
   };
 
   const clockLabel =

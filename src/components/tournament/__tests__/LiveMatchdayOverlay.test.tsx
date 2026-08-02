@@ -54,7 +54,7 @@ function openSession(e: LiveMatchdayEntry = entry) {
 
 beforeEach(() => {
   useLiveMatchdayStore.setState({ session: null });
-  useMatchResultsStore.setState({ isOpen: false, results: [], title: '' });
+  useMatchResultsStore.setState({ isOpen: false, results: [], title: '', table: null });
   useTournamentStore.setState({ teams });
 });
 
@@ -376,5 +376,28 @@ describe('LiveMatchdayOverlay', () => {
       expect(screen.queryByText('82%')).not.toBeInTheDocument();
       expect(screen.queryByText('91%')).not.toBeInTheDocument();
     });
+  });
+
+  it('al cerrar reenvía la tabla de la sesión al resumen', () => {
+    const table = {
+      leaderTeamId: 'arg',
+      leaderTeamName: 'Argentina',
+      leaderIsNew: true,
+      moves: [{ teamId: 'bra', teamName: 'Brasil', from: 1, to: 3 }],
+    };
+    useLiveMatchdayStore.setState({
+      session: {
+        title: 'Liga A · Fecha 12',
+        entries: [entry],
+        allResults: [],
+        hiddenCount: 0,
+        table,
+      },
+    });
+    render(<LiveMatchdayOverlay />);
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(useMatchResultsStore.getState().table).toEqual(table);
   });
 });
