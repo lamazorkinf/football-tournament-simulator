@@ -400,4 +400,34 @@ describe('deriveHeadlines — opciones', () => {
     // 1.3 es el peso de 'world-cup-knockout'; sin etapa el multiplicador es 1.
     expect(conEtapa.score).toBeCloseTo(sinEtapa.score * 1.3);
   });
+
+  /**
+   * `rank()` se llama desde DOS lugares: el bucle principal (candidatos por
+   * partido, como BATACAZO) y `streakCandidates` (candidatos por racha). Los
+   * tests de arriba sólo ejercitan el primero a través de `batacazo(...)` — hace
+   * falta un caso que fuerce el segundo, o una regresión que rompa sólo la
+   * propagación de `decayByAge` dentro de `streakCandidates` pasaría
+   * desapercibida. Para que una racha se emita hacen falta al menos
+   * `STREAK_MIN` (4) victorias seguidas Y el partido que la corta dentro de la
+   * ventana (si no está acotada, no se sabe si sigue y no se emite).
+   */
+  it('con decayByAge en false, una racha detrás de relleno tampoco decae', () => {
+    /** Cuatro victorias de `team` y el partido que corta la racha. */
+    const racha = (team: string): HeadlineMatch[] => [
+      match({ homeTeamId: team, awayTeamId: `${team}-w1` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-w2` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-w3` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-w4` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-corte`, homeScore: 0, awayScore: 1 }),
+    ];
+    const res = deriveHeadlines(
+      [...racha('G'), ...relleno(30), ...racha('H')],
+      { decayByAge: false },
+    );
+    expect(res).toHaveLength(2);
+    expect(res.every((h) => h.kind === 'streak')).toBe(true);
+    // Sin decaimiento, a la racha de H (detrás de 30 partidos de relleno) le
+    // pesa lo mismo que a la de G (al principio del array): mismo puntaje.
+    expect(res[0].score).toBe(res[1].score);
+  });
 });
