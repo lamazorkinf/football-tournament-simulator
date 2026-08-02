@@ -9,7 +9,7 @@ import { HeadlinesCard } from './HeadlinesCard';
 import type { NavItem } from '../../modes/nav';
 import type { HubIdle } from '../../modes/hubHeader';
 import type { MobileAction } from '../../hooks/useMobileAction';
-import type { HeadlineView } from '../../hooks/useRecentHeadlines';
+import type { HeadlineView } from '../../core/headlines';
 import type { View } from '../../types/view';
 
 interface HubViewProps {

@@ -51,7 +51,7 @@ describe('buildJornadaResults', () => {
     const j = jornada([ctx(match('m1', 'per', 'bol')), ctx(match('m2', 'arg', 'bra'))]);
     const outcomes = [outcome('m1', 'per', 'bol', 1, 1), outcome('m2', 'arg', 'bra', 2, 0)];
 
-    const results = buildJornadaResults(j, outcomes, teams, new Set(['arg']));
+    const results = buildJornadaResults(j, outcomes, teams, new Set(['arg']), new Map());
 
     expect(results.find((r) => r.homeTeam === 'Perú')?.isFavorite).toBe(false);
     expect(results.find((r) => r.homeTeam === 'Argentina')?.isFavorite).toBe(true);
@@ -61,7 +61,7 @@ describe('buildJornadaResults', () => {
     const j = jornada([ctx(match('m1', 'arg', 'bra', true)), ctx(match('m2', 'per', 'bol'))]);
     const outcomes = [outcome('m2', 'per', 'bol', 1, 0)];
 
-    const results = buildJornadaResults(j, outcomes, teams, new Set());
+    const results = buildJornadaResults(j, outcomes, teams, new Set(), new Map());
 
     expect(results).toHaveLength(2);
     expect(results.find((r) => r.homeTeam === 'Argentina')).toMatchObject({
@@ -73,7 +73,7 @@ describe('buildJornadaResults', () => {
   it('omite los partidos sin jugar y sin resultado simulado', () => {
     const j = jornada([ctx(match('m1', 'arg', 'bra')), ctx(match('m2', 'per', 'bol'))]);
 
-    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set());
+    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set(), new Map());
 
     expect(results.map((r) => r.homeTeam)).toEqual(['Argentina']);
   });
@@ -84,7 +84,7 @@ describe('buildJornadaResults', () => {
       { ...outcome('m1', 'arg', 'bra', 1, 1), penalties: { homeScore: 4, awayScore: 3 } },
     ];
 
-    const results = buildJornadaResults(j, outcomes, teams, new Set());
+    const results = buildJornadaResults(j, outcomes, teams, new Set(), new Map());
 
     expect(results[0].penalties).toEqual({ homeScore: 4, awayScore: 3 });
   });
@@ -99,7 +99,7 @@ describe('buildJornadaResults', () => {
     };
     const j = jornada([{ ...ctx(played), stage: 'knockout' }]);
 
-    const results = buildJornadaResults(j, [], teams, new Set());
+    const results = buildJornadaResults(j, [], teams, new Set(), new Map());
 
     expect(results[0].penalties).toEqual({ homeScore: 5, awayScore: 4 });
   });
@@ -107,7 +107,7 @@ describe('buildJornadaResults', () => {
   it('un partido sin penales no los declara', () => {
     const j = jornada([ctx(match('m1', 'arg', 'bra'))]);
 
-    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 2, 0)], teams, new Set());
+    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 2, 0)], teams, new Set(), new Map());
 
     expect(results[0].penalties).toBeUndefined();
   });
@@ -115,7 +115,7 @@ describe('buildJornadaResults', () => {
   it('lleva los ids de los dos equipos, para poder dibujar sus banderas', () => {
     const j = jornada([ctx(match('m1', 'arg', 'bra'))]);
 
-    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set());
+    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set(), new Map());
 
     expect(results[0]).toMatchObject({ homeTeamId: 'arg', awayTeamId: 'bra' });
   });
@@ -123,7 +123,7 @@ describe('buildJornadaResults', () => {
   it('lleva la región y el grupo de cada partido', () => {
     const j = jornada([ctx(match('m1', 'arg', 'bra'))]);
 
-    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set());
+    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set(), new Map());
 
     expect(results[0]).toMatchObject({ region: 'America', groupName: 'Grupo A' });
   });
@@ -131,8 +131,69 @@ describe('buildJornadaResults', () => {
   it('un partido sin región (Mundial, Confederaciones) no la inventa', () => {
     const j = jornada([{ ...ctx(match('m1', 'arg', 'bra')), stage: 'confederations', region: undefined }]);
 
-    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set());
+    const results = buildJornadaResults(j, [outcome('m1', 'arg', 'bra', 1, 0)], teams, new Set(), new Map());
 
     expect(results[0].region).toBeUndefined();
+  });
+
+  it('estampa el skill previo de cada equipo', () => {
+    const m = match('m1', 'arg', 'bra');
+    const outcomes: MatchdayOutcome[] = [
+      { matchId: 'm1', homeTeamId: 'arg', awayTeamId: 'bra', homeScore: 2, awayScore: 1 },
+    ];
+    const skillBefore = new Map([['arg', 88], ['bra', 84]]);
+
+    const [res] = buildJornadaResults(jornada([ctx(m)]), outcomes, teams, new Set(), skillBefore);
+
+    // El pool de equipos ya trae los skills NUEVOS (90 y 85): lo que se estampa
+    // es el mapa capturado antes de simular.
+    expect(res.homeSkillBefore).toBe(88);
+    expect(res.awaySkillBefore).toBe(84);
+  });
+
+  /**
+   * El mapa de skills se captura antes de ESTA tanda, así que para un partido
+   * que el usuario ya había simulado suelto desde el Centro de Partidos ese
+   * snapshot es POSTERIOR al partido: la brecha que mide el titular ya viene
+   * achicada por los dos deltas de Elo. Sin skill confiable, `undefined`, igual
+   * que `wentToExtraTime`.
+   */
+  it('un partido ya jugado no se estampa con skills posteriores', () => {
+    const m = match('m1', 'bol', 'bra', true); // simulado suelto antes de la tanda
+    const skillBefore = new Map([['bol', 66], ['bra', 84]]);
+
+    const [res] = buildJornadaResults(jornada([ctx(m)]), [], teams, new Set(), skillBefore);
+
+    expect(res.homeSkillBefore).toBeUndefined();
+    expect(res.awaySkillBefore).toBeUndefined();
+  });
+
+  it('un equipo que no está en el mapa queda sin skill previo', () => {
+    const m = match('m1', 'arg', 'bra');
+    const outcomes: MatchdayOutcome[] = [
+      { matchId: 'm1', homeTeamId: 'arg', awayTeamId: 'bra', homeScore: 2, awayScore: 1 },
+    ];
+
+    const [res] = buildJornadaResults(jornada([ctx(m)]), outcomes, teams, new Set(), new Map());
+
+    expect(res.homeSkillBefore).toBeUndefined();
+  });
+
+  it('marca el alargue del partido que lo tuvo', () => {
+    const m = match('m1', 'arg', 'bra');
+    const outcomes: MatchdayOutcome[] = [
+      {
+        matchId: 'm1',
+        homeTeamId: 'arg',
+        awayTeamId: 'bra',
+        homeScore: 2,
+        awayScore: 1,
+        extraTime: { homeGoals: 1, awayGoals: 0 },
+      },
+    ];
+
+    const [res] = buildJornadaResults(jornada([ctx(m)]), outcomes, teams, new Set(), new Map());
+
+    expect(res.wentToExtraTime).toBe(true);
   });
 });

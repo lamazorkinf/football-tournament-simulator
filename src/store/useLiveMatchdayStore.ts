@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Region } from '../types';
 import type { LiveTimeline } from '../core/liveMatch';
 import type { MatchResult } from './useMatchResultsStore';
+import type { TableSummaryView } from '../core/tableMoves';
 
 /** Una tarjeta de la grilla en vivo: partido ya comprometido + su timeline. */
 export interface LiveMatchdayEntry {
@@ -38,6 +39,8 @@ export interface LiveMatchdaySession {
   allResults: MatchResult[];
   /** Partidos simulados en segundo plano que no entraron a la grilla. */
   hiddenCount: number;
+  /** Movimientos de la tabla, para que el resumen final los muestre. */
+  table?: TableSummaryView;
 }
 
 interface LiveMatchdayState {

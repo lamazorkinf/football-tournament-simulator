@@ -95,8 +95,12 @@ export function useCycleJornada(tournament: Cycle | null, teams: Team[]) {
   );
 
   const results = useCallback(
-    (jornada: JornadaGroup, outcomes: MatchdayOutcome[]): MatchResult[] =>
-      buildJornadaResults(jornada, outcomes, teams, new Set(favoriteTeamIds)),
+    (
+      jornada: JornadaGroup,
+      outcomes: MatchdayOutcome[],
+      skillBefore: ReadonlyMap<string, number>,
+    ): MatchResult[] =>
+      buildJornadaResults(jornada, outcomes, teams, new Set(favoriteTeamIds), skillBefore),
     [teams, favoriteTeamIds],
   );
 
@@ -114,21 +118,24 @@ export function useCycleJornada(tournament: Cycle | null, teams: Team[]) {
     const toSimulate = targets();
     if (!jornada || !toSimulate) return;
     try {
+      // Skills PRE-simulación: al volver del await el store ya aplicó los deltas.
+      const skillBefore = new Map(teams.map((t) => [t.id, t.skill]));
       const outcomes = await run(toSimulate);
-      showResults(results(jornada, outcomes), `${title} — Resultados`);
+      showResults(results(jornada, outcomes, skillBefore), `${title} — Resultados`);
       toast.success(`${jornada.label} completada — ${outcomes.length} partidos simulados`);
     } catch (error) {
       console.error('Error simulating matchday:', error);
       toast.error('Error al simular la jornada');
     }
-  }, [currentJornada, targets, run, results, showResults, title]);
+  }, [currentJornada, targets, run, results, showResults, title, teams]);
 
   const simulateLive = useCallback(async () => {
     const jornada = currentJornada;
     const toSimulate = targets();
     if (!jornada || !toSimulate) return;
 
-    // Selección de los ≤12 que se ven en vivo, con skills PRE-simulación.
+    // Selección de los que se ven en vivo (tope `LIVE_MATCH_CAP`), con skills
+    // PRE-simulación.
     const skillMap = new Map(teams.map((t) => [t.id, t.skill]));
     const favorites = new Set(favoriteTeamIds);
     const chosenIds = new Set(
@@ -178,14 +185,14 @@ export function useCycleJornada(tournament: Cycle | null, teams: Team[]) {
 
       if (entries.length === 0) {
         // No se pudo simular nada (fuera de jornada, etc.): mostrar el resumen.
-        showResults(results(jornada, outcomes), `${title} — Resultados`);
+        showResults(results(jornada, outcomes, skillMap), `${title} — Resultados`);
         return;
       }
 
       openLiveSession({
         title,
         entries,
-        allResults: results(jornada, outcomes),
+        allResults: results(jornada, outcomes, skillMap),
         hiddenCount: outcomes.length - entries.length,
       });
     } catch (error) {

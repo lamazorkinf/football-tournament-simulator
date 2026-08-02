@@ -354,3 +354,80 @@ describe('deriveHeadlines — racha', () => {
     expect(h.subjectTeamId).toBe('A');
   });
 });
+
+describe('deriveHeadlines — opciones', () => {
+  /** Batacazo de brecha 25 entre dos equipos que se pasan por parámetro. */
+  const batacazo = (homeTeamId: string, awayTeamId: string) =>
+    match({ homeTeamId, awayTeamId, homeSkillBefore: 60, awaySkillBefore: 85 });
+
+  /** Partidos que no producen ningún titular: 1-0 entre iguales, equipos distintos. */
+  const relleno = (n: number) =>
+    Array.from({ length: n }, (_, i) => match({ homeTeamId: `h${i}`, awayTeamId: `a${i}` }));
+
+  it('respeta el límite pedido', () => {
+    const res = deriveHeadlines(
+      [batacazo('A', 'B'), batacazo('C', 'D'), batacazo('E', 'F')],
+      { limit: 1 },
+    );
+    expect(res).toHaveLength(1);
+  });
+
+  it('por defecto sigue decayendo por antigüedad', () => {
+    const res = deriveHeadlines([batacazo('A', 'B'), ...relleno(59), batacazo('C', 'D')]);
+    expect(res[0].score).toBeGreaterThan(res[1].score);
+  });
+
+  /**
+   * Los partidos de una jornada son SIMULTÁNEOS: no hay más viejo ni más nuevo,
+   * y penalizar por posición en el array sería arbitrario.
+   */
+  it('con decayByAge en false, la posición en el array no pesa', () => {
+    const res = deriveHeadlines(
+      [batacazo('A', 'B'), ...relleno(59), batacazo('C', 'D')],
+      { decayByAge: false },
+    );
+    expect(res).toHaveLength(2);
+    expect(res[0].score).toBe(res[1].score);
+  });
+
+  it('sin etapa, el peso de etapa es neutro', () => {
+    const [conEtapa] = deriveHeadlines([
+      match({ homeSkillBefore: 60, awaySkillBefore: 85, stage: 'world-cup-knockout' }),
+    ]);
+    const [sinEtapa] = deriveHeadlines([
+      match({ homeSkillBefore: 60, awaySkillBefore: 85, stage: undefined }),
+    ]);
+    // 1.3 es el peso de 'world-cup-knockout'; sin etapa el multiplicador es 1.
+    expect(conEtapa.score).toBeCloseTo(sinEtapa.score * 1.3);
+  });
+
+  /**
+   * `rank()` se llama desde DOS lugares: el bucle principal (candidatos por
+   * partido, como BATACAZO) y `streakCandidates` (candidatos por racha). Los
+   * tests de arriba sólo ejercitan el primero a través de `batacazo(...)` — hace
+   * falta un caso que fuerce el segundo, o una regresión que rompa sólo la
+   * propagación de `decayByAge` dentro de `streakCandidates` pasaría
+   * desapercibida. Para que una racha se emita hacen falta al menos
+   * `STREAK_MIN` (4) victorias seguidas Y el partido que la corta dentro de la
+   * ventana (si no está acotada, no se sabe si sigue y no se emite).
+   */
+  it('con decayByAge en false, una racha detrás de relleno tampoco decae', () => {
+    /** Cuatro victorias de `team` y el partido que corta la racha. */
+    const racha = (team: string): HeadlineMatch[] => [
+      match({ homeTeamId: team, awayTeamId: `${team}-w1` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-w2` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-w3` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-w4` }),
+      match({ homeTeamId: team, awayTeamId: `${team}-corte`, homeScore: 0, awayScore: 1 }),
+    ];
+    const res = deriveHeadlines(
+      [...racha('G'), ...relleno(30), ...racha('H')],
+      { decayByAge: false },
+    );
+    expect(res).toHaveLength(2);
+    expect(res.every((h) => h.kind === 'streak')).toBe(true);
+    // Sin decaimiento, a la racha de H (detrás de 30 partidos de relleno) le
+    // pesa lo mismo que a la de G (al principio del array): mismo puntaje.
+    expect(res[0].score).toBe(res[1].score);
+  });
+});

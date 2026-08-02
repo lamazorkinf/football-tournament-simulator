@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Region } from '../types';
+import type { TableSummaryView } from '../core/tableMoves';
 
 export interface MatchResult {
   homeTeam: string;
@@ -27,13 +28,29 @@ export interface MatchResult {
    * no entran en los totales del resumen.
    */
   penalties?: { homeScore: number; awayScore: number };
+  /**
+   * Skill de cada lado ANTES de este partido: es lo que mide la sorpresa de un
+   * titular. Opcionales porque sólo los completa quien capturó el pool de
+   * equipos antes de simular — al volver del await, el store ya aplicó los
+   * deltas y el skill de "antes" ya no existe.
+   */
+  homeSkillBefore?: number;
+  awaySkillBefore?: number;
+  /** El partido se resolvió en el alargue. */
+  wentToExtraTime?: boolean;
 }
 
 interface MatchResultsState {
   isOpen: boolean;
   results: MatchResult[];
   title: string;
-  showResults: (results: MatchResult[], title: string) => void;
+  /**
+   * Movimientos de la tabla de esta fecha. Sólo lo trae una jornada de UNA
+   * liga: una fecha de clasificatorias reparte sus partidos en ~14 grupos y no
+   * hay una tabla única que resumir.
+   */
+  table: TableSummaryView | null;
+  showResults: (results: MatchResult[], title: string, table?: TableSummaryView) => void;
   close: () => void;
 }
 
@@ -41,12 +58,14 @@ export const useMatchResultsStore = create<MatchResultsState>((set) => ({
   isOpen: false,
   results: [],
   title: '',
+  table: null,
 
-  showResults: (results: MatchResult[], title: string) => {
+  showResults: (results: MatchResult[], title: string, table?: TableSummaryView) => {
     set({
       isOpen: true,
       results,
       title,
+      table: table ?? null,
     });
   },
 
@@ -55,6 +74,7 @@ export const useMatchResultsStore = create<MatchResultsState>((set) => ({
       isOpen: false,
       results: [],
       title: '',
+      table: null,
     });
   },
 }));
