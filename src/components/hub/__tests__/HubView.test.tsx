@@ -35,7 +35,7 @@ function props(over: Partial<React.ComponentProps<typeof HubView>> = {}) {
     ladder: LADDER,
     currentView: 'hub' as const,
     onSelectStep: vi.fn(),
-    lastResult: null,
+    headlines: [],
     idle: { kind: 'done' } as HubIdle,
     ...over,
   };
@@ -118,46 +118,46 @@ describe('HubView', () => {
     expect(screen.queryByText(/no queda nada por jugar/i)).not.toBeInTheDocument();
   });
 
-  it('sin último resultado no rinde ese bloque', () => {
+  it('sin titulares no rinde el bloque de portada', () => {
     render(<HubView {...props()} />);
-    expect(screen.queryByText(/ultimo resultado/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/titulares/i)).not.toBeInTheDocument();
   });
 
-  it('con último resultado lo muestra', () => {
-    render(
-      <HubView
-        {...props({
-          lastResult: { homeTeam: 'Islandia', awayTeam: 'Brasil', homeScore: 2, awayScore: 1 },
-        })}
-      />,
-    );
-    expect(screen.getByText('Islandia')).toBeInTheDocument();
-    expect(screen.getByText('Brasil')).toBeInTheDocument();
-  });
-
-  it('con ids de equipo en el resultado rinde las banderas', () => {
+  it('con titulares los rinde, con banderas', () => {
     // Ids de selección (código de país): `TeamFlag` deriva la URL del id y no
-    // depende del pool de equipos del store, así que no hace falta sembrarlo
-    // para que esta rama sea honesta — si se rompe la condición que hoy exige
-    // `homeTeamId`/`awayTeamId`, este test deja de encontrar el <img>.
+    // depende del pool de equipos del store, así que no hace falta sembrarlo.
     render(
       <HubView
         {...props({
-          lastResult: {
-            homeTeam: 'Islandia',
-            awayTeam: 'Brasil',
-            homeTeamId: 'isl',
-            awayTeamId: 'bra',
-            homeScore: 2,
-            awayScore: 1,
-          },
+          headlines: [
+            {
+              kind: 'upset',
+              label: 'BATACAZO',
+              detail: 'le ganó a un rival 25 puntos mejor',
+              subjectTeamId: 'isl',
+              score: 0.6,
+              homeTeamName: 'Islandia',
+              awayTeamName: 'Brasil',
+              match: {
+                homeTeamId: 'isl',
+                awayTeamId: 'bra',
+                homeScore: 2,
+                awayScore: 1,
+                homeSkillBefore: 60,
+                awaySkillBefore: 85,
+                stage: 'qualifier',
+              },
+            },
+          ],
         })}
       />,
     );
-    const homeFlag = screen.getByRole('img', { name: /islandia/i });
-    const awayFlag = screen.getByRole('img', { name: /brasil/i });
-    expect(homeFlag).toHaveAttribute('src', expect.stringContaining('flagcdn.com'));
-    expect(awayFlag).toHaveAttribute('src', expect.stringContaining('flagcdn.com'));
+    expect(screen.getByText('BATACAZO')).toBeInTheDocument();
+    expect(screen.getByText('Islandia')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /islandia/i })).toHaveAttribute(
+      'src',
+      expect.stringContaining('flagcdn.com'),
+    );
   });
 
   it('el peldaño de la escalera avisa cuál se eligió', async () => {

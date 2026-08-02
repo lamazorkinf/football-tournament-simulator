@@ -6,6 +6,7 @@ import {
   matchHistoryService,
 } from '../matchHistoryService';
 import * as supaLib from '../../lib/supabase';
+import { useHistoryRevisionStore } from '../../store/useHistoryRevisionStore';
 
 const entry = (id: string, playedAt: string): MatchHistoryEntry => ({
   id,
@@ -232,5 +233,105 @@ describe('getRegionStats', () => {
 
     const rows = await matchHistoryService.getRegionStats();
     expect(rows).toEqual([{ region: 'Europe', totalGoals: 120, matchesPlayed: 40 }]);
+  });
+});
+
+describe('revisión del historial', () => {
+  const insertParams = {
+    homeTeamId: 'A',
+    awayTeamId: 'B',
+    homeScore: 1,
+    awayScore: 0,
+    stage: 'league' as const,
+    homeSkillBefore: 80,
+    awaySkillBefore: 70,
+    homeSkillAfter: 81,
+    awaySkillAfter: 69,
+    homeSkillChange: 1,
+    awaySkillChange: -1,
+  };
+
+  it('un insert exitoso incrementa la revisión', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { from: (...a: unknown[]) => unknown }, 'from')
+      .mockReturnValue({
+        insert: () => ({
+          select: () => ({
+            single: async () => ({ data: dbRow('nuevo', '2026-01-01T00:00:00Z'), error: null }),
+          }),
+        }),
+      } as never);
+
+    const antes = useHistoryRevisionStore.getState().revision;
+    await matchHistoryService.createMatch(insertParams);
+
+    expect(useHistoryRevisionStore.getState().revision).toBe(antes + 1);
+  });
+
+  it('un insert fallido NO incrementa la revisión', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { from: (...a: unknown[]) => unknown }, 'from')
+      .mockReturnValue({
+        insert: () => ({
+          select: () => ({
+            single: async () => ({ data: null, error: new Error('sin red') }),
+          }),
+        }),
+      } as never);
+
+    const antes = useHistoryRevisionStore.getState().revision;
+    await expect(matchHistoryService.createMatch(insertParams)).rejects.toThrow();
+
+    expect(useHistoryRevisionStore.getState().revision).toBe(antes);
+  });
+
+  it('un batch exitoso incrementa la revisión una sola vez', async () => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { from: (...a: unknown[]) => unknown }, 'from')
+      .mockReturnValue({
+        insert: () => ({
+          select: async () => ({
+            data: [dbRow('a', '2026-01-01T00:00:00Z'), dbRow('b', '2026-01-01T00:00:00Z')],
+            error: null,
+          }),
+        }),
+      } as never);
+
+    const antes = useHistoryRevisionStore.getState().revision;
+    await matchHistoryService.createMatchesBatch([insertParams, insertParams], 'villamariense');
+
+    expect(useHistoryRevisionStore.getState().revision).toBe(antes + 1);
+  });
+
+  /** Un `delete().eq()` que resuelve con `{ error }`, como el del cliente real. */
+  const mockDelete = (error: Error | null) => {
+    vi.spyOn(supaLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supaLib.supabase as unknown as { from: (...a: unknown[]) => unknown }, 'from')
+      .mockReturnValue({
+        delete: () => ({ eq: async () => ({ error }) }),
+      } as never);
+  };
+
+  /**
+   * Un borrado cambia el historial tanto como un insert. Sin bump, borrar los
+   * partidos de un torneo deja la portada del Hub titulando partidos que ya no
+   * existen hasta el próximo insert.
+   */
+  it('un borrado exitoso incrementa la revisión', async () => {
+    mockDelete(null);
+
+    const antes = useHistoryRevisionStore.getState().revision;
+    await matchHistoryService.deleteMatchesByTournament('t1');
+
+    expect(useHistoryRevisionStore.getState().revision).toBe(antes + 1);
+  });
+
+  it('un borrado fallido NO incrementa la revisión', async () => {
+    mockDelete(new Error('sin red'));
+
+    const antes = useHistoryRevisionStore.getState().revision;
+    await expect(matchHistoryService.deleteMatchesByTournament('t1')).rejects.toThrow();
+
+    expect(useHistoryRevisionStore.getState().revision).toBe(antes);
   });
 });

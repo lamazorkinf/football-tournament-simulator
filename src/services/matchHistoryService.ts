@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured, escapeOrValue } from '../lib/supabase';
 import type { Database } from '../types/database';
 import type { MatchHistoryStage } from '../core/formats/rounds';
+import { bumpHistoryRevision } from '../store/useHistoryRevisionStore';
 
 type MatchHistoryRow = Database['public']['Tables']['match_history']['Row'];
 type MatchHistoryInsert = Database['public']['Tables']['match_history']['Insert'];
@@ -169,6 +170,7 @@ export const matchHistoryService = {
       .single();
 
     if (error) throw error;
+    bumpHistoryRevision();
     return dbMatchToMatch(data);
   },
 
@@ -392,6 +394,7 @@ export const matchHistoryService = {
       .select();
 
     if (error) throw error;
+    bumpHistoryRevision();
     return data.map(dbMatchToMatch);
   },
 
@@ -407,6 +410,10 @@ export const matchHistoryService = {
       .eq('tournament_id', tournamentId);
 
     if (error) throw error;
+    // Un borrado cambia el historial tanto como un insert: sin este bump, la
+    // portada del Hub sigue titulando partidos que ya no existen hasta que algo
+    // más inserte.
+    bumpHistoryRevision();
   },
 
   // Suscripción a inserts en tiempo real. Entrega la fila nueva ya convertida;
