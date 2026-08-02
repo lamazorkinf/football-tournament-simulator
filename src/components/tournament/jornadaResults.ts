@@ -12,6 +12,12 @@ export function buildJornadaResults(
   outcomes: MatchdayOutcome[],
   teams: Team[],
   favoriteTeamIds: ReadonlySet<string>,
+  /**
+   * Skill de cada equipo ANTES de esta jornada. Se pasa capturado y no se lee
+   * de `teams` porque, para cuando esta función corre, el store ya aplicó los
+   * deltas: el skill de "antes" ya no existe en ningún lado.
+   */
+  skillBefore: ReadonlyMap<string, number>,
 ): MatchResult[] {
   const byId = new Map(outcomes.map((o) => [o.matchId, o]));
   const getTeam = (teamId: string) => teams.find((t) => t.id === teamId);
@@ -40,6 +46,11 @@ export function buildJornadaResults(
       region: ctx.region,
       isFavorite: favoriteTeamIds.has(homeTeam.id) || favoriteTeamIds.has(awayTeam.id),
       penalties,
+      homeSkillBefore: skillBefore.get(homeTeam.id),
+      awaySkillBefore: skillBefore.get(awayTeam.id),
+      // Sólo se sabe del partido recién simulado: un partido ya jugado no
+      // guarda si fue al alargue.
+      wentToExtraTime: outcome ? outcome.extraTime !== undefined : undefined,
     });
   }
   return results;
