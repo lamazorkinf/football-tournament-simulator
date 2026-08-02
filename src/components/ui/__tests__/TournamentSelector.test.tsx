@@ -40,18 +40,35 @@ describe('TournamentSelector — dos torneos del mismo año', () => {
     expect(screen.getByText(/Campeón: Brasil/)).toBeInTheDocument();
   });
 
-  it('las filas de la lista ya no repiten el año a secas', async () => {
+  it('el año deja de ser el renglón grande, pero no desaparece', async () => {
     render(<TournamentSelector />);
-    const disparador = screen.getAllByRole('button')[0];
-    await userEvent.click(disparador);
+    await userEvent.click(screen.getAllByRole('button')[0]);
 
-    // El año a secas sobrevive SÓLO en el botón disparador, que es la etiqueta
-    // compacta del selector cerrado. Antes también era el renglón grande de
-    // cada fila, y eso es lo que hacía indistinguibles a dos torneos del mismo
-    // año: con dos torneos en la lista habría tres "2026" en pantalla.
-    const sueltos = screen.getAllByText('2026');
-    expect(sueltos).toHaveLength(1);
-    expect(disparador).toContainElement(sueltos[0]);
+    // Antes el año era el renglón grande de CADA fila, y como el nombre ya lo
+    // trae, dos torneos del mismo año se leían idénticos. Ahora el renglón de
+    // abajo dice el campeón cuando lo hay; el año queda para las filas que no
+    // tienen —incluido un torneo importado cuyo nombre puede no traerlo.
+    const filas = screen.getAllByRole('button').filter((b) => b.textContent?.includes('Mundial 2026'));
+    expect(filas).toHaveLength(2);
+    expect(filas[0].textContent).toContain('Campeón: Brasil');
+    expect(filas[1].textContent).toContain('2026');
+    expect(filas[1].textContent).not.toContain('Campeón');
+  });
+
+  /**
+   * Lo que este arreglo NO resuelve, dicho de frente: dos torneos del mismo año
+   * y ninguno con campeón siguen leyéndose igual. Los distingue el badge de
+   * estado, igual que antes — no es una regresión, es el límite.
+   */
+  it('dos torneos sin campeón del mismo año se distinguen sólo por su estado', async () => {
+    useTournamentStore.setState({
+      tournaments: [torneo('a', 2026), torneo('b', 2026)],
+    } as never);
+    render(<TournamentSelector />);
+    await userEvent.click(screen.getAllByRole('button')[0]);
+
+    expect(screen.getAllByText('Mundial 2026')).toHaveLength(2);
+    expect(screen.queryByText(/Campeón/)).not.toBeInTheDocument();
   });
 
   it('un campeón que no está en el pool cae a su id', async () => {

@@ -145,11 +145,17 @@ export function TournamentSelector() {
                             <div className="font-semibold">
                               {tournament.name}
                             </div>
-                            {tournament.worldCup?.champion && (
-                              <div className="text-xs text-grass-soft">
-                                Campeón: {teamName(tournament.worldCup.champion)}
-                              </div>
-                            )}
+                            {/* El campeón cuando lo hay —que es lo que distingue
+                                dos torneos del mismo año— y si no, el año. El
+                                año hace falta porque un torneo importado
+                                conserva el nombre del archivo y puede no
+                                traerlo (`createNewTournament` sí lo garantiza,
+                                `importTournament` no). */}
+                            <div className="text-xs text-grass-soft">
+                              {tournament.worldCup?.champion
+                                ? `Campeón: ${teamName(tournament.worldCup.champion)}`
+                                : tournament.year}
+                            </div>
                           </div>
                         </div>
 

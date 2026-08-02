@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MatchCenter } from '../MatchCenter';
 import { toCycle } from '../../../core/cycle';
@@ -50,6 +51,22 @@ function cicloConFixture(isPlayed: boolean): Cycle {
   return toCycle(t);
 }
 
+/** América con su partido jugado, Europa con el suyo pendiente. */
+function cicloMitadJugado(): Cycle {
+  const t = baseTournament();
+  t.qualifiers.America = [grupoConUnPartido(true)];
+  t.qualifiers.Europe = [
+    {
+      ...grupoConUnPartido(false),
+      id: 'g2',
+      name: 'Grupo B',
+      region: 'Europe',
+      matches: [{ ...grupoConUnPartido(false).matches[0], id: 'm2' }],
+    },
+  ];
+  return toCycle(t);
+}
+
 beforeEach(() => {
   useTournamentStore.setState({ teams, isSavingMatch: false } as never);
   useFavoritesStore.setState({ favoriteTeamIds: [] } as never);
@@ -65,9 +82,11 @@ function renderCenter(tournament: Cycle) {
 }
 
 /**
- * La lista de próximos partidos se vacía por TRES motivos distintos, y decirlos
- * como si fueran uno solo miente: antes del sorteo no hay fixture, y con un
- * filtro puesto los partidos existen pero no se están viendo.
+ * La lista de próximos partidos se vacía por CUATRO motivos distintos, y
+ * decirlos como si fueran uno solo miente: antes del sorteo no hay fixture; con
+ * un filtro puesto los partidos existen pero no se están viendo; lo que se está
+ * mirando puede haberse jugado entero con pendientes en el resto; y recién
+ * después queda el caso de que efectivamente no falte nada.
  */
 describe('MatchCenter — por qué no hay partidos próximos', () => {
   it('sin sorteo dice que falta el fixture, no que ya se jugó todo', () => {
@@ -90,6 +109,28 @@ describe('MatchCenter — por qué no hay partidos próximos', () => {
     expect(screen.queryByText(/todavía no se sortearon/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/todos los partidos han sido jugados/i)).not.toBeInTheDocument();
   });
+
+  /**
+   * El caso más frecuente de todos, y el que el primer arreglo se comía: es el
+   * estado en el que queda la vista JUSTO DESPUÉS de simular la jornada que se
+   * está mirando, porque la jornada seleccionada no sigue al avance.
+   */
+  it('si lo que se está mirando ya se jugó pero queda pendiente en el resto, lo dice', async () => {
+    renderCenter(cicloMitadJugado());
+    // Filtrar por América, donde el único partido ya se jugó.
+    await userEvent.selectOptions(screen.getByDisplayValue(/todas las regiones/i), 'America');
+
+    expect(screen.getByText(/queda 1 partido pendiente fuera de esta selección/i)).toBeInTheDocument();
+    expect(screen.queryByText(/todos los partidos han sido jugados/i)).not.toBeInTheDocument();
+  });
+
+  it('un filtro que no matchea nada lo dice con sus palabras', async () => {
+    renderCenter(cicloConFixture(false));
+    // El único partido es de América: filtrar por Europa no deja nada.
+    await userEvent.selectOptions(screen.getByDisplayValue(/todas las regiones/i), 'Europe');
+
+    expect(screen.getByText(/ningún partido coincide con los filtros/i)).toBeInTheDocument();
+  });
 });
 
 /**
@@ -99,11 +140,16 @@ describe('MatchCenter — por qué no hay partidos próximos', () => {
  * tiene margen donde pegarse.
  */
 describe('MatchCenter — la vista previa acompaña el scroll', () => {
-  it('la columna derecha es sticky y no se estira', () => {
+  it('la columna derecha es sticky, no se estira y scrollea por dentro', () => {
     const { container } = renderCenter(cicloConFixture(false));
 
     const columna = container.querySelector('.lg\\:sticky');
     expect(columna).not.toBeNull();
     expect(columna?.className).toContain('lg:self-start');
+    // Y con su propio techo de altura: el contenido (marcador, tabla del grupo,
+    // últimos partidos de los dos equipos y H2H) pasa el alto de un portátil, y
+    // pegado sin `max-h` la parte de abajo dejaba de verse.
+    expect(columna?.className).toContain('lg:max-h-[calc(100vh-2rem)]');
+    expect(columna?.className).toContain('lg:overflow-y-auto');
   });
 });

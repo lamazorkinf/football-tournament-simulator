@@ -421,6 +421,27 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                     </div>
                   );
                 }
+                // Lo que se está mirando se jugó entero, pero puede quedar
+                // pendiente en OTRA jornada o fuera del filtro. Es el estado en
+                // el que queda la vista justo después de simular la jornada
+                // mostrada —`selectedJornadaIndex` no sigue al avance, ver el
+                // comentario del centinela más arriba—, así que anunciar ahí
+                // "todos los partidos han sido jugados" es la mentira más
+                // frecuente de las cuatro.
+                const pendientesEnTodo = allMatches.filter((m) => !m.match.isPlayed).length;
+                if (pendientesEnTodo > 0) {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Ya se jugó todo esto</p>
+                      <p className="text-sm mt-2">
+                        {pendientesEnTodo === 1
+                          ? 'Queda 1 partido pendiente fuera de esta selección'
+                          : `Quedan ${pendientesEnTodo} partidos pendientes fuera de esta selección`}
+                      </p>
+                    </div>
+                  );
+                }
                 return (
                   <div className="text-center text-grass-soft py-12">
                     <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
@@ -439,7 +460,7 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
             negro mientras se scrollea. `self-start` es imprescindible — en un
             grid el ítem se estira a la altura de la fila y `sticky` no tendría
             margen donde pegarse. */}
-        <div className="hidden lg:block lg:sticky lg:top-4 lg:self-start">
+        <div className="hidden lg:block lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           {unplayedMatches.length > 0 && (() => {
             const nextMatch = unplayedMatches[0];
             const homeTeam = getTeam(nextMatch.match.homeTeamId);
