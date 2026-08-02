@@ -157,3 +157,92 @@ describe('MatchResultsModal', () => {
     expect(shown[1]).toContain('Gales');
   });
 });
+
+/** Resultado con los datos que hacen falta para que produzca un titular. */
+const conSkills = (
+  homeTeam: string,
+  awayTeam: string,
+  over: Partial<MatchResult> = {},
+): MatchResult => ({
+  ...result(homeTeam, awayTeam),
+  homeTeamId: homeTeam.toLowerCase(),
+  awayTeamId: awayTeam.toLowerCase(),
+  homeSkillBefore: 55,
+  awaySkillBefore: 90,
+  ...over,
+});
+
+const tabla = {
+  leaderTeamId: 'a',
+  leaderTeamName: 'Ben Hur',
+  leaderIsNew: true,
+  moves: [{ teamId: 'b', teamName: 'Talleres', from: 7, to: 4 }],
+};
+
+describe('MatchResultsModal — resumen de fecha', () => {
+  it('titula el batacazo de la fecha', () => {
+    useMatchResultsStore.getState().showResults([conSkills('Colon', 'Alumni')], 'Fecha 12');
+    render(<MatchResultsModal />);
+    expect(screen.getByText('BATACAZO')).toBeInTheDocument();
+  });
+
+  it('sin skills previos no hay bloque de titulares', () => {
+    useMatchResultsStore.getState().showResults([result('Colon', 'Alumni')], 'Fecha 12');
+    render(<MatchResultsModal />);
+    expect(screen.queryByText(/titulares/i)).not.toBeInTheDocument();
+  });
+
+  it('rinde el bloque de tabla sólo cuando la fecha lo trae', () => {
+    useMatchResultsStore.getState().showResults([result('Colon', 'Alumni')], 'Fecha 12', tabla);
+    render(<MatchResultsModal />);
+    expect(screen.getByText('Ben Hur')).toBeInTheDocument();
+    expect(screen.getByText('7º → 4º')).toBeInTheDocument();
+  });
+
+  it('sin tabla no rinde ese bloque', () => {
+    useMatchResultsStore.getState().showResults([result('Colon', 'Alumni')], 'Fecha 12');
+    render(<MatchResultsModal />);
+    expect(screen.queryByText(/la tabla/i)).not.toBeInTheDocument();
+  });
+
+  /**
+   * Una fecha de Villamariense son 10 partidos y se sigue viendo como siempre;
+   * una de clasificatorias son 84 y era un muro.
+   */
+  it('con pocos resultados la lista arranca abierta', () => {
+    useMatchResultsStore
+      .getState()
+      .showResults(
+        Array.from({ length: 10 }, (_, i) => result(`Local ${i}`, `Visita ${i}`)),
+        'Fecha 12',
+      );
+    render(<MatchResultsModal />);
+    expect(screen.getAllByTestId('match-result')).toHaveLength(10);
+  });
+
+  it('con muchos resultados la lista arranca colapsada', () => {
+    useMatchResultsStore
+      .getState()
+      .showResults(
+        Array.from({ length: 20 }, (_, i) => result(`Local ${i}`, `Visita ${i}`)),
+        'Jornada 3',
+      );
+    render(<MatchResultsModal />);
+    expect(screen.queryAllByTestId('match-result')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: /20 resultados/i })).toBeInTheDocument();
+  });
+
+  it('el plegable abre la lista', () => {
+    useMatchResultsStore
+      .getState()
+      .showResults(
+        Array.from({ length: 20 }, (_, i) => result(`Local ${i}`, `Visita ${i}`)),
+        'Jornada 3',
+      );
+    render(<MatchResultsModal />);
+
+    fireEvent.click(screen.getByRole('button', { name: /20 resultados/i }));
+
+    expect(screen.getAllByTestId('match-result')).toHaveLength(20);
+  });
+});

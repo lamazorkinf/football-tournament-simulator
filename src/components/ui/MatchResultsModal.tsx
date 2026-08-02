@@ -1,14 +1,47 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X, Trophy, Star } from 'lucide-react';
 import { useMatchResultsStore } from '../../store/useMatchResultsStore';
+import type { MatchResult } from '../../store/useMatchResultsStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { penaltiesLabel } from '../../utils/matchLabels';
 import { regionLabel } from '../../utils/regionLabels';
 import { Button } from './Button';
 import { TeamFlag } from './TeamFlag';
+import { deriveHeadlines, type HeadlineMatch, type HeadlineView } from '../../core/headlines';
+import { HeadlinesCard } from '../hub/HeadlinesCard';
+import { TableMovesCard } from './TableMovesCard';
+
+/**
+ * Por encima de esto la lista de resultados arranca plegada. 12 es el mismo
+ * tope que usa la grilla de la jornada en vivo: una fecha de liga (10 partidos)
+ * se sigue viendo entera y una de clasificatorias (84) deja de ser un muro.
+ */
+const RESULTS_COLLAPSE_THRESHOLD = 12;
+
+/**
+ * Un resultado sólo produce titular si trae con qué medir la sorpresa. Los
+ * productores viejos —o cualquiera que no haya capturado el pool de equipos
+ * antes de simular— devuelven `null` y quedan afuera sin romper nada.
+ */
+function resultToHeadlineMatch(r: MatchResult): HeadlineMatch | null {
+  if (!r.homeTeamId || !r.awayTeamId) return null;
+  if (r.homeSkillBefore === undefined || r.awaySkillBefore === undefined) return null;
+  return {
+    homeTeamId: r.homeTeamId,
+    awayTeamId: r.awayTeamId,
+    homeScore: r.homeScore,
+    awayScore: r.awayScore,
+    homeSkillBefore: r.homeSkillBefore,
+    awaySkillBefore: r.awaySkillBefore,
+    wentToExtraTime: r.wentToExtraTime,
+    // La etapa no viaja: dentro de una jornada todos los partidos comparten la
+    // misma, así que su peso sería un multiplicador constante.
+    ...(r.penalties ? { penalties: r.penalties } : {}),
+  };
+}
 
 export function MatchResultsModal() {
-  const { isOpen, results, title, close } = useMatchResultsStore();
+  const { isOpen, results, title, table, close } = useMatchResultsStore();
   const trapRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   // Cierre con Escape y bloqueo del scroll del body mientras está abierto.
@@ -25,6 +58,34 @@ export function MatchResultsModal() {
       document.body.style.overflow = previousOverflow;
     };
   }, [isOpen, close]);
+
+  // Estado del plegable derivado de las props, sin efecto: el mismo patrón que
+  // `TeamFlag.tsx:50-55`. Un `useEffect` con `setState` dispararía la regla
+  // `react-hooks/set-state-in-effect`.
+  const [prevResults, setPrevResults] = useState(results);
+  const [showList, setShowList] = useState(results.length <= RESULTS_COLLAPSE_THRESHOLD);
+  if (results !== prevResults) {
+    setPrevResults(results);
+    setShowList(results.length <= RESULTS_COLLAPSE_THRESHOLD);
+  }
+
+  const headlines = useMemo<HeadlineView[]>(() => {
+    const matches = results
+      .map(resultToHeadlineMatch)
+      .filter((m): m is HeadlineMatch => m !== null);
+    // Los partidos de una fecha son SIMULTÁNEOS: no hay más viejo ni más nuevo.
+    const derived = deriveHeadlines(matches, { decayByAge: false });
+    const nameById = new Map<string, string>();
+    for (const r of results) {
+      if (r.homeTeamId) nameById.set(r.homeTeamId, r.homeTeam);
+      if (r.awayTeamId) nameById.set(r.awayTeamId, r.awayTeam);
+    }
+    return derived.map((h) => ({
+      ...h,
+      homeTeamName: nameById.get(h.match.homeTeamId) ?? h.match.homeTeamId,
+      awayTeamName: nameById.get(h.match.awayTeamId) ?? h.match.awayTeamId,
+    }));
+  }, [results]);
 
   if (!isOpen) return null;
 
@@ -63,7 +124,21 @@ export function MatchResultsModal() {
         </div>
 
         {/* Results */}
-        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(85vh-80px)]">
+        <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(85vh-80px)] space-y-4">
+          <HeadlinesCard headlines={headlines} />
+
+          {table && <TableMovesCard table={table} />}
+
+          <button
+            onClick={() => setShowList((open) => !open)}
+            aria-expanded={showList}
+            className="w-full flex items-center gap-2 font-arcade text-[10px] text-grass-soft uppercase hover:text-white transition-colors"
+          >
+            <span aria-hidden="true">{showList ? '▾' : '▸'}</span>
+            Los {results.length} resultados
+          </button>
+
+          {showList && (
           <div className="space-y-2 sm:space-y-3">
             {orderedResults.map((result, index) => {
               // La etapa ya está en el título del resumen (una jornada es de
@@ -153,6 +228,7 @@ export function MatchResultsModal() {
               );
             })}
           </div>
+          )}
 
           {/* Summary */}
           <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t-2 border-grass">
