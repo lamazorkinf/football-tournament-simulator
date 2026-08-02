@@ -70,8 +70,8 @@ export function deriveTableSummary(
   moves.sort(
     (a, b) =>
       Math.abs(b.from - b.to) - Math.abs(a.from - a.to) ||
-      // A igual magnitud de salto, quien venía más arriba en `before` primero.
-      a.from - b.from ||
+      // A igual salto, primero el que quedó más arriba en la tabla nueva.
+      a.to - b.to ||
       // Último desempate para que el orden sea determinista.
       a.teamId.localeCompare(b.teamId),
   );

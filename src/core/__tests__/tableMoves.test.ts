@@ -65,7 +65,7 @@ describe('deriveTableSummary', () => {
 
   it('quien no se movió no aparece', () => {
     const res = deriveTableSummary(tabla('A', 'B', 'C'), tabla('A', 'C', 'B'));
-    expect(res?.moves.map((m) => m.teamId)).toEqual(['B', 'C']);
+    expect(res?.moves.map((m) => m.teamId)).toEqual(['C', 'B']);
   });
 
   it('un equipo que antes no estaba no produce movimiento', () => {
