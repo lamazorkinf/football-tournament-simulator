@@ -152,4 +152,26 @@ describe('HeadlinesCard', () => {
     const titulo = screen.getByText(/titulares/i);
     expect(titulo.className).toContain('font-arcade');
   });
+
+  /**
+   * Un titular de PENALES no tiene sujeto: el partido lo definió la tanda, no
+   * una actuación de uno de los dos. Resaltar a cualquiera de ellos sería
+   * elegir un protagonista que la derivación se negó a elegir.
+   */
+  it('un titular sin sujeto no resalta a ningún equipo', () => {
+    render(
+      <HeadlinesCard
+        headlines={[
+          headline({
+            kind: 'decider',
+            label: 'PENALES',
+            detail: 'se definió por penales',
+            subjectTeamId: undefined,
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText('Ben Hur').className).not.toContain('text-gold');
+    expect(screen.getByText('Alumni').className).not.toContain('text-gold');
+  });
 });

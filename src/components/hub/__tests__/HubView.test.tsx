@@ -154,7 +154,13 @@ describe('HubView', () => {
     );
     expect(screen.getByText('BATACAZO')).toBeInTheDocument();
     expect(screen.getByText('Islandia')).toBeInTheDocument();
+    // Las DOS banderas: el layout dibuja al visitante con su propia rama, así
+    // que afirmar sólo la del local dejaba la mitad sin cubrir.
     expect(screen.getByRole('img', { name: /islandia/i })).toHaveAttribute(
+      'src',
+      expect.stringContaining('flagcdn.com'),
+    );
+    expect(screen.getByRole('img', { name: /brasil/i })).toHaveAttribute(
       'src',
       expect.stringContaining('flagcdn.com'),
     );

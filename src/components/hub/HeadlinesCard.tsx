@@ -75,6 +75,10 @@ export function HeadlinesCard({ headlines }: { headlines: HeadlineView[] }) {
           const homeHighlighted = headline.subjectTeamId === headline.match.homeTeamId;
           const awayHighlighted = headline.subjectTeamId === headline.match.awayTeamId;
           return (
+            /* El par de equipos alcanza como `key` porque `deriveHeadlines`
+               garantiza que un equipo no aparece dos veces en la lista que
+               devuelve (ver la deduplicación por equipo en `core/headlines.ts`).
+               Si esa regla cambiara, acá habría colisión de keys. */
             <div key={`${headline.match.homeTeamId}-${headline.match.awayTeamId}`} className="space-y-1">
               <p className="font-arcade text-[9px] text-gold flex items-center gap-2">
                 <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />
