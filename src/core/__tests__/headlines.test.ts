@@ -354,3 +354,50 @@ describe('deriveHeadlines — racha', () => {
     expect(h.subjectTeamId).toBe('A');
   });
 });
+
+describe('deriveHeadlines — opciones', () => {
+  /** Batacazo de brecha 25 entre dos equipos que se pasan por parámetro. */
+  const batacazo = (homeTeamId: string, awayTeamId: string) =>
+    match({ homeTeamId, awayTeamId, homeSkillBefore: 60, awaySkillBefore: 85 });
+
+  /** Partidos que no producen ningún titular: 1-0 entre iguales, equipos distintos. */
+  const relleno = (n: number) =>
+    Array.from({ length: n }, (_, i) => match({ homeTeamId: `h${i}`, awayTeamId: `a${i}` }));
+
+  it('respeta el límite pedido', () => {
+    const res = deriveHeadlines(
+      [batacazo('A', 'B'), batacazo('C', 'D'), batacazo('E', 'F')],
+      { limit: 1 },
+    );
+    expect(res).toHaveLength(1);
+  });
+
+  it('por defecto sigue decayendo por antigüedad', () => {
+    const res = deriveHeadlines([batacazo('A', 'B'), ...relleno(59), batacazo('C', 'D')]);
+    expect(res[0].score).toBeGreaterThan(res[1].score);
+  });
+
+  /**
+   * Los partidos de una jornada son SIMULTÁNEOS: no hay más viejo ni más nuevo,
+   * y penalizar por posición en el array sería arbitrario.
+   */
+  it('con decayByAge en false, la posición en el array no pesa', () => {
+    const res = deriveHeadlines(
+      [batacazo('A', 'B'), ...relleno(59), batacazo('C', 'D')],
+      { decayByAge: false },
+    );
+    expect(res).toHaveLength(2);
+    expect(res[0].score).toBe(res[1].score);
+  });
+
+  it('sin etapa, el peso de etapa es neutro', () => {
+    const [conEtapa] = deriveHeadlines([
+      match({ homeSkillBefore: 60, awaySkillBefore: 85, stage: 'world-cup-knockout' }),
+    ]);
+    const [sinEtapa] = deriveHeadlines([
+      match({ homeSkillBefore: 60, awaySkillBefore: 85, stage: undefined }),
+    ]);
+    // 1.3 es el peso de 'world-cup-knockout'; sin etapa el multiplicador es 1.
+    expect(conEtapa.score).toBeCloseTo(sinEtapa.score * 1.3);
+  });
+});

@@ -30,7 +30,15 @@ export interface HeadlineMatch {
   awayScore: number;
   homeSkillBefore: number;
   awaySkillBefore: number;
-  stage: MatchHistoryStage;
+  /**
+   * Etapa del partido. OPCIONAL a propósito: lo único que hace es pesar el
+   * puntaje vía `STAGE_WEIGHT`, y dentro de una jornada todos los partidos
+   * comparten etapa — con lo cual el peso es un multiplicador constante,
+   * incapaz de cambiar el orden. El resumen de fecha no la transporta; el Hub
+   * sí, porque ahí los partidos vienen de `match_history` y comparar entre
+   * etapas importa.
+   */
+  stage?: MatchHistoryStage;
   wentToExtraTime?: boolean;
   /**
    * Sólo el ciclo mundialista la estampa (`useTournamentStore.ts:2540`); el modo
@@ -199,7 +207,12 @@ function pickBest(candidates: Candidate[]): Candidate | null {
   return best;
 }
 
-function rank(candidate: Candidate, m: HeadlineMatch, index: number): Ranked {
+function rank(
+  candidate: Candidate,
+  m: HeadlineMatch,
+  index: number,
+  decayByAge: boolean,
+): Ranked {
   return {
     index,
     headline: {
@@ -208,7 +221,10 @@ function rank(candidate: Candidate, m: HeadlineMatch, index: number): Ranked {
       detail: candidate.detail,
       subjectTeamId: candidate.subjectTeamId,
       match: m,
-      score: candidate.base * STAGE_WEIGHT[m.stage] * DECAY ** index,
+      score:
+        candidate.base *
+        (m.stage ? STAGE_WEIGHT[m.stage] : 1) *
+        (decayByAge ? DECAY ** index : 1),
     },
   };
 }
@@ -229,7 +245,7 @@ interface TeamRun {
  * ventana son victorias, la racha puede ser más larga de lo que se ve y decir el
  * número visible sería subestimar. Se prefiere callar.
  */
-function streakCandidates(matches: HeadlineMatch[]): Ranked[] {
+function streakCandidates(matches: HeadlineMatch[], decayByAge: boolean): Ranked[] {
   const runs = new Map<string, TeamRun>();
 
   const note = (teamId: string, won: boolean, m: HeadlineMatch, index: number) => {
@@ -264,29 +280,44 @@ function streakCandidates(matches: HeadlineMatch[]): Ranked[] {
         },
         run.match,
         run.index,
+        decayByAge,
       ),
     );
   }
   return out;
 }
 
+export interface DeriveHeadlinesOptions {
+  /** Cuántos titulares devolver. */
+  limit?: number;
+  /**
+   * Penalizar cada titular según su posición en el array, que en el Hub es su
+   * antigüedad. `false` para una jornada: sus partidos son simultáneos, no hay
+   * más viejo ni más nuevo, y castigar por posición sería arbitrario.
+   */
+  decayByAge?: boolean;
+}
+
 /**
- * @param matches Ordenados del más nuevo al más viejo — el orden que devuelve
- *   `getMatchesPage`. El índice de cada partido ES su antigüedad.
+ * @param matches En el Hub, ordenados del más nuevo al más viejo — el orden que
+ *   devuelve `getMatchesPage`, donde el índice de cada partido ES su antigüedad.
+ *   En un resumen de fecha el orden no significa nada: para eso está
+ *   `decayByAge: false`.
  */
 export function deriveHeadlines(
   matches: HeadlineMatch[],
-  limit: number = HEADLINES_LIMIT,
+  options: DeriveHeadlinesOptions = {},
 ): Headline[] {
+  const { limit = HEADLINES_LIMIT, decayByAge = true } = options;
   const ranked: Ranked[] = [];
   matches.forEach((m, index) => {
     const best = pickBest(candidatesFor(m));
-    if (best) ranked.push(rank(best, m, index));
+    if (best) ranked.push(rank(best, m, index, decayByAge));
   });
   // Las rachas son por equipo, no por partido, así que se calculan aparte y
   // compiten en la misma tabla. La regla de "un equipo no aparece dos veces" es
   // la que evita "BATACAZO: Ben Hur" + "RACHA: Ben Hur, 6 al hilo".
-  ranked.push(...streakCandidates(matches));
+  ranked.push(...streakCandidates(matches, decayByAge));
 
   const ordered = ranked
     .filter((r) => r.headline.score >= MIN_SCORE)
@@ -312,4 +343,16 @@ export function deriveHeadlines(
     out.push(headline);
   }
   return out;
+}
+
+/**
+ * Un titular listo para dibujar. La derivación habla de ids; los nombres los
+ * resuelve quien tiene el pool de equipos a mano. Vive acá y no en el hook que
+ * lo produjo primero porque tiene dos consumidores —la portada del Hub y el
+ * resumen de fecha— y un componente no debería importar un tipo desde un hook
+ * de datos que no usa.
+ */
+export interface HeadlineView extends Headline {
+  homeTeamName: string;
+  awayTeamName: string;
 }

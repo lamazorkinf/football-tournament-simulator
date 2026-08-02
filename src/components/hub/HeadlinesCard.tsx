@@ -3,8 +3,7 @@ import { Card, CardContent } from '../ui/Card';
 import { TeamFlag } from '../ui/TeamFlag';
 import { penaltiesLabel } from '../../utils/matchLabels';
 import { cn } from '../../lib/utils';
-import type { HeadlineKind } from '../../core/headlines';
-import type { HeadlineView } from '../../hooks/useRecentHeadlines';
+import type { HeadlineKind, HeadlineView } from '../../core/headlines';
 
 const KIND_ICON: Record<HeadlineKind, LucideIcon> = {
   upset: Zap,

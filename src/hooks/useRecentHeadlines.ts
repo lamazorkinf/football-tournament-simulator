@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { deriveHeadlines, type Headline, type HeadlineMatch } from '../core/headlines';
+import {
+  deriveHeadlines,
+  type Headline,
+  type HeadlineMatch,
+  type HeadlineView,
+} from '../core/headlines';
 import { matchHistoryService, type MatchHistoryEntry } from '../services/matchHistoryService';
 import { useHistoryRevisionStore } from '../store/useHistoryRevisionStore';
 import { useModeStore } from '../store/useModeStore';
@@ -19,11 +24,6 @@ export const HEADLINES_WINDOW = 80;
 
 /** Una fecha de temporada dispara diez inserts en paralelo, o sea diez bumps. */
 export const HEADLINES_DEBOUNCE_MS = 300;
-
-export interface HeadlineView extends Headline {
-  homeTeamName: string;
-  awayTeamName: string;
-}
 
 /**
  * Adapta una fila del historial a la forma neutra que consume la derivación.

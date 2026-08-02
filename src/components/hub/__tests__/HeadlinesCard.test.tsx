@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { HeadlinesCard } from '../HeadlinesCard';
-import type { HeadlineView } from '../../../hooks/useRecentHeadlines';
+import type { HeadlineView } from '../../../core/headlines';
 
 const headline = (over: Partial<HeadlineView> = {}): HeadlineView => ({
   kind: 'upset',
