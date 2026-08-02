@@ -10,6 +10,15 @@ import type { TableSummaryView } from '../../core/tableMoves';
  * información, y el puntero se anuncia siempre.
  */
 export function TableMovesCard({ table }: { table: TableSummaryView }) {
+  // Tres estados, no dos: en la primera fecha de una liga no había tabla contra
+  // la cual sostenerse (el orden de antes era el de siembra), así que ahí el
+  // puntero no "sigue" ni es "nuevo" — simplemente es.
+  const leaderLabel = !table.hadPreviousTable
+    ? 'es el puntero'
+    : table.leaderIsNew
+      ? 'es el nuevo puntero'
+      : 'sigue puntero';
+
   return (
     <div className="bg-night border-2 border-grass p-3 sm:p-4 space-y-2">
       {/* "La tabla" en minúscula, con la mayúscula puesta por CSS: Press Start
@@ -20,9 +29,7 @@ export function TableMovesCard({ table }: { table: TableSummaryView }) {
       <p className="flex items-center gap-2 text-sm min-w-0">
         <Crown className="w-4 h-4 text-gold shrink-0" aria-hidden="true" />
         <span className="truncate text-gold">{table.leaderTeamName}</span>
-        <span className="text-grass-soft shrink-0">
-          {table.leaderIsNew ? 'es el nuevo puntero' : 'sigue puntero'}
-        </span>
+        <span className="text-grass-soft shrink-0">{leaderLabel}</span>
       </p>
 
       {table.moves.map((move) => {

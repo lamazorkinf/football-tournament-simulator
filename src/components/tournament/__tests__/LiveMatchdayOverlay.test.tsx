@@ -383,6 +383,7 @@ describe('LiveMatchdayOverlay', () => {
       leaderTeamId: 'arg',
       leaderTeamName: 'Argentina',
       leaderIsNew: true,
+      hadPreviousTable: true,
       moves: [{ teamId: 'bra', teamName: 'Brasil', from: 1, to: 3 }],
     };
     useLiveMatchdayStore.setState({

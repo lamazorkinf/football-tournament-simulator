@@ -93,4 +93,47 @@ describe('deriveTableSummary', () => {
     expect(res?.leaderIsNew).toBe(false);
     expect(res?.moves).toEqual([]);
   });
+
+  /**
+   * El complemento de la regla de honestidad: `leaderIsNew: false` sin más era
+   * un booleano de dos estados para tres situaciones, así que la vista no podía
+   * distinguir "el puntero se sostuvo" de "no había tabla contra la cual
+   * sostenerse" y anunciaba continuidad contra un pasado que no existió.
+   */
+  it('marca que no había tabla previa cuando nadie había jugado', () => {
+    const sinJugar = ['A', 'B', 'C'].map((id) =>
+      fila(id, { played: 0, lost: 0, goalsAgainst: 0, goalDifference: 0 }),
+    );
+    expect(deriveTableSummary(sinJugar, tabla('C', 'A', 'B'))?.hadPreviousTable).toBe(false);
+  });
+
+  it('marca que sí había tabla previa en una fecha normal', () => {
+    expect(deriveTableSummary(tabla('A', 'B', 'C'), tabla('A', 'C', 'B'))?.hadPreviousTable).toBe(
+      true,
+    );
+  });
+
+  /**
+   * El escenario completo de la fecha 1 de una liga sembrada: B iba segundo en
+   * la siembra y le gana 3-0 a A, C empata con D. B queda puntero sin haberlo
+   * sido nunca, así que el resumen no puede decir que "sigue" ni que es "nuevo".
+   */
+  it('la fecha 1 de una liga sembrada no afirma nada sobre el pasado', () => {
+    const siembra = ['A', 'B', 'C', 'D'].map((id) =>
+      fila(id, { played: 0, lost: 0, goalsAgainst: 0, goalDifference: 0 }),
+    );
+    const despues: TeamStanding[] = [
+      fila('B', { won: 1, lost: 0, goalsFor: 3, goalsAgainst: 0, goalDifference: 3, points: 3 }),
+      fila('C', { drawn: 1, lost: 0, goalsFor: 1, goalsAgainst: 1, goalDifference: 0, points: 1 }),
+      fila('D', { drawn: 1, lost: 0, goalsFor: 1, goalsAgainst: 1, goalDifference: 0, points: 1 }),
+      fila('A', { goalsAgainst: 3, goalDifference: -3 }),
+    ];
+
+    expect(deriveTableSummary(siembra, despues)).toEqual({
+      leaderTeamId: 'B',
+      leaderIsNew: false,
+      hadPreviousTable: false,
+      moves: [],
+    });
+  });
 });

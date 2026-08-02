@@ -7,6 +7,7 @@ const table = (over: Partial<TableSummaryView> = {}): TableSummaryView => ({
   leaderTeamId: 'A',
   leaderTeamName: 'Ben Hur',
   leaderIsNew: true,
+  hadPreviousTable: true,
   moves: [
     { teamId: 'B', teamName: 'Talleres', from: 7, to: 4 },
     { teamId: 'C', teamName: 'Alumni', from: 1, to: 3 },
@@ -24,6 +25,22 @@ describe('TableMovesCard', () => {
   it('el puntero que se sostiene se lee distinto', () => {
     render(<TableMovesCard table={table({ leaderIsNew: false })} />);
     expect(screen.getByText(/sigue puntero/i)).toBeInTheDocument();
+    expect(screen.queryByText(/nuevo puntero/i)).not.toBeInTheDocument();
+  });
+
+  /**
+   * LA FECHA 1, la instancia más vista del bloque: `deriveTableSummary` no
+   * reporta movimientos ni puntero nuevo porque el orden de antes era el de
+   * siembra. Decir "sigue puntero" ahí sería afirmar una continuidad contra un
+   * pasado que no existió: el puntero de la fecha 1 nunca fue puntero.
+   */
+  it('sin tabla previa no afirma que el puntero venía de antes', () => {
+    render(
+      <TableMovesCard table={table({ leaderIsNew: false, hadPreviousTable: false, moves: [] })} />,
+    );
+    expect(screen.getByText('Ben Hur')).toBeInTheDocument();
+    expect(screen.getByText('es el puntero')).toBeInTheDocument();
+    expect(screen.queryByText(/sigue puntero/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/nuevo puntero/i)).not.toBeInTheDocument();
   });
 

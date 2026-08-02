@@ -19,6 +19,14 @@ export interface TableSummary {
   leaderTeamId: string;
   /** El puntero cambió en esta fecha. */
   leaderIsNew: boolean;
+  /**
+   * Antes de esta fecha ya había una tabla: alguien había jugado. En `false`
+   * —la primera fecha de una liga— el orden de antes era el de siembra, así que
+   * `leaderIsNew: false` NO significa que el puntero se haya sostenido: no
+   * había puntero. Sin este tercer estado la pantalla afirma una continuidad
+   * contra un pasado que no existió.
+   */
+  hadPreviousTable: boolean;
   /** Los que más se movieron, de mayor a menor salto. Puede venir vacío. */
   moves: TableMove[];
 }
@@ -54,7 +62,12 @@ export function deriveTableSummary(
   // inventar, así que se anuncia el puntero y nada más.
   const hadTable = before.some((s) => s.played > 0);
   if (!hadTable) {
-    return { leaderTeamId: leader.teamId, leaderIsNew: false, moves: [] };
+    return {
+      leaderTeamId: leader.teamId,
+      leaderIsNew: false,
+      hadPreviousTable: false,
+      moves: [],
+    };
   }
 
   const positionBefore = new Map(before.map((s, i) => [s.teamId, i + 1]));
@@ -79,6 +92,7 @@ export function deriveTableSummary(
   return {
     leaderTeamId: leader.teamId,
     leaderIsNew: before[0]?.teamId !== leader.teamId,
+    hadPreviousTable: true,
     moves: moves.slice(0, limit),
   };
 }
