@@ -13,6 +13,9 @@ export function TournamentSelector() {
     createNewTournament,
   } = useTournamentStore();
 
+  // El campeón se guarda como id: hay que resolverlo contra el pool de equipos.
+  const teams = useTournamentStore((s) => s.teams);
+
   const [isOpen, setIsOpen] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [newYear, setNewYear] = useState('');
@@ -47,6 +50,9 @@ export function TournamentSelector() {
       toast.error('No se pudo crear el torneo. Revisá la conexión e intentá de nuevo.');
     }
   };
+
+  /** Nombre del equipo, o el id si no está en el pool. */
+  const teamName = (teamId: string) => teams.find((t) => t.id === teamId)?.name ?? teamId;
 
   const getStatusBadge = (tournament: typeof tournaments[0]) => {
     if (tournament.worldCup?.champion) {
@@ -129,13 +135,21 @@ export function TournamentSelector() {
                       >
                         <div className="flex items-center gap-3">
                           <Trophy className={`w-5 h-5 ${isSelected ? 'text-gold' : 'text-grass-soft'}`} />
+                          {/* El nombre ya trae el año ("Mundial 2026"), así que
+                              repetirlo arriba dejaba dos filas idénticas cuando
+                              hay dos torneos del mismo año — algo que el guard
+                              de `handleCreateNew` ya no permite crear, pero que
+                              existe en bases viejas. El renglón de abajo pasa a
+                              decir algo que SÍ los distingue. */}
                           <div className="text-left">
                             <div className="font-semibold">
-                              {tournament.year}
-                            </div>
-                            <div className="text-xs text-grass-soft">
                               {tournament.name}
                             </div>
+                            {tournament.worldCup?.champion && (
+                              <div className="text-xs text-grass-soft">
+                                Campeón: {teamName(tournament.worldCup.champion)}
+                              </div>
+                            )}
                           </div>
                         </div>
 
