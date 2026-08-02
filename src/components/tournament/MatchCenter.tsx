@@ -442,10 +442,28 @@ export function MatchCenter({ tournament, teams, onNavigate }: MatchCenterProps)
                     </div>
                   );
                 }
+                // Y todavía falta un caso: `collectAllMatches` recorre sólo lo
+                // que EXISTE, así que "no queda nada pendiente" puede querer
+                // decir "no queda nada de lo ya sorteado". Terminar las
+                // clasificatorias con el Mundial sin sortear deja el ciclo
+                // entero por delante y contaba como "todos los partidos han
+                // sido jugados" — el mismo engaño, en el momento por el que
+                // pasa cada ciclo.
+                if (tournament.calendar.phase !== 'completed') {
+                  return (
+                    <div className="text-center text-grass-soft py-12">
+                      <CalendarX className="w-16 h-16 mx-auto mb-4 text-grass-soft" />
+                      <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Falta sortear</p>
+                      <p className="text-sm mt-2">
+                        Se jugó todo lo sorteado hasta acá: la próxima fase todavía no tiene fixture
+                      </p>
+                    </div>
+                  );
+                }
                 return (
                   <div className="text-center text-grass-soft py-12">
                     <CheckCircle className="w-16 h-16 mx-auto mb-4 text-led" />
-                    <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Sin partidos próximos</p>
+                    <p className="font-arcade text-xs text-white text-shadow-retro uppercase">Ciclo terminado</p>
                     <p className="text-sm mt-2">Todos los partidos han sido jugados</p>
                   </div>
                 );

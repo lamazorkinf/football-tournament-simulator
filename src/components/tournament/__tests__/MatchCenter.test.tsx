@@ -96,11 +96,26 @@ describe('MatchCenter — por qué no hay partidos próximos', () => {
     expect(screen.queryByText(/todos los partidos han sido jugados/i)).not.toBeInTheDocument();
   });
 
-  it('con todo jugado sí lo dice', () => {
+  /**
+   * `collectAllMatches` sólo recorre lo que EXISTE, así que "no queda nada
+   * pendiente" a mitad de ciclo significa "nada de lo ya sorteado". Terminar
+   * las clasificatorias con el Mundial sin sortear deja el ciclo entero por
+   * delante, y decir ahí "todos los partidos han sido jugados" es el mismo
+   * engaño en el momento por el que pasa cada ciclo.
+   */
+  it('con todo lo sorteado jugado pero el ciclo a medias, avisa que falta sortear', () => {
     renderCenter(cicloConFixture(true));
 
+    expect(screen.getByText(/la próxima fase todavía no tiene fixture/i)).toBeInTheDocument();
+    expect(screen.queryByText(/todos los partidos han sido jugados/i)).not.toBeInTheDocument();
+  });
+
+  it('sólo con el ciclo terminado dice que se jugó todo', () => {
+    const cycle = cicloConFixture(true);
+    renderCenter({ ...cycle, calendar: { ...cycle.calendar, phase: 'completed' } });
+
     expect(screen.getByText(/todos los partidos han sido jugados/i)).toBeInTheDocument();
-    expect(screen.queryByText(/todavía no se sortearon/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/todavía no tiene fixture/i)).not.toBeInTheDocument();
   });
 
   it('con partidos pendientes no muestra ningún estado vacío', () => {
